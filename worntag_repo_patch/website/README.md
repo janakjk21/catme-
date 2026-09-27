@@ -1,6 +1,6 @@
 # WornTag website
 
-A responsive marketing site served from static HTML by a small Node HTTP server. The PostgreSQL driver is used by the beta-list endpoints, but the public sign-up remains closed until a database is connected. The copy and concept imagery present WornTag as in development; there are no working app downloads, photo uploads, payments, or customer testimonials.
+A responsive marketing site served from static HTML by a small Node HTTP server. The beta-list endpoints use Railway PostgreSQL; the public beta form is open and stores consented email addresses. The copy and concept imagery present WornTag as in development; there are no working app downloads, photo uploads, payments, or customer testimonials.
 
 ## Pages
 
@@ -11,7 +11,7 @@ A responsive marketing site served from static HTML by a small Node HTTP server.
 - `/stories.html` — editorial reflections, not customer testimonials
 - `/privacy.html` — pre-launch site privacy notice
 - `/terms.html` — pre-launch website terms
-- `/beta.html` — beta invitation page; the email form remains closed until PostgreSQL is connected
+- `/beta.html` — beta invitation page with active consent-based email storage and self-service removal
 - `/404.html` — helpful not-found page
 
 SEO decisions are recorded in [`../docs/SEO_MARKETING.md`](../docs/SEO_MARKETING.md), with the latest findings in [`../docs/SEO_AUDIT_2026-09-27.md`](../docs/SEO_AUDIT_2026-09-27.md). Brand direction is in [`../docs/brand/BRAND_GUIDE.md`](../docs/brand/BRAND_GUIDE.md).
@@ -32,7 +32,7 @@ The site is deployed as `worntag-website`, separate from the existing `doll-me-`
 
 The canonical host is `https://worntag.com`. Requests to `www.worntag.com` and `/index.html` redirect to the apex homepage form; verify these redirects after every deployment.
 
-The beta route uses Railway PostgreSQL through `DATABASE_URL`. No PostgreSQL service or `DATABASE_URL` is currently configured, so `/api/beta-signups/status` returns `{"open":false}` and the public form stays closed. The server creates only a `beta_signups` table when a database is available; it stores normalized email, consent timestamp/version and source, never pet photos or IP addresses. Only provision/connect a database after the owner approves any associated Railway usage charges. Never expose database credentials or signup data through the public server.
+The beta route uses Railway PostgreSQL through the `DATABASE_URL` Railway reference variable. The production `Postgres` service is connected and `/api/beta-signups/status` returns `{"open":true}`. The server creates only a `beta_signups` table when a database is available; it stores normalized email, consent timestamp/version and source, never pet photos or IP addresses. The live form was checked with a synthetic `example.invalid` address: first insert and duplicate submission both succeeded, then self-service removal succeeded. The test row was removed. Railway bills database resources based on actual usage; monitor the project usage after the first full billing interval. Never expose database credentials or signup data through the public server.
 
 Cloudflare `worntag.com` and `www.worntag.com` records target the separate Railway service. Preserve both existing domains and other DNS records during future changes.
 
