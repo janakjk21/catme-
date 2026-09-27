@@ -32,6 +32,8 @@ The site is deployed as `worntag-website`, separate from the existing `doll-me-`
 
 The canonical host is `https://worntag.com`. Requests to `www.worntag.com` and `/index.html` redirect to the apex homepage form; verify these redirects after every deployment.
 
+The brand icon is provided as SVG, a multi-size ICO, a 32px PNG fallback, and a 180px Apple touch icon. All HTML pages reference these files; the server's public-file allowlist must include each icon path.
+
 The beta route uses Railway PostgreSQL through the `DATABASE_URL` Railway reference variable. The production `Postgres` service is connected and `/api/beta-signups/status` returns `{"open":true}`. The server creates only a `beta_signups` table when a database is available; it stores normalized email, consent timestamp/version and source, never pet photos or IP addresses. The live form was checked with a synthetic `example.invalid` address: first insert and duplicate submission both succeeded, then self-service removal succeeded. The test row was removed. Railway bills database resources based on actual usage; monitor the project usage after the first full billing interval. Never expose database credentials or signup data through the public server.
 
 Cloudflare `worntag.com` and `www.worntag.com` records target the separate Railway service. Preserve both existing domains and other DNS records during future changes.
