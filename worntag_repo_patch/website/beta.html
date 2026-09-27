@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WornTag beta — get an invitation</title>
+  <meta name="description" content="Ask to hear when WornTag opens a small beta for its photo-inspired digital pet companion." />
+  <link rel="canonical" href="https://worntag.com/beta.html" />
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+  <meta property="og:site_name" content="WornTag" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="WornTag beta — get an invitation" />
+  <meta property="og:description" content="Hear when WornTag opens a small beta. The product is still in development." />
+  <meta property="og:url" content="https://worntag.com/beta.html" />
+  <meta property="og:image" content="https://worntag.com/assets/hero-cat.webp" />
+  <meta property="og:image:alt" content="Concept image of a cat reaching for a woven toy in a warm home" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="WornTag beta — get an invitation" />
+  <meta name="twitter:description" content="Hear when WornTag opens a small beta. The product is still in development." />
+  <meta name="twitter:image" content="https://worntag.com/assets/hero-cat.webp" />
+  <meta name="twitter:image:alt" content="Concept image of a fluffy cat reaching for a woven toy in a warm home" />
+  <meta name="theme-color" content="#f3eee5" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=beta-20260927" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="wordmark" href="/" aria-label="WornTag home">WornTag<span class="mark">•</span></a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Open navigation" data-menu-toggle><span></span><span></span></button>
+    <nav class="nav" id="primary-nav" aria-label="Primary navigation" data-nav><a href="/#how">How it works</a><a href="/#made-for">Made for</a><a href="stories.html">Stories</a><a href="about.html">Our story</a><a href="beta.html" aria-current="page">Beta</a></nav>
+    <a class="button button-dark button-small header-cta" href="#signup">Beta access</a>
+  </header>
+  <main id="main">
+    <section class="beta-hero section-shell">
+      <div class="beta-copy">
+        <p class="eyebrow">WornTag beta</p>
+        <h1>Help shape<br />what comes next.</h1>
+        <p class="lede">We’re working toward a small beta for a more personal way to spend time with a digital companion inspired by your pet’s photo.</p>
+        <p class="beta-note">The app is still in development. Asking for an invitation is not a place reservation or a promise of access.</p>
+      </div>
+      <img src="assets/hero-cat.webp" alt="Concept image of a fluffy cat reaching for a woven toy in a warm home" width="920" height="780" fetchpriority="high" />
+    </section>
+    <section class="beta-panel section-narrow" id="signup" aria-labelledby="signup-title">
+      <p class="eyebrow centered">A quiet first step</p>
+      <h2 id="signup-title">Hear when beta invites open.</h2>
+      <p class="beta-intro">If you’d like to try WornTag when a small beta is ready, leave your email. We’ll use it only for WornTag beta access and availability updates—not a general newsletter. No photos, account, or payment details are requested here.</p>
+      <p class="notice-box" role="status" aria-live="polite" data-beta-status>Checking whether beta sign-ups are open…</p>
+      <form class="beta-form" data-beta-signup hidden>
+        <label for="beta-email">Email address</label>
+        <input id="beta-email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="254" required placeholder="you@example.com" />
+        <label class="consent-row"><input type="checkbox" name="consent" value="yes" required /><span>I agree that WornTag may email me about beta access and availability. I can ask to be removed at any time.</span></label>
+        <div class="form-trap" aria-hidden="true"><label for="beta-website">Leave this field empty</label><input id="beta-website" name="website" tabindex="-1" autocomplete="off" /></div>
+        <button class="button button-dark" type="submit">Ask for a beta invitation</button>
+        <p class="form-note">If the beta list is open, your email and consent record will be stored in WornTag’s Railway database. Read the <a class="text-link" href="privacy.html">privacy notice</a>.</p>
+        <p class="form-feedback" role="status" aria-live="polite" data-beta-feedback></p>
+      </form>
+      <noscript><p class="notice-box">Beta sign-up needs JavaScript to submit safely. No email is collected without the form’s confirmation.</p></noscript>
+      <details class="beta-remove" data-beta-remove hidden>
+        <summary>Already signed up? Remove your email</summary>
+        <form class="beta-form beta-remove-form" data-beta-removal>
+          <label for="remove-email">Email address to remove</label>
+          <input id="remove-email" name="email" type="email" autocomplete="email" maxlength="254" required />
+          <button class="button button-ghost" type="submit">Remove this address</button>
+          <p class="form-feedback" role="status" aria-live="polite" data-remove-feedback></p>
+        </form>
+      </details>
+    </section>
+    <section class="beta-expectations section-narrow">
+      <h2>What joining means.</h2>
+      <ul>
+        <li>We hope to learn whether a companion feels recognisable and whether a small play moment feels natural. The exact beta features are still being defined.</li>
+        <li>You’re asking to hear about beta access; you’re not buying anything.</li>
+        <li>Joining does not guarantee a place. We’ll share timing and requirements when they are confirmed.</li>
+        <li>The companion is digital and cannot replace or bring back a real animal.</li>
+      </ul>
+      <p><a class="text-link" href="how-it-works.html">See the experience we’re working toward →</a></p>
+    </section>
+  </main>
+  <footer class="site-footer">
+    <div><a class="wordmark footer-mark" href="/">WornTag<span class="mark">•</span></a><p>Closer than a photo.</p></div>
+    <div class="footer-links"><a href="how-it-works.html">How it works</a><a href="faq.html">FAQ</a><a href="about.html">Our story</a><a href="stories.html">Stories</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="beta.html">Beta</a></div>
+    <p class="copyright">© <span id="year"></span> WornTag</p>
+  </footer>
+  <script src="app.js?v=beta-20260927" defer></script>
+</body>
+</html>

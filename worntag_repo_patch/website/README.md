@@ -1,0 +1,44 @@
+# WornTag website
+
+A responsive marketing site served from static HTML by a small Node HTTP server. The PostgreSQL driver is used by the beta-list endpoints, but the public sign-up remains closed until a database is connected. The copy and concept imagery present WornTag as in development; there are no working app downloads, photo uploads, payments, or customer testimonials.
+
+## Pages
+
+- `/` — brand introduction and clear development status
+- `/how-it-works.html` — product concept and its limits
+- `/faq.html` — availability, photo, privacy, price and device questions
+- `/about.html` — brand story
+- `/stories.html` — editorial reflections, not customer testimonials
+- `/privacy.html` — pre-launch site privacy notice
+- `/terms.html` — pre-launch website terms
+- `/beta.html` — beta invitation page; the email form remains closed until PostgreSQL is connected
+- `/404.html` — helpful not-found page
+
+SEO decisions are recorded in [`../docs/SEO_MARKETING.md`](../docs/SEO_MARKETING.md), with the latest findings in [`../docs/SEO_AUDIT_2026-09-27.md`](../docs/SEO_AUDIT_2026-09-27.md). Brand direction is in [`../docs/brand/BRAND_GUIDE.md`](../docs/brand/BRAND_GUIDE.md).
+
+## Run locally
+
+Requires Node 22.12 or newer.
+
+```sh
+npm start
+```
+
+Open `http://localhost:3000`. The server uses Railway's `PORT` when deployed and exposes `/health` for its health check.
+
+## Railway and Cloudflare
+
+The site is deployed as `worntag-website`, separate from the existing `doll-me-` service. Keep that service and its `slap3d.com` domain unchanged. The website listens on Railway's injected `PORT`, and `/health` returns a small readiness response.
+
+The canonical host is `https://worntag.com`. Requests to `www.worntag.com` and `/index.html` redirect to the apex homepage form; verify these redirects after every deployment.
+
+The beta route uses Railway PostgreSQL through `DATABASE_URL`. No PostgreSQL service or `DATABASE_URL` is currently configured, so `/api/beta-signups/status` returns `{"open":false}` and the public form stays closed. The server creates only a `beta_signups` table when a database is available; it stores normalized email, consent timestamp/version and source, never pet photos or IP addresses. Only provision/connect a database after the owner approves any associated Railway usage charges. Never expose database credentials or signup data through the public server.
+
+Cloudflare `worntag.com` and `www.worntag.com` records target the separate Railway service. Preserve both existing domains and other DNS records during future changes.
+
+## Before a public product launch
+
+- Replace this pre-launch privacy notice and website terms with reviewed service-specific documents.
+- Publish a real support/contact route, actual app store links, confirmed platform requirements and price.
+- Add a working early-access mechanism only after its delivery and data handling are configured.
+- Verify metadata, status codes, redirects, JSON-LD, sitemap, mobile/desktop performance, accessibility and social previews on the live host; submit the sitemap in Search Console and Bing Webmaster Tools.
