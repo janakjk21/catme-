@@ -56,11 +56,11 @@ namespace CatMe.Editor
             PlayerSettings.productName = "CatMe Home";
             PlayerSettings.bundleVersion = "0.1.0";
             PlayerSettings.colorSpace = ColorSpace.Linear;
-            PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;
             PlayerSettings.allowedAutorotateToPortrait = false;
             PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
-            PlayerSettings.allowedAutorotateToLandscapeLeft = false;
-            PlayerSettings.allowedAutorotateToLandscapeRight = false;
+            PlayerSettings.allowedAutorotateToLandscapeLeft = true;
+            PlayerSettings.allowedAutorotateToLandscapeRight = true;
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.catme.home");
             PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.iOS, "com.catme.home");
             PlayerSettings.Android.bundleVersionCode = 1;

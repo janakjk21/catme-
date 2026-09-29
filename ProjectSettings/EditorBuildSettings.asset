@@ -6,12 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/CatMe/Scenes/Bootstrap.unity
-    guid: 8a97415448bbf4ba2b65b83951a79204
-  - enabled: 1
     path: Assets/CatMe/Scenes/HomeRoom.unity
     guid: 8a84cd92389b94a4c8852ca8c9818dd1
-  - enabled: 0
-    path: Assets/CatMe/Scenes/ModelTest.unity
-    guid: cad694fc9fcc6436181b370397f46add
-  m_configObjects: {}
+  m_configObjects:
+    com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}

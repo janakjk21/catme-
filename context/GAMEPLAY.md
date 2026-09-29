@@ -1,100 +1,51 @@
-# Gameplay Contract
+# Garden Gameplay Contract
 
-## Stable cat states
+## Player and companion roles
 
-Use stable gameplay names even while some animations are approximated:
+- The owner avatar is player-controlled.
+- The cat follows the owner at a readable, comfortable distance. It catches up smoothly after turns, checks back when the owner pauses, and stays inside the useful camera view when possible.
+- The garden is a compact authored play space, not an open-world promise.
 
-```text
-Idle
-Walk
-PetReaction
-Play
-Pounce
-EnterSleep
-Sleep
-Wake
-```
-
-`CatMotor` owns navigation and velocity. `CatAnimationController` owns animation. `CatNeeds` owns values. `CatBrain` chooses activities. Keep these responsibilities separate.
-
-## Locomotion quality
-
-- Rotate toward a destination before and during movement.
-- Accelerate and decelerate smoothly.
-- Synchronize walk playback speed with actual movement velocity.
-- Stop without severe foot sliding.
-- Apply an asset-specific forward correction once at the model root.
-- Validate ten consecutive paths before calling locomotion complete.
-
-## First behavior loop
+## First session loop
 
 ```text
-Idle or explore
-→ player calls cat
-→ cat walks toward an authored destination
-→ player pets or starts laser play
-→ energy falls
-→ cat walks to its house
-→ hidden sleep transition
-→ energy recovers
+Pair setup
+→ enter garden together
+→ cat playfully slips behind a nearby garden feature
+→ owner calls/listens; player follows subtle visual and audio clues
+→ cat is found; close-up greeting and owner acknowledgment
+→ walk together
+→ pick up and throw one ball
+→ cat notices, chases, engages, and rejoins
+→ free garden play
 ```
 
-Low energy changes behavior instead of disabling interaction.
+The opening search is brief, readable, and impossible to fail. The cat is nearby and safe. Do not use loss, countdowns, a fail state, or repeated nagging prompts. Allow skip/accessibility cues if searching or sound cues are difficult.
 
-## Needs and relationship
+## Desired companion behavior
 
-Use four values with different responsibilities:
+- Follow the owner with smooth acceleration and turns; avoid snapping or hovering.
+- Occasionally glance toward the owner, sniff a nearby point of interest, or trot to catch up. Keep idle reactions sparse so they do not interrupt player movement.
+- Notice the ball before the throw, orient toward its path, chase after release, investigate/catch it, then return near the owner or wait beside it.
+- A gentle direct interaction may invite the cat closer. Use a meow, purr, head rub, or paw gesture only when the loaded asset has a suitable motion; do not fake unsupported body animation.
 
-| Value | Behavior |
-|---|---|
-| Energy | Falls through activity and recovers through rest and sleep |
-| Mood | Responds to recent care, play, environment, and frustration |
-| Hunger | Rises gradually and falls when fed |
-| Bond | Long-term relationship progression; increases slowly and never decreases |
+## Owner animation opportunities
 
-Low needs create gentle behavior changes rather than punishment. The cat cannot become permanently ill, die, or lose bond because the player was away.
+The owner can make the relationship legible with a small authored set: walk, stop/look, call/listen, crouch/reach for the reunion, pick up/throw a ball, and respond warmly when the cat returns. Add stronger emotional performances only in a later optional story and only when the human rig supports them convincingly.
 
-### Bond feedback
+## Mobile controls and camera
 
-Show bond as a heart meter paired with a relationship label. Avoid presenting affection as only a raw percentage.
+- Lower-left movement stick controls the owner.
+- One clear ball action appears when useful; aiming and release should be easy to discover.
+- Keep camera look and movement gestures distinct. Avoid covering the owner, cat, clues, or ball path with UI.
+- Preserve the approved slightly elevated trailing view and relative character scale. Make safe-area, touch, rotation, and performance decisions on physical phones.
 
-Suggested stages:
+## Story boundary
 
-```text
-New companion → Familiar → Trusting → Bonded → Inseparable
-```
+The first hide-and-find is a warm onboarding moment, not a tragedy. A later optional story may explore separation, memory, or reunion with emotional depth. Never make the cat permanently disappear, punish absence, or assume whether a player's real pet is alive. A remembrance path must be clearly user-selected and gentle.
 
-Petting, feeding, playing, responding to needs, taking memories, and returning over time add bond. Repeating the same action rapidly has diminishing returns and a cooldown so tapping cannot manufacture a complete relationship in one session.
+## Implementation ownership and limits
 
-Each bond gain should produce small visible feedback: a heart pulse, a gentle haptic, a sound, or a new reaction. Bond stages unlock reactions, activities, memory poses, and small room moments rather than raw power.
+Keep cat navigation in `CatMotor` and animation in `CatAnimationController`; keep owner locomotion, camera, ball interaction, and UI in their existing focused modules or clearly owned garden equivalents. Discover clips, scale, axes, and supported rig controls from each GLB. The current GardenCompanion prototype includes walking characters, follow/call controls, and ball chase, but the opening hide-and-find flow and polished human reactions are not yet verified as complete.
 
-## Ambient time and return loop
-
-- Room lighting follows local morning, daytime, evening, and night.
-- Settings provide a manual lighting override.
-- Returning players may discover a candid cat photograph or a small behavior moment.
-- Memories record the cat, activity, room state, and date without turning play into a daily checklist.
-- Offline recovery is capped and the cat welcomes the player without guilt messaging.
-- On app open, the cat sometimes greets the player and sometimes continues its current activity.
-- Players can take photographs, while the game also captures occasional candid memory moments.
-
-## Room interactions
-
-Props publish authored interaction points. The first room needs an open play area, cat house, food area, window point, toy storage, and useful scale references.
-
-First toy: laser pointer. The cat reacts after a short delay, follows a valid floor target, approximates a pounce, and receives sound plus haptic feedback on a catch.
-
-### Feeding with limited animation
-
-- Display a food packet or container as a physical room object.
-- The player places food into a bowl or feeding slot.
-- Position the bowl against a wall or inside a feeding nook so the cat's face and front paws are naturally hidden.
-- The cat walks to a precise authored approach point and stands in place.
-- Camera framing, eating audio, bowl movement, and subtle procedural shoulder or head-root motion sell the eating action.
-- Finish with a small satisfied reaction, hunger reduction, and limited bond feedback.
-
-The occlusion is part of the room design, not a temporary debug treatment.
-
-## Limited-animation rule
-
-When a clip is missing, use a short procedural motion, camera framing, particles, sound, or an occluded transition. Do not block the prototype on obtaining a complete animation library.
+`HomeRoom`, laser, feeding nook, room needs, and room-specific ambient behavior belong to the legacy prototype. Do not use them as the active garden gameplay specification.

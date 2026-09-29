@@ -1,69 +1,28 @@
 # Current Handoff
 
-Last updated: 2026-09-21
+Last updated: 2026-09-29
 
-## Current objective
+## Active game direction
 
-Build the smallest convincing mobile CatMe prototype one bounded phase at a time. The room blockout and isolated local cat validation are complete; the next bounded phase can place this validated cat into the room.
+CatMe is a garden companion game. The player creates a cat and an owner avatar, then controls the owner while the cat follows. The approved camera sits slightly above and behind the owner and keeps the pair visible at the agreed relative scale.
 
-## Verified foundation
+**First session:** create/select the pair → enter the garden → the cat playfully hides close by → follow gentle clues → find the cat in a close-up greeting → walk together → throw one ball for the cat to chase → continue free play. The search is short, safe, skippable, and never timed or punitive. Optional emotionally deep story chapters are later features. See `context/tasks/CATME_FINAL_PRODUCT_IMPLEMENTATION_PLAN.md` and `docs/CATME_EXPERIENCE_DESIGN_V1.md`.
 
-- Unity `6000.6.2f1` project opens and compiles.
-- URP, Input System, Cinemachine, AI Navigation, glTFast, and UGUI are installed.
-- Portrait orientation, Linear colour space, 60 FPS runtime target, and application ID `com.catme.home` are configured.
-- Scenes exist: `Bootstrap`, `ModelTest`, and `HomeRoom`.
-- Local fixture exists at `LocalFixtures/Cats/mochi-tripo-walk.glb` and is intentionally ignored by Git.
-- The simple room and cat meow/purr audio are under `Assets/CatMe/`.
-- Only Mac and WebGL editor support are currently installed. iOS Build Support and Xcode can be installed before physical iPhone testing.
+## Verified prototype foundation
 
-## Completed milestone
+- `Assets/CatMe/Scenes/GardenCompanion.unity` exists separately from the legacy HomeRoom scene. The recorded Garden prototype includes human movement, cat roam/follow/call, and ball throw/chase. Its three character GLBs total about 71 MB before iOS packaging.
+- A Unity batch Play Mode smoke check loaded the three models and expected clips and exercised movement, follow, call, and ball actions. This is Editor evidence, not proof of phone comfort.
+- Signed iOS build 8 was installed and launch returned on the paired iPhone 14 Pro Max on 2026-09-28. The rendered app screen was not visually inspected; touch, camera, safe areas, performance, and the complete opening sequence remain unverified on device. Android Build Support is not installed in the recorded Unity editor.
+- The cat-hide onboarding, close-up reunion, polished owner emotions, and complete first-run creation journey are design requirements, not verified implementation.
 
-Room Phase 1: complete.
+## Production blocker
 
-Verified:
+The recorded local prototype calls Tripo and Meshy directly using an ignored Unity credential file. Keys inside an app can be extracted. Do not distribute this build. Before public use, remove bundled credentials and direct provider calls; move jobs behind an authenticated HTTPS service and define photo consent, retention/deletion, cost, and failure recovery. Do not trigger paid generation during routine gameplay work.
 
-- `HomeRoom` contains the required `Room_Blockout` hierarchy, scaled architecture, zones, props, interaction points, camera anchors, lighting, and scale reference.
-- The room is approximately `6.5 m × 5.0 m × 2.8 m` with a clear central play area.
-- Feeding and sleep geometry support the planned occlusion transitions.
-- A baked NavMesh reaches `CallDestination`, `WindowApproach`, `SleepApproach`, `FeedingApproach`, and `ToyApproach`.
-- Unity Console showed zero errors during the final build and validation.
+## Next work
 
-## Completed milestone
+Use known-good local character assets to prototype the cat-hide → clue → close-up reunion opening in `GardenCompanion`, then validate the full first session on the physical iPhone. Keep the legacy HomeRoom scene and existing app data intact while the garden flow is reviewed. After any C# changes, run focused Unity compilation; only call a mobile phase complete after the corresponding physical-device checks.
 
-Cat Model Phase 2: isolated local GLB validation.
+## Legacy implementation boundary
 
-Verified in Unity Play Mode:
-
-- `ModelTest` loaded exactly one local fixture from `LocalFixtures/Cats/mochi-tripo-walk.glb` through glTFast.
-- The runtime hierarchy contained `ModelTestRuntime/CatModelRoot/AxisCorrection/LoadedCat`, plus `Ground`, `ForwardMarker`, `CameraRig`, and `Lighting`.
-- The supplied cat rendered with its imported material and coat; no material errors were logged.
-- Diagnostics reported one renderer, one skinned mesh, one material, and the embedded `preset:quadruped:walk` clip at `2.6 s`.
-- The cat normalized to `0.35 m`, rested on the floor, and matched the world `+Z` marker with `0` degrees of yaw correction.
-- The automatic 10-second walk acceptance logged `PASS`, with `maxRootDrift=0 m`, `height=0.35 m`, and `floorDistance=0 m`.
-- Unity Console showed zero errors after the corrected compile and successful runtime load.
-
-## Current milestone
-
-HomeRoom Cat Integration Phase 3.
-
-Active task:
-
-```text
-context/tasks/HOME_ROOM_CAT_PHASE_3.md
-```
-
-The task extracts the proven reusable local loading behavior, places exactly one validated cat at `CatSpawn` inside `HomeRoom`, and verifies room scale, floor contact, materials, camera visibility, and a stationary in-place walk. It must preserve the completed `ModelTest` acceptance and stop before navigation or interaction work.
-
-## Boundaries
-
-- No Meshy, Tripo, OpenAI, Supabase, login, payment, or remote-download work during this milestone.
-- Do not spend provider credits.
-- Do not start navigation, interactions, UI, or the creation funnel during Phase 3.
-- Do not commit the 134 MB local fixture.
-
-## Known risks
-
-- The provider GLB is approximately 134 MB and is too large for production mobile delivery.
-- Animation clip name, model scale, floor offset, and forward axis must be discovered from the asset rather than assumed.
-- Physical iPhone behavior remains unverified until iOS tooling is installed.
-- Room composition has been checked in the Unity editor Game view but not yet on a physical portrait device.
+HomeRoom, room furniture, first-person room movement, laser, room feeding/sleep, and the room HUD are retained implementation history only. Do not use them as active design requirements or extend them for the garden direction.

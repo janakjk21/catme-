@@ -1,4 +1,5 @@
 using System.IO;
+using CatMe.Cat;
 using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -12,6 +13,7 @@ namespace CatMe.Editor
     {
         private const string ScenePath = "Assets/CatMe/Scenes/HomeRoom.unity";
         private const string MaterialFolder = "Assets/CatMe/Art/Materials";
+        private const string PurrClipPath = "Assets/CatMe/Audio/cat-purr.mp3";
 
         [MenuItem("CatMe/Build Room Phase 1")]
         public static void BuildRoomPhase1()
@@ -94,6 +96,8 @@ namespace CatMe.Editor
                 Object.DestroyImmediate(referenceCollider);
             }
 
+            CreateHomeRoomCatIntegration();
+
             GameObject navigation = Empty("Navigation", room.transform, Vector3.zero);
             NavMeshSurface surface = navigation.AddComponent<NavMeshSurface>();
             surface.collectObjects = CollectObjects.All;
@@ -115,6 +119,67 @@ namespace CatMe.Editor
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
             Debug.Log("CatMe Room Phase 1 blockout built and NavMesh baked.");
+        }
+
+        [MenuItem("CatMe/Configure HomeRoom Cat Phase 3")]
+        public static void ConfigureHomeRoomCatPhase3()
+        {
+            Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            if (!scene.IsValid())
+            {
+                Debug.LogError($"Could not open HomeRoom scene at {ScenePath}.");
+                return;
+            }
+
+            CreateHomeRoomCatIntegration();
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene, ScenePath);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log("CatMe HomeRoom Cat Integration Phase 3 configured.");
+        }
+
+        public static void ConfigureHomeRoomCatPhase3FromCommandLine()
+        {
+            ConfigureHomeRoomCatPhase3();
+        }
+
+        private static void CreateHomeRoomCatIntegration()
+        {
+            GameObject catSpawn = GameObject.Find("CatSpawn");
+            if (catSpawn == null)
+            {
+                catSpawn = Empty("CatSpawn", null, new Vector3(0f, 0f, -0.5f));
+            }
+            else
+            {
+                catSpawn.transform.position = new Vector3(0f, 0f, -0.5f);
+            }
+
+            GameObject catRuntime = GameObject.Find("CatRuntime");
+            if (catRuntime == null)
+            {
+                catRuntime = Empty("CatRuntime", null, catSpawn.transform.position);
+            }
+
+            HomeRoomCatIntegration integration = catRuntime.GetComponent<HomeRoomCatIntegration>();
+            if (integration == null)
+            {
+                catRuntime.AddComponent<HomeRoomCatIntegration>();
+                integration = catRuntime.GetComponent<HomeRoomCatIntegration>();
+            }
+
+            AudioClip purrClip = AssetDatabase.LoadAssetAtPath<AudioClip>(PurrClipPath);
+            if (purrClip != null && integration != null)
+            {
+                SerializedObject serializedIntegration = new SerializedObject(integration);
+                SerializedProperty purrProperty = serializedIntegration.FindProperty("purrClip");
+                if (purrProperty != null)
+                {
+                    purrProperty.objectReferenceValue = purrClip;
+                    serializedIntegration.ApplyModifiedPropertiesWithoutUndo();
+                }
+            }
         }
 
         public static void BuildRoomPhase1FromCommandLine()

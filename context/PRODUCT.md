@@ -1,59 +1,40 @@
-# Product Requirements
+# CatMe Product Requirements
 
 ## Product promise
 
-A player turns a photograph of their real cat into a recognizable 3D companion that lives in a small interactive home.
+Turn a photograph of a player's cat into a personal 3D companion, create an owner avatar from the player's photo, and explore a garden together. The owner is the character the player controls. The cat follows and reacts.
 
-The same product also supports old pet photographs and people who want a realistic virtual cat. It does not ask users to identify a pet as living or deceased.
+## First playable experience
+
+1. Create or choose the cat, then create or choose the owner avatar. Show honest progress, review, retry, and fallback states.
+2. Enter the garden together. The cat briefly hides nearby as a playful first-run moment.
+3. Guide the player with subtle, readable clues to find the cat. The search is short, safe, and non-punitive.
+4. Reveal the cat in a close, personal greeting. The owner can kneel or reach toward it; the cat approaches, meows, or rubs close if its rig supports the motion.
+5. Introduce thumb-friendly owner movement. The cat follows, checks back, and catches up.
+6. Introduce one ball interaction: pick up, aim/throw, watch the cat chase, then rejoin. Return to free garden play.
+
+## Core design rules
+
+- The owner is the playable lead; the personalized cat is their responsive companion.
+- Use the approved relative character scale and slightly elevated camera behind the owner. Keep both characters readable on a phone and leave enough view of the path.
+- Keep the first garden compact, authored, and calm. Every prop should support navigation, a clue, or a shared moment.
+- Make the first hide-and-find moment playful. Never imply the cat is permanently lost, punish the player, or force a timed search.
+- Use animation, movement, gaze, sound, and pauses for emotion before adding dialogue or prompt-heavy UI. Do not claim a photo-created avatar has expressions or motions its rig does not support.
+- Keep the journey usable without provider generation: explain failures clearly and preserve a playable fallback.
+- Treat uploaded photos, likeness, generation cost, consent, deletion, and local storage as product requirements, not implementation afterthoughts.
 
 ## Prototype success criteria
 
-The prototype is successful when a player can:
+- A new player understands that they control the owner and the cat follows.
+- The player finds the nearby hiding cat using clear but gentle cues and gets a satisfying close-up reunion.
+- Owner movement and cat following feel smooth at the agreed scale and camera on a phone.
+- The player can throw a ball and understand the cat's response.
+- The player can leave and return without losing the saved pair or basic state.
 
-1. See a personalized cat that looks convincing at mobile viewing distance.
-2. Watch it move naturally through a small room.
-3. Call and pet it with sound and haptic feedback.
-4. Play one understandable toy interaction.
-5. Watch energy affect activity and sleep.
-6. Leave and return without losing basic state.
+## Later features
 
-The room is part of the game. Toys and destinations should exist as room objects instead of only as menu buttons.
+After the walk-and-ball loop works, consider optional short story chapters, simple petting and bonding reactions, garden discoveries, and a shared photo capture. A deeper emotional story about separation and reunion must be optional and carefully framed for players remembering a pet. It must not suggest the digital companion replaces a pet who died or exploit grief. Food/sleep care, progression, multiple characters, social features, economy, accounts, and cloud sync require separate product decisions.
 
-## First playable scope
+## Out of current scope
 
-- One cat.
-- One small home room.
-- Elevated orbit camera.
-- Walk, explore, call, pet, meow, and sleep behavior.
-- One laser-pointer activity.
-- Energy, mood, hunger, and persistent bond values without punishment or pet death.
-- Local save data.
-- Sound and haptic feedback.
-- Real-world room lighting with a manual time override.
-- Candid memory photographs and small discoveries as the main return incentive.
-
-## Companion ownership
-
-- Start with one free Studio Cat.
-- Later, users can create a personalized cat or buy professionally authored Studio Cats.
-- Players may own several cats but keep one active in the room in the first release.
-- General care, toys, and relationship progression work for every cat.
-- Studio Cats may have signature actions supported by their authored animation sets.
-
-Every cat receives a player-selected name. The app may suggest the Studio Cat's original name, but ownership begins with naming.
-
-## Economy boundary
-
-See `context/ECONOMY.md`. The stable product boundary is direct one-time Studio Cat purchases plus one soft token earned through play. Basic care remains available, and bond cannot be bought.
-
-## Quality priorities
-
-1. Cat resemblance and coat colour.
-2. Natural forward locomotion.
-3. Stable mobile performance.
-4. Clear, pleasant interactions.
-5. Generation reliability and recovery.
-
-## Deferred
-
-Multiple rooms, multiplayer, clothing, large inventories, strand-fur simulation, conversational AI, AR, multiple pets, subscriptions, accounts, and cloud sync do not block the prototype.
+The indoor HomeRoom, room-prop interactions, laser play, room-based feeding/sleeping loop, and room HUD are legacy prototype work. They are not requirements for the garden game. Keep existing scenes and save data intact until a migration is deliberately planned.

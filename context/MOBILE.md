@@ -1,56 +1,25 @@
-# Mobile Contract
+# Garden Mobile Contract
 
-## Delivery order
+## Delivery approach
 
-Develop in the Unity Editor first, then validate on iOS first. Add Android device support after the core interaction loop is convincing. Keep gameplay code and input abstractions cross-platform.
+Develop in the Unity Editor, then validate on iOS first. Add Android device support after the garden walk-and-ball loop is convincing. Keep gameplay and input abstractions cross-platform. A build succeeding does not complete a mobile milestone.
 
-Xcode and Unity iOS Build Support are required before installing on an iPhone, but they do not block editor development.
+## Camera and composition
 
-## Camera
+Use the approved slightly elevated trailing view behind the owner. Keep both the owner and cat visible at the agreed scale, with enough garden path ahead to read direction and clues. Avoid forced shake, sudden camera snaps, or automatic close-ups that take control away; the first reunion close-up is a brief authored opening beat that returns smoothly to gameplay framing.
 
-- Portrait-first layout.
-- Elevated view so the cat's legs and movement remain readable.
-- One-finger drag rotates the room camera.
-- Pinch zooms within authored limits.
-- Prevent wall penetration, below-floor angles, and extreme close-ups.
-- Home view target: cat occupies roughly 15–25% of screen height.
-- Play view target: cat occupies roughly 30–40%.
+## Touch controls
 
-Use three coordinated modes:
+- Put owner movement in a comfortable lower-left touch region.
+- Show one clear ball interaction when appropriate. Keep aiming and throwing separate from camera look and movement.
+- Reserve the initiating pointer for a ball gesture; cancel cleanly if a pinch or interruption occurs.
+- Pair sound-based clues with visual cues. Provide extra search guidance and a skip option.
+- Keep touch targets large and UI clear of both characters, clues, and the ball path.
 
-- `Room`: elevated guided orbit with limited swipe rotation and pinch zoom.
-- `CatFocus`: tap the cat to move closer; drags over the cat become petting.
-- `Activity`: frames the cat and the active prop, then returns to the room view.
+## Layout
 
-The default experience should remain composed like a living diorama while still letting the player inspect the cat closely.
-
-## Input modes
-
-Normal room mode:
-
-- drag rotates camera
-- pinch zooms
-- tap cat focuses or pets
-- tap prop starts an interaction
-
-Toy mode:
-
-- drag controls the active toy
-- exiting restores camera control
-
-A gesture must never control the toy and camera at the same time.
+Respect safe areas in supported phone orientations and adapt to changing aspect ratios. Reflow rather than relying on a single device resolution. Keep transient hints away from the owner-cat pair and movement control.
 
 ## Device-only validation
 
-Use a physical phone to validate:
-
-- touch gesture conflicts
-- haptic strength and timing
-- audio balance
-- thermal behavior
-- memory pressure
-- frame pacing
-- model load time
-- safe areas and portrait UI
-
-Editor behavior alone cannot complete these checks.
+On a physical phone, verify supported orientations, touch comfort, safe areas, owner/cat scale, follow behavior, camera framing, haptics, audio balance, thermal behavior, memory use, frame pacing, character loading, ball play, photo selection, save/reload, offline recovery, and the full find-your-cat opening. Editor captures, navigation checks, and successful builds do not prove these.

@@ -2,6 +2,8 @@
 
 Apply these requirements when work touches networking, photographs, generated assets, local storage, permissions, analytics, purchases, or release builds.
 
+The recorded GardenCompanion prototype currently calls Tripo/Meshy directly with local ignored Unity credentials. This is a known private-prototype exception that exposes keys in built apps. Do not distribute it. Remove the client credentials/direct provider calls and add authenticated HTTPS job handling before public distribution.
+
 ## Secrets and provider access
 
 - Unity must never contain Meshy, Tripo, Supabase service-role, OpenAI, signing, or other privileged credentials.

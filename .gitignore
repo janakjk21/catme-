@@ -37,3 +37,8 @@ Thumbs.db
 GeneratedCats/
 DownloadedCats/
 LocalFixtures/
+# Local-only packaged development cat
+/Assets/StreamingAssets/Cats/*.glb
+# Local prototype provider credentials; intentionally embedded only in local builds
+/Assets/Resources/CompanionProviderKeys.json
+/Assets/Resources/CompanionProviderKeys.json.meta

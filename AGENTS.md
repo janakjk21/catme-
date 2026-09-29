@@ -13,9 +13,9 @@ This repository is the Unity mobile game client. The existing browser generation
 
 1. Read `context/README.md` and `context/STATUS.md`, then load only the context module named for the task. Do not read the full implementation reference unless the routing table says it is needed.
 2. Use the known-good local cat for normal gameplay work. Do not spend Meshy or Tripo credits for routine tests.
-3. Keep provider credentials and provider-specific task handling on the server.
+3. Keep provider credentials and provider-specific task handling on the server. The recorded local garden prototype currently calls providers directly with local credentials; treat that as a private, insecure prototype and never distribute it.
 4. Validate gameplay on a physical mobile device before calling a mobile milestone complete.
-5. Keep scenes small and systems modular. Prefer `ModelTest` for asset diagnosis and `HomeRoom` for gameplay.
+5. Keep scenes small and systems modular. Prefer `ModelTest` for asset diagnosis and `GardenCompanion` for gameplay. `HomeRoom` is a legacy scene; do not extend its room-based gameplay as the active product direction.
 6. Run a focused Unity compile after changing C# files. Run broader checks only when the touched surface requires them.
 7. Update `context/STATUS.md` after completing a milestone or changing the next task. Record durable decisions in `context/DECISIONS.md`.
 8. Never commit generated cat GLBs, Unity caches, credentials, or signing material.
@@ -26,4 +26,4 @@ This repository is the Unity mobile game client. The existing browser generation
 - Keep each context module short and replace stale facts instead of appending repeated history.
 - Inspect only the current task's scripts, scenes, prefabs, settings, and their direct dependencies.
 - Do not scan `Library/`, `Temp/`, `Logs/`, `LocalFixtures/`, generated models, or the sibling web repository unless the task explicitly requires them.
-- Use `docs/CATME_MOBILE_GAME_IMPLEMENTATION.md` as the detailed product reference. Do not load it for ordinary isolated implementation tasks.
+- Use `context/tasks/CATME_FINAL_PRODUCT_IMPLEMENTATION_PLAN.md` and `docs/CATME_EXPERIENCE_DESIGN_V1.md` as the current product references. `docs/CATME_MOBILE_GAME_IMPLEMENTATION.md` is the garden implementation guide. Do not load broad references for ordinary isolated implementation tasks.
