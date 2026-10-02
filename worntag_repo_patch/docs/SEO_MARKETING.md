@@ -51,3 +51,20 @@ On 27 September 2026, also reviewed the open-source [AgriciDaniel/claude-seo rep
 ## Hosting boundary
 
 The Railway project contains the existing production `doll-me-` service for `slap3d.com` and a separate `worntag-website` service for WornTag. There is no database service or database connection variable on `worntag-website` yet. The root and `www` records are the exact per-domain CNAME targets Railway issued, with matching Railway ownership TXT records. Both Cloudflare CNAMEs are DNS-only. Do not repoint or replace `doll-me-`, change unrelated DNS, or invent IP/CNAME targets. No commit or GitHub push was made; Railway deployment used the working website folder.
+
+
+## Blog (added 2 October 2026)
+
+Method: every post must (1) lead its title with a term people or AI search for, (2) be about a buying-stage topic where WornTag is the natural solution in the opening paragraph and again later, (3) use a specific modifier (dog, cat, photo, gift) rather than a head term, and (4) be written to be cited: one idea per sentence, a question-style heading answered in the first sentence, one to three sourced facts, bullets for lists and tables for comparisons.
+
+| Post | Lead term | Intent |
+|---|---|---|
+| `/blog/3d-dog-model-from-a-photo.html` | 3D dog model from a photo | Evaluating how to make a 3D pet |
+| `/blog/best-photo-for-a-3d-pet-model.html` | best photo for a 3D pet model | Preparing to make one |
+| `/blog/digital-pet-gift-ideas.html` | digital pet gift ideas | Buying a gift |
+
+Keyword basis and limits: this folder contains no WornTag keyword list and the Slap3D list must not be reused, so the lead terms come from WornTag's own positioning language (photo, 3D companion, dog or cat, gift). They are hypotheses. No search-volume or ranking data was available; confirm with Search Console and replace or extend the terms once real queries exist.
+
+Facts used and their sources are linked on each page: APPA (95 million US households own a pet, 2025 survey), Vuforia's guide to Apple's Object Capture (100-image minimum, 70% overlap), and Stability AI's TripoSR announcement (single image, about 0.5 s on an Nvidia A100). Re-check these before updating the posts. All posts keep the pre-launch boundaries: no download, no uploads on the site, no price, no memory claims, and the gift post says gifting is not available.
+
+Wiring: posts are in the sitemap and the server's public-file allowlist, linked from `/blog.html` and the footer of every page, and carry BlogPosting JSON-LD. Not yet done: add Blog to each page's header nav, deploy, request indexing, and measure.

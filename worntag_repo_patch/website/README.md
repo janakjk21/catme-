@@ -9,6 +9,7 @@ A responsive marketing site served from static HTML by a small Node HTTP server.
 - `/faq.html` — availability, photo, privacy, price and device questions
 - `/about.html` — brand story
 - `/stories.html` — editorial reflections, not customer testimonials
+- `/blog.html` and `/blog/*.html` — guides written to be found and cited (see SEO_MARKETING.md)
 - `/privacy.html` — pre-launch site privacy notice
 - `/terms.html` — pre-launch website terms
 - `/beta.html` — beta invitation page with active consent-based email storage and self-service removal

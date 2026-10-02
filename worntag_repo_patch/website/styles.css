@@ -264,3 +264,25 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px soli
   .beta-expectations { margin-bottom: 64px; }
   .beta-expectations ul { padding-left: 22px; line-height: 1.75; }
 }
+
+/* Blog */
+.post { width: min(860px, calc(100% - 40px)); margin: 70px auto 110px; }
+.post-head { text-align: center; margin-bottom: 34px; }
+.post-head h1 { font-size: clamp(2.2rem, 5vw, 3.6rem); line-height: 1.08; margin: 12px 0 14px; }
+.post-head .eyebrow a { color: var(--leather); }
+.byline { color: var(--muted-ink); font-size: .95rem; margin: 0; }
+.post-image { width: 100%; height: auto; border-radius: var(--radius); margin: 0 0 26px; }
+.post-body { margin: 0; width: 100%; }
+.post-body h2 { font-size: 1.9rem; margin: 44px 0 12px; }
+.post-body p, .post-body li { color: var(--body-ink); line-height: 1.75; font-size: 1.05rem; }
+.post-body ul { padding-left: 1.2em; display: grid; gap: 6px; margin: 12px 0 18px; }
+.post-body a { color: var(--leather); text-decoration: underline; text-underline-offset: 3px; }
+.post-body table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: .98rem; display: block; overflow-x: auto; }
+.post-body th, .post-body td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--stone); vertical-align: top; }
+.post-body th { font-weight: 600; color: var(--worn-ink); background: rgba(215,206,194,.35); }
+.post-note { margin-top: 36px; padding: 16px 18px; border-radius: 18px; background: var(--warm-bone); font-size: .95rem; }
+.post-cta { display: flex; gap: 12px; flex-wrap: wrap; margin: 26px 0 8px; }
+.post-body .post-cta a { text-decoration: none; color: inherit; }
+.post-body .post-cta .button-dark { color: var(--paper-white); }
+.story-item h2 a { color: inherit; }
+@media (max-width: 640px) { .post { margin-top: 36px; } .post-body h2 { font-size: 1.55rem; } }
