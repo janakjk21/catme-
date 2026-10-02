@@ -52,7 +52,7 @@ const publicFiles = new Set([
   '/beta.html',
   '/blog/3d-dog-model-from-a-photo.html',
   '/blog/best-photo-for-a-3d-pet-model.html',
-  '/blog/digital-pet-gift-ideas.html',
+  '/blog/digital-pet-gift-ideas.html',\n  '/blog/pet-memorial-gift-from-a-photo.html',
   '/blog.html',
   '/apple-touch-icon.png',
   '/favicon-32.png',
