@@ -62,9 +62,10 @@ Method: every post must (1) lead its title with a term people or AI search for, 
 | `/blog/3d-dog-model-from-a-photo.html` | 3D dog model from a photo | Evaluating how to make a 3D pet |
 | `/blog/best-photo-for-a-3d-pet-model.html` | best photo for a 3D pet model | Preparing to make one |
 | `/blog/digital-pet-gift-ideas.html` | digital pet gift ideas | Buying a gift |
+| `/blog/pet-memorial-gift-from-a-photo.html` | pet memorial gift from a photo | Buying a memorial keepsake |
 
 Keyword basis and limits: this folder contains no WornTag keyword list and the Slap3D list must not be reused, so the lead terms come from WornTag's own positioning language (photo, 3D companion, dog or cat, gift). They are hypotheses. No search-volume or ranking data was available; confirm with Search Console and replace or extend the terms once real queries exist.
 
-Facts used and their sources are linked on each page: APPA (95 million US households own a pet, 2025 survey), Vuforia's guide to Apple's Object Capture (100-image minimum, 70% overlap), and Stability AI's TripoSR announcement (single image, about 0.5 s on an Nvidia A100). Re-check these before updating the posts. All posts keep the pre-launch boundaries: no download, no uploads on the site, no price, no memory claims, and the gift post says gifting is not available.
+Facts used and their sources are linked on each page: APPA (95 million US households own a pet, 2025 survey), Vuforia's guide to Apple's Object Capture (100-image minimum, 70% overlap), Stability AI's TripoSR announcement (single image, about 0.5 s on an Nvidia A100), plus PDSA and Blue Cross guidance for the memorial article. Re-check these before updating the posts. All posts keep the pre-launch boundaries: no download, no uploads on the site, no price, no memory claims, and the gift post says gifting is not available.
 
 Wiring: posts are in the sitemap and the server's public-file allowlist, linked from `/blog.html` and the footer of every page, and carry BlogPosting JSON-LD. Not yet done: add Blog to each page's header nav, deploy, request indexing, and measure.
