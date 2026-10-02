@@ -45,3 +45,7 @@ Cloudflare `worntag.com` and `www.worntag.com` records target the separate Railw
 - Publish a real support/contact route, actual app store links, confirmed platform requirements and price.
 - Add a working early-access mechanism only after its delivery and data handling are configured.
 - Verify metadata, status codes, redirects, JSON-LD, sitemap, mobile/desktop performance, accessibility and social previews on the live host; submit the sitemap in Search Console and Bing Webmaster Tools.
+
+## Deployment
+
+Railway service `worntag-website` (project `splendid-warmth`) is connected to GitHub repo `janakjk21/catme-`, branch `main`, root directory `worntag_repo_patch/website`, watch path `/worntag_repo_patch/website/**`. A push to `main` that changes files in this folder deploys to production (worntag.com). Changes elsewhere in the repo, such as the Unity project, do not deploy. Check `/health` and the sitemap after a deploy.
