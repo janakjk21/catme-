@@ -183,6 +183,8 @@ namespace CatMe.Editor
             root.SetString("CFBundleDisplayName", "WornTag");
             // The selfie screen opens the front camera (CatMePhotoPicker.mm).
             root.SetString("NSCameraUsageDescription", "Take a selfie so we can make a little 3D you to walk with your pet.");
+            // Album "Save to Photos" (CatMePhotoPicker_SaveToPhotos).
+            root.SetString("NSPhotoLibraryAddUsageDescription", "Save photos of you and your pet to your Photos.");
             // Google sign-in: the client id, and the reversed client id as the URL scheme Google returns to (from GoogleService-Info.plist).
             string firebasePlistPath = Path.Combine(Application.dataPath, "GoogleService-Info.plist");
             if (File.Exists(firebasePlistPath))

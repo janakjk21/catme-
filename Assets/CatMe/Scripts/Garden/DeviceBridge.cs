@@ -96,6 +96,19 @@ namespace CatMe.Garden
             }
         }
 
+        /// <summary>Copies a saved album photo to the phone's Photos library. Editor: shows the file instead. Returns false where unsupported.</summary>
+        public static bool SaveToPhotos(string path)
+        {
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) return false;
+#if UNITY_EDITOR
+            EditorUtility.RevealInFinder(path); return true;
+#elif UNITY_IOS
+            CatMePhotoPicker_SaveToPhotos(path); return true;
+#else
+            return false;
+#endif
+        }
+
         // Words for the native face check (COPY.md, Messages).
         static string PersonPhotoMessage(string reason)
         {
@@ -194,6 +207,7 @@ namespace CatMe.Garden
         [DllImport("__Internal")] static extern void CatMePhotoPicker_Open(string target);
         [DllImport("__Internal")] static extern void CatMePhotoPicker_OpenForHuman(string target);
         [DllImport("__Internal")] static extern void CatMePhotoPicker_TakeSelfie(string target);
+        [DllImport("__Internal")] static extern void CatMePhotoPicker_SaveToPhotos(string path);
         [DllImport("__Internal")] static extern void CatMeAppleSignIn_Open(string target);
 #endif
     }

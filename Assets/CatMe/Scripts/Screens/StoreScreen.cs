@@ -42,7 +42,7 @@ namespace CatMe.Garden
         void Refresh()
         {
             var pet = PetRoster.Active;
-            shopper.text = "Shopping for " + pet.name + " · " + (pet.Kind == Species.Dog ? "dog" : "cat");
+            shopper.text = "Shopping for " + PetRoster.NameForText() + " · " + (pet.Kind == Species.Dog ? "dog" : "cat");
             Tint(toysTab, !bag && tab == StoreCategory.Toy); Tint(foodTab, !bag && tab == StoreCategory.Food); Tint(bagTab, bag);
             foreach (Transform c in content) { c.gameObject.SetActive(false); UnityEngine.Object.Destroy(c.gameObject); }
             var items = new List<StoreItem>();

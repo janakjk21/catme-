@@ -26,6 +26,8 @@ Owner push `b1633e8`: old 166 MB butterfly replaced by AI cartoon butterflies, R
 
 Feeding and frame (cloud, not compiled): bigger bowl and cat house (menu CatMe > Rooms > Refurnish House Room), "Fill the bowl" with kibble and the pet eating, pet leads home when hungry and to the bowl inside, pet admires a new frame photo, frame lead only while empty, frame account check once a second.
 
+Polish pass (cloud, not compiled): days now change (new day after a short night, on relaunch after 3 h or at night, never the same weather twice) with a day line; bigger tent and a furnished tent room with a fire (rebuild the place); leaving the tent anytime; Story linger lengthens all lines; Save to Photos in the album (needs NSPhotoLibraryAddUsageDescription, set by IOSDevelopmentBuild for development builds only); store food used at dinner; guest account text no longer mentions Apple only.
+
 ## Current task
 
 Owner request: furnish the house and add an account-saved photo frame with a cat guide and contextual action. Unity compilation reports 0 errors and warnings; 22 focused local server tests pass (frame, privacy, existing API). Play Mode checks use a fake account API and isolated temporary save, never the player's photo or a provider. Evidence in `docs/implementation/house-photo-frame/`. Live account persistence requires owner-approved deployment of the sibling server; phone validation remains pending.

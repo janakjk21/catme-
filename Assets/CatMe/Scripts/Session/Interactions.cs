@@ -24,7 +24,7 @@ namespace CatMe.Session
         InteractionPoint active;
         InteractionPoint sitPoint;
         Transform eyeAnchor;
-        float roomEnteredAt; bool rainStopped;
+        float roomEnteredAt; bool rainStopped, rainedOnEntry;
         AudioSource rainAudio; AudioClip rainClip; AudioClip meow;
         string lightingBefore = "Sunset";
         Vector3 doorSpot;
@@ -79,7 +79,7 @@ namespace CatMe.Session
             float target = 0f;
             var w = director.WeatherController;
             if (w != null && w.Intensity > .02f) target = Mathf.Lerp(0f, .1f, w.Intensity);
-            if (state == State.InRoom && !rainStopped) target = .24f;
+            if (state == State.InRoom && !rainStopped && rainedOnEntry) target = .24f;   // rain on the canvas only if it was raining
             if (PlayerPrefs.GetInt("CatMe.SoundEnabled", 1) == 0) target = 0f;
             rainAudio.volume = Mathf.MoveTowards(rainAudio.volume, target, Time.unscaledDeltaTime * .25f);
 
@@ -111,8 +111,9 @@ namespace CatMe.Session
             if (state == State.Sitting) { SeatedCatWander(); SetButton("Stand up"); return; }
             if (state == State.InRoom)
             {
-                if (!rainStopped && Time.time - roomEnteredAt > RoomRainSeconds) { rainStopped = true; director.EndRain(); garden.SetAppStatus("The rain has stopped."); }
-                SetButton(rainStopped ? "Go out" : null);
+                if (!rainStopped && Time.time - roomEnteredAt > RoomRainSeconds) { rainStopped = true; director.EndRain(); if (rainedOnEntry) garden.SetAppStatus("The rain has stopped."); }
+                // You can always step out after a moment; waiting out the rain is the reward, not a lock.
+                SetButton(Time.time - roomEnteredAt > 3f ? "Go out" : null);
                 return;
             }
             // Free: nearest interaction point in range
@@ -202,7 +203,7 @@ namespace CatMe.Session
                     else if (houseAction == HouseAction.Frame && NearFrame && houseFrame.CanInteract) houseFrame.Interact();
                     break;
                 case State.Sitting: StartCoroutine(StandUp()); break;
-                case State.InRoom: if (rainStopped) StartCoroutine(LeaveTent()); break;
+                case State.InRoom: if (Time.time - roomEnteredAt > 3f) StartCoroutine(LeaveTent()); break;
             }
         }
 
@@ -270,6 +271,7 @@ namespace CatMe.Session
             state = State.Busy; garden.SetInputBlocked(true);
             var door = active.transform; doorSpot = door.position; doorYaw = door.eulerAngles.y;
             lightingBefore = director.CurrentLightingName ?? "Sunset";
+            rainedOnEntry = director.WeatherController != null && director.WeatherController.Intensity > .1f;
             yield return director.FadeTo(1f, .5f);
             var spot = director.FindNamed("Room_Spot");
             if (spot == null) { Debug.LogWarning("[CatMe][Session] Tent room is missing in this place."); garden.SetInputBlocked(false); yield return director.FadeTo(0f, .3f); state = State.Free; yield break; }
@@ -284,8 +286,22 @@ namespace CatMe.Session
             yield return director.FadeTo(0f, .6f);
             garden.SetInputBlocked(false);
             if (meow != null && PlayerPrefs.GetInt("CatMe.SoundEnabled", 1) == 1) AudioSource.PlayClipAtPoint(meow, Camera.main.transform.position, .8f);
-            garden.SetAppStatus("Listen to the rain.");
+            garden.SetAppStatus(rainedOnEntry ? "Warm and dry by the fire. Listen to the rain." : "A cosy spot by the fire.");
+            // The pet pads over to its cushion by the fire and settles there, facing the flames.
+            var cushion = director.FindNamed("Tent_CatSpot");
+            if (cushion != null) StartCoroutine(SettleByFire(cushion));
             state = State.InRoom;
+        }
+
+        IEnumerator SettleByFire(Transform cushion)
+        {
+            yield return null;   // started just before the room state is set
+            garden.SetCuriosity(cushion.position, 6f);
+            for (float t = 0f; t < 6f && state == State.InRoom && Flat(garden.CatPosition, cushion.position) > .3f; t += Time.deltaTime) yield return null;
+            if (state != State.InRoom) yield break;
+            garden.SetCuriosity(Vector3.zero, 0f);
+            garden.HoldCat(garden.SampledGroundPosition(cushion.position), cushion.eulerAngles.y);
+            garden.SetAppStatus(PetRoster.NameForText(true) + " is cosy by the fire.");
         }
 
         IEnumerator LeaveTent()
@@ -467,7 +483,9 @@ namespace CatMe.Session
             garden.ClearLead(); garden.ReleaseCat(); catSleeping = false;
             Vector3 spot = EatSpot;
             garden.SetCuriosity(spot, 10f);
-            garden.SetAppStatus("Dinner time. Here comes " + PetRoster.NameForText() + ".");
+            // Food from the store's bag makes dinner a little special.
+            var treat = StoreCatalog.FirstOwned(StoreCategory.Food, PetRoster.Active.Kind);
+            garden.SetAppStatus((treat != null ? "Dinner time: " + treat.name.ToLowerInvariant() : "Dinner time") + ". Here comes " + PetRoster.NameForText() + ".");
             for (float t = 0f; t < 10f && Flat(garden.CatPosition, spot) > .35f; t += Time.deltaTime) yield return null;
             garden.SetCuriosity(Vector3.zero, 0f);
             Vector3 look = bowlCentre - spot; look.y = 0f;
@@ -489,7 +507,7 @@ namespace CatMe.Session
             feed = FeedStage.Empty; fullUntil = Time.time + FullSeconds; eating = null;
             FindAnyObjectByType<CompanionLeader>()?.HadDinner();
             garden.ReleaseCat();
-            FindAnyObjectByType<CatPetInput>()?.PopHearts(3);
+            FindAnyObjectByType<CatPetInput>()?.PopHearts(StoreCatalog.FirstOwned(StoreCategory.Food, PetRoster.Active.Kind) != null ? 5 : 3);
             garden.SetAppStatus("All gone. " + name + " loved that.");
         }
 

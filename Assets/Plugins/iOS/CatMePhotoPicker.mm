@@ -205,3 +205,13 @@ extern "C" void CatMePhotoPicker_OpenForHuman(const char *gameObjectName) {
 extern "C" void CatMePhotoPicker_TakeSelfie(const char *gameObjectName) {
     CatMePhotoPicker_OpenWithCallback(gameObjectName, @"OnHumanPhotoPicked", YES);
 }
+
+// Copies an album photo into the phone's Photos library (needs NSPhotoLibraryAddUsageDescription in Info.plist).
+extern "C" void CatMePhotoPicker_SaveToPhotos(const char *path) {
+    if (path == nullptr) return;
+    NSString *file = [NSString stringWithUTF8String:path];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        UIImage *image = [UIImage imageWithContentsOfFile:file];
+        if (image) UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil);
+    });
+}

@@ -208,7 +208,7 @@ namespace CatMe.Garden
             SetGameplayControlsVisible(false); Time.timeScale = 0f;
             onboarding.OnAccountDone = () => CloseOverlayScreen();
             string who = identityForAccount != null && !string.IsNullOrEmpty(identityForAccount.UserId)
-                ? (identityForAccount.IsGuest ? "You are using a guest account. Sign in with Apple to keep your pets safe." : "Your pets are saved to your account.")
+                ? (identityForAccount.IsGuest ? "You are using a guest account. Sign in to keep your pets if you change phones." : "Your pets are saved to your account.")
                 : null;
             if (who == null) onboarding.BeginAccountOnly();
             else onboarding.ShowSignedIn(who, () => identityForAccount.SignOut(), () => ConfirmDeletion(true));

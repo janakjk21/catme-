@@ -31,7 +31,7 @@ namespace CatMe.Garden
         GameObject gallery, photoMode;
         Image galleryImage;
         Text galleryCaption;
-        Button previousPhoto, nextPhoto, deletePhoto;
+        Button previousPhoto, nextPhoto, deletePhoto, savePhoto;
         Light sun;
         ParticleSystem rain;
         AudioSource weatherAudio;
@@ -376,8 +376,9 @@ namespace CatMe.Garden
             galleryCaption=MakeLabel(sheet.transform,"Photo caption","Photos stay on this phone.",new Vector2(.5f,.5f),new Vector2(780,44));galleryCaption.rectTransform.anchoredPosition=new Vector2(0,-342);galleryCaption.color=CatMeUIStyle.MutedInk;
             previousPhoto=Round(sheet.transform,"back","Previous photo",new Vector2(0f,.55f),new Vector2(-585,0),()=>MovePhoto(-1));
             nextPhoto=Round(sheet.transform,"arrow","Next photo",new Vector2(1f,.55f),new Vector2(585,0),()=>MovePhoto(1));
-            deletePhoto=MakeButton(sheet.transform,"Delete selected photo","Delete photo",new Vector2(.5f,0f),Vector2.zero,new Vector2(260,72),DeleteSelectedPhoto);deletePhoto.GetComponent<RectTransform>().anchoredPosition=new Vector2(-240,62);CatMeUIStyle.StyleButton(deletePhoto,CatMeUIStyle.Danger,true);
-            {var back=MakeButton(sheet.transform,"Close photo album","Back to garden",new Vector2(.5f,0f),Vector2.zero,new Vector2(320,72),CloseGallery);back.GetComponent<RectTransform>().anchoredPosition=new Vector2(150,62);CatMeUIStyle.StyleButton(back,CatMeUIStyle.Pine,true);}
+            deletePhoto=MakeButton(sheet.transform,"Delete selected photo","Delete photo",new Vector2(.5f,0f),Vector2.zero,new Vector2(260,72),DeleteSelectedPhoto);deletePhoto.GetComponent<RectTransform>().anchoredPosition=new Vector2(-420,62);CatMeUIStyle.StyleButton(deletePhoto,CatMeUIStyle.Danger,true);
+            savePhoto=MakeButton(sheet.transform,"Save selected photo","Save to Photos",new Vector2(.5f,0f),Vector2.zero,new Vector2(280,72),SaveSelectedPhoto);savePhoto.GetComponent<RectTransform>().anchoredPosition=new Vector2(-110,62);CatMeUIStyle.StyleButton(savePhoto,CatMeUIStyle.Olive,true);
+            {var back=MakeButton(sheet.transform,"Close photo album","Back to garden",new Vector2(.5f,0f),Vector2.zero,new Vector2(320,72),CloseGallery);back.GetComponent<RectTransform>().anchoredPosition=new Vector2(230,62);CatMeUIStyle.StyleButton(back,CatMeUIStyle.Pine,true);}
             gallery.SetActive(false);
         }
 
@@ -424,11 +425,16 @@ namespace CatMe.Garden
             photos=ListPhotos();photoIndex=Mathf.Clamp(photoIndex,0,Mathf.Max(0,photos.Length-1));gallery.SetActive(true);gallery.transform.SetAsLastSibling();ShowPhoto();
         }
         internal void OpenPhotoAlbum() => OpenGallery();
+        void SaveSelectedPhoto()
+        {
+            if(photos==null||photos.Length==0)return;
+            ShowNotice(DeviceBridge.SaveToPhotos(photos[photoIndex])?"Saved to your Photos.":"This photo stays in the album on this phone.");
+        }
         void MovePhoto(int direction){if(photos.Length==0)return;deleteArmed=false;photoIndex=(photoIndex+direction+photos.Length)%photos.Length;ShowPhoto();}
         void ShowPhoto()
         {
-            if(photos.Length==0){galleryImage.sprite=null;galleryImage.color=new Color(.2f,.22f,.2f,1);galleryCaption.text="No photos yet. Tap the camera to take one.";deletePhoto.interactable=false;return;}
-            deletePhoto.interactable=true;
+            if(photos.Length==0){galleryImage.sprite=null;galleryImage.color=new Color(.2f,.22f,.2f,1);galleryCaption.text="No photos yet. Tap the camera to take one.";deletePhoto.interactable=false;if(savePhoto!=null)savePhoto.interactable=false;return;}
+            deletePhoto.interactable=true;if(savePhoto!=null)savePhoto.interactable=true;
             var bytes=File.ReadAllBytes(photos[photoIndex]);var texture=new Texture2D(2,2,TextureFormat.RGBA32,false);
             if(!texture.LoadImage(bytes)){Destroy(texture);galleryCaption.text="This photo could not be opened.";return;}
             var old=galleryImage.sprite;galleryImage.sprite=Sprite.Create(texture,new Rect(0,0,texture.width,texture.height),new Vector2(.5f,.5f));galleryImage.color=Color.white;if(old!=null){Destroy(old.texture);Destroy(old);}

@@ -32,6 +32,7 @@ namespace CatMe.Garden
             if (!force && Busy) return false;
             string line = garden.Behavior.Line(moment);
             if (string.IsNullOrEmpty(line)) return false;
+            if (PlayerPrefs.GetFloat("CatMe.Journey.StoryHold", 4.2f) > 6f) seconds *= 1.6f;   // Story linger setting
             text.text = line; shownAt = Time.unscaledTime; until = shownAt + seconds; cooldownUntil = until + 5f;
             bubble.gameObject.SetActive(true);
             garden.Behavior.Sound(garden.CompanionAudio, moment == Moment.Petted ? "purr" : "call", .5f);

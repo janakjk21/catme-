@@ -969,26 +969,63 @@ namespace CatMe.Editor
             var ip = o.AddComponent<InteractionPoint>(); ip.kind = InteractionKind.Sit; ip.label = "Sit"; ip.radius = 2.4f;
         }
 
-        // Tent beside the path with a "Get in" prompt, plus a small dark room far outside the playable area that the prompt switches to.
+        // Tent beside the path with a "Get in" prompt, plus a cosy room far outside the playable area that the prompt switches to.
         static void TentWithRoom(Vector3 tentCentre, float pathEdgeX)
         {
             Tent(tentCentre);
             var o = new GameObject("Interact_Tent"); o.transform.SetParent(structures, false);
             o.transform.position = OnGround(new Vector3(pathEdgeX, 0, tentCentre.z));
             var ip = o.AddComponent<InteractionPoint>(); ip.kind = InteractionKind.EnterTent; ip.label = "Get in"; ip.radius = 3.2f;
-            // Room: 3 x 3 m, 2.2 m high, canvas walls, a very dim lantern. Floor is Walkable so the ground probe works.
-            Vector3 c = new Vector3(160f, 0f, 0f);
-            var dark = Mat("Tent room canvas", new Color(.20f, .17f, .12f));
-            var floor = Box("Tent room floor", structures, c + Vector3.up * -.05f, new Vector3(3.4f, .1f, 3.4f), Mat("Tent room floor", new Color(.16f, .13f, .1f)), true);
+            TentRoom(new Vector3(160f, 0f, 0f));
+        }
+
+        // Room: 5 x 5 m, 2.8 m high, warm canvas walls, a small fire in a stone ring, rug, sleeping bag, a cushion for the pet,
+        // a crate and a hanging lantern. Floor is Walkable so the ground probe works. Room_Spot faces the fire.
+        static void TentRoom(Vector3 c)
+        {
+            const float half = 2.5f, height = 2.8f;
+            var walls = Mat("Tent room canvas warm", new Color(.34f, .27f, .18f));
+            var floor = Box("Tent room floor", structures, c + Vector3.up * -.05f, new Vector3(half * 2f, .1f, half * 2f), Mat("Tent room floor", new Color(.24f, .19f, .14f)), true);
             floor.layer = LayerMask.NameToLayer(GroundProbe.WalkableLayerName);
-            Box("Tent room wall N", structures, c + new Vector3(0, 1.1f, 1.7f), new Vector3(3.4f, 2.2f, .1f), dark, true);
-            Box("Tent room wall S", structures, c + new Vector3(0, 1.1f, -1.7f), new Vector3(3.4f, 2.2f, .1f), dark, true);
-            Box("Tent room wall E", structures, c + new Vector3(1.7f, 1.1f, 0), new Vector3(.1f, 2.2f, 3.4f), dark, true);
-            Box("Tent room wall W", structures, c + new Vector3(-1.7f, 1.1f, 0), new Vector3(.1f, 2.2f, 3.4f), dark, true);
-            Box("Tent room roof", structures, c + new Vector3(0, 2.25f, 0), new Vector3(3.4f, .1f, 3.4f), dark, true);
-            var spot = new GameObject("Room_Spot"); spot.transform.SetParent(structures, false); spot.transform.position = c + new Vector3(0, 0, -.9f); spot.transform.rotation = Quaternion.Euler(0, 0, 0);
-            var lg = new GameObject("Tent room lantern"); lg.transform.SetParent(structures, false); lg.transform.position = c + new Vector3(.8f, .35f, .9f);
+            Box("Tent room wall N", structures, c + new Vector3(0, height / 2f, half), new Vector3(half * 2f, height, .1f), walls, true);
+            Box("Tent room wall S", structures, c + new Vector3(0, height / 2f, -half), new Vector3(half * 2f, height, .1f), walls, true);
+            Box("Tent room wall E", structures, c + new Vector3(half, height / 2f, 0), new Vector3(.1f, height, half * 2f), walls, true);
+            Box("Tent room wall W", structures, c + new Vector3(-half, height / 2f, 0), new Vector3(.1f, height, half * 2f), walls, true);
+            Box("Tent room roof", structures, c + new Vector3(0, height + .05f, 0), new Vector3(half * 2f, .1f, half * 2f), walls, true);
+            // Poles: a ridge along the middle and one at each corner, so it reads as a tent rather than a box.
+            Box("Tent ridge pole", structures, c + new Vector3(0, height - .12f, 0), new Vector3(.08f, .08f, half * 2f), Timber, false);
+            for (int x = -1; x <= 1; x += 2) for (int z = -1; z <= 1; z += 2)
+                Box("Tent corner pole", structures, c + new Vector3(x * (half - .12f), height / 2f, z * (half - .12f)), new Vector3(.08f, height, .08f), Timber, false);
+
+            // Fire in a ring of stones, with crossed logs; CampFire adds flames, sparks, light and crackle at runtime.
+            Vector3 fire = c + new Vector3(0f, 0f, 1.1f);
+            for (int i = 0; i < 9; i++)
+            {
+                float a = i / 9f * Mathf.PI * 2f;
+                Box("Fire stone", structures, fire + new Vector3(Mathf.Cos(a) * .42f, .07f, Mathf.Sin(a) * .42f), new Vector3(.2f, .14f, .17f), Stone, false, a * Mathf.Rad2Deg);
+            }
+            Box("Fire log", structures, fire + new Vector3(0, .07f, 0), new Vector3(.55f, .09f, .09f), Timber, false, 30f);
+            Box("Fire log", structures, fire + new Vector3(0, .1f, 0), new Vector3(.55f, .09f, .09f), Timber, false, -40f);
+            var fireGo = new GameObject("Tent fire"); fireGo.transform.SetParent(structures, false); fireGo.transform.position = fire + Vector3.up * .08f;
+            fireGo.AddComponent<CampFire>();
+            var blocker = Box("Tent fire blocker", structures, fire + Vector3.up * .3f, new Vector3(1f, .6f, 1f), Stone, true);
+            Object.DestroyImmediate(blocker.GetComponent<Renderer>()); Object.DestroyImmediate(blocker.GetComponent<MeshFilter>());
+
+            Box("Tent rug", structures, c + new Vector3(0f, .015f, -.2f), new Vector3(2.4f, .03f, 1.7f), Mat("Tent rug", new Color(.58f, .27f, .2f)), false);
+            Box("Sleeping bag", structures, c + new Vector3(-1.75f, .07f, .1f), new Vector3(.8f, .14f, 1.9f), Mat("Sleeping bag", new Color(.25f, .38f, .52f)), false);
+            Box("Pillow", structures, c + new Vector3(-1.75f, .16f, .9f), new Vector3(.55f, .12f, .32f), Mat("Pillow", new Color(.88f, .84f, .74f)), false);
+            Box("Blanket", structures, c + new Vector3(-1.7f, .15f, -.35f), new Vector3(.82f, .05f, .7f), Mat("Blanket", new Color(.66f, .55f, .32f)), false);
+            Box("Pet cushion", structures, c + new Vector3(1f, .05f, .55f), new Vector3(.62f, .1f, .62f), Mat("Pet cushion", new Color(.74f, .52f, .31f)), false);
+            Box("Crate", structures, c + new Vector3(1.85f, .25f, 1.85f), new Vector3(.5f, .5f, .5f), Timber, true, 12f);
+            Box("Mug", structures, c + new Vector3(1.8f, .55f, 1.8f), new Vector3(.09f, .11f, .09f), Mat("Mug", new Color(.85f, .9f, .92f)), false);
+            Box("Hanging lantern", structures, c + new Vector3(-1.6f, 2.05f, -1.8f), new Vector3(.18f, .26f, .18f), Mat("Lantern glow", new Color(1f, .8f, .5f), 0f, new Color(1.6f, 1f, .5f)), false);
+            var lg = new GameObject("Tent room lantern"); lg.transform.SetParent(structures, false); lg.transform.position = c + new Vector3(-1.6f, 1.85f, -1.8f);
             var l = lg.AddComponent<Light>(); l.type = LightType.Point; l.range = 4f; l.intensity = .35f; l.color = new Color(1f, .62f, .32f); l.shadows = LightShadows.None;
+
+            var spot = new GameObject("Room_Spot"); spot.transform.SetParent(structures, false); spot.transform.position = c + new Vector3(0, 0, -1.5f); spot.transform.rotation = Quaternion.identity;
+            // Where the pet curls up: on its cushion, facing the fire.
+            var pet = new GameObject("Tent_CatSpot"); pet.transform.SetParent(structures, false); pet.transform.position = c + new Vector3(1f, .1f, .55f);
+            pet.transform.rotation = Quaternion.LookRotation(new Vector3(fire.x - pet.transform.position.x, 0f, fire.z - pet.transform.position.z));
         }
 
         static void Lantern(string name, Vector3 p)
@@ -1011,10 +1048,18 @@ namespace CatMe.Editor
         {
             var g = new GameObject("TEMP_Replaceable_Tent").transform; g.SetParent(structures, false);
             Vector3 b = OnGround(centre);
-            // Two leaning panels form an A-frame. Each panel has a thin solid collider.
-            Box("Tent panel L", g, b + new Vector3(-.8f, 1f, 0), new Vector3(.06f, 2.3f, 3.2f), Canvas, true, 0f).transform.rotation = Quaternion.Euler(0, 0, -32f);
-            Box("Tent panel R", g, b + new Vector3(.8f, 1f, 0), new Vector3(.06f, 2.3f, 3.2f), Canvas, true, 0f).transform.rotation = Quaternion.Euler(0, 0, 32f);
-            Box("Tent floor", g, b + Vector3.up * .03f, new Vector3(2.4f, .05f, 3.2f), Mat("Tent floor", new Color(.45f, .40f, .30f)), false);
+            // Two leaning panels form an A-frame (about 3.4 m wide, 2.7 m tall, 4.4 m deep) so it reads as a place to shelter from the path.
+            Box("Tent panel L", g, b + new Vector3(-1.05f, 1.3f, 0), new Vector3(.06f, 3.0f, 4.4f), Canvas, true, 0f).transform.rotation = Quaternion.Euler(0, 0, -32f);
+            Box("Tent panel R", g, b + new Vector3(1.05f, 1.3f, 0), new Vector3(.06f, 3.0f, 4.4f), Canvas, true, 0f).transform.rotation = Quaternion.Euler(0, 0, 32f);
+            Box("Tent ridge pole", g, b + new Vector3(0f, 2.62f, 0f), new Vector3(.09f, .09f, 4.8f), Timber, false);
+            Box("Tent front pole", g, b + new Vector3(0f, 1.3f, 2.25f), new Vector3(.08f, 2.6f, .08f), Timber, false);
+            Box("Tent back pole", g, b + new Vector3(0f, 1.3f, -2.25f), new Vector3(.08f, 2.6f, .08f), Timber, false);
+            Box("Tent floor", g, b + Vector3.up * .03f, new Vector3(3.2f, .05f, 4.4f), Mat("Tent floor", new Color(.45f, .40f, .30f)), false);
+            Box("Tent doormat", g, b + new Vector3(0f, .04f, 2.6f), new Vector3(1.1f, .03f, .7f), Mat("Tent rug", new Color(.58f, .27f, .2f)), false);
+            // A lantern hanging at the entrance: it glows at dusk and marks the tent from along the path.
+            Box("Tent entrance lantern", g, b + new Vector3(0f, 2.15f, 2.3f), new Vector3(.18f, .26f, .18f), Mat("Lantern glow", new Color(1f, .8f, .5f), 0f, new Color(1.6f, 1f, .5f)), false);
+            var lg = new GameObject("Night_Tent entrance light"); lg.transform.SetParent(g, false); lg.transform.position = b + new Vector3(0f, 1.95f, 2.6f);
+            var l = lg.AddComponent<Light>(); l.type = LightType.Point; l.range = 5f; l.intensity = .7f; l.color = new Color(1f, .7f, .38f); l.shadows = LightShadows.None;
         }
 
         static BoxCollider Shelter(Vector3 centre)

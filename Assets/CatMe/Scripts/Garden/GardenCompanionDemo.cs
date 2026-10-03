@@ -960,7 +960,10 @@ namespace CatMe.Garden
 
         private IEnumerator FadeStatus()
         {
-            yield return new WaitForSecondsRealtime(2.8f);
+            // Longer lines stay longer; the Story linger setting adds reading time to every line.
+            bool linger = PlayerPrefs.GetFloat("CatMe.Journey.StoryHold", 4.2f) > 6f;
+            int words = status != null ? status.text.Split(' ').Length : 0;
+            yield return new WaitForSecondsRealtime(Mathf.Max(2.8f, words * .32f) * (linger ? 1.7f : 1f));
             float elapsed = 0f;
             while (elapsed < 0.42f && statusGroup != null)
             {

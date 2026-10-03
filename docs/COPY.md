@@ -40,6 +40,11 @@ House frame: "Add a photo here". Cat guide: "Follow me. Let's put a photo in the
 
 ## Status lines
 
+Day: "A clear, sunny day." / "Soft clouds drifting over." / "A misty start to the day." / "Showers might pass by today." / "A rainy day. The tent is cosy."
+Tent: "Warm and dry by the fire. Listen to the rain." (or "A cosy spot by the fire." when dry), "[Name] is cosy by the fire."
+Album: button "Save to Photos"; "Saved to your Photos."
+Feeding with store food: "Dinner time: salmon bites. Here comes [name]."
+
 | Moment | Text |
 |---|---|
 | Loading | Getting your garden ready (in app) |
@@ -75,7 +80,7 @@ Your pets · Store · Photo album · Account · Settings · Keep exploring
 | Sound | Hear the garden and your pet |
 | Guidance | Show helpful prompts while you walk |
 | Story notes | Show quiet story lines |
-| Story linger | Give story lines more reading time |
+| Story linger | Give story lines more reading time (status lines and the pet's speech stay longer) |
 | Reduce motion | Keep movement and transitions gentle |
 | Haptics | Feel a light tap on actions |
 | Delete my photos | Remove your photos from our server. Your pets stay. |

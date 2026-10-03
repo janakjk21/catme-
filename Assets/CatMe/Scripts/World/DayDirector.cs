@@ -12,8 +12,10 @@ namespace CatMe.World
     /// </summary>
     public sealed class DayDirector : MonoBehaviour
     {
-        const string TypeKey = "CatMe.World.DayType", TimeKey = "CatMe.World.Time";
+        const string TypeKey = "CatMe.World.DayType", TimeKey = "CatMe.World.Time", SavedAtKey = "CatMe.World.SavedAt";
         const float CycleSeconds = 1080f; // afternoon -> blue hour over about 18 minutes of play
+        const float NightHoldSeconds = 150f;  // a short night, then a new day starts (it used to stay night for good)
+        const double NewDayAfterHours = 3.0;  // coming back after a break starts a fresh day
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void DefaultWind() { Shader.SetGlobalFloat("_CatMeWindScale", 1f); }
@@ -26,14 +28,16 @@ namespace CatMe.World
         public bool Night => TimeOfDay > .72f;
         public bool Suspended { get; set; }                  // true inside rooms, which set their own lighting
         float cloudTarget, showerAt, showerUntil, applyAt, saveAt, driftSeed;
-        bool nightApplied;
+        bool nightApplied, dawning, announcePending;
+        float nightFor, announceAt;
         ParticleSystem fireflies;
 
         public void Initialize(SessionDirector sessionDirector, PlaceLighting placeLighting, PlaceWeather placeWeather)
         {
             director = sessionDirector; lighting = placeLighting; weather = placeWeather;
             driftSeed = Random.value * 100f;
-            if (PlayerPrefs.HasKey(TypeKey) && PlayerPrefs.HasKey(TimeKey)) { Type = (DayType)Mathf.Clamp(PlayerPrefs.GetInt(TypeKey), 0, 4); TimeOfDay = Mathf.Clamp01(PlayerPrefs.GetFloat(TimeKey)); }
+            if (PlayerPrefs.HasKey(TypeKey) && PlayerPrefs.HasKey(TimeKey) && !SavedLongAgo() && PlayerPrefs.GetFloat(TimeKey) < .9f)
+            { Type = (DayType)Mathf.Clamp(PlayerPrefs.GetInt(TypeKey), 0, 4); TimeOfDay = Mathf.Clamp01(PlayerPrefs.GetFloat(TimeKey)); }
             else NewDay();
             windClip = Resources.Load<AudioClip>("CatMeAudio/wind-low");
             if (windClip != null) { windAudio = gameObject.AddComponent<AudioSource>(); windAudio.clip = windClip; windAudio.loop = true; windAudio.spatialBlend = 0f; windAudio.volume = 0f; windAudio.Play(); }
@@ -69,14 +73,55 @@ namespace CatMe.World
         /// <summary>Weighted toward fair weather; never chaotic.</summary>
         public void NewDay()
         {
-            float r = Random.value;
-            Type = r < .40f ? DayType.Clear : r < .65f ? DayType.PartlyCloudy : r < .75f ? DayType.MistyMorning : r < .90f ? DayType.Showery : DayType.Rainy;
+            bool hadDay = PlayerPrefs.HasKey(TypeKey);
+            var previous = (DayType)PlayerPrefs.GetInt(TypeKey, -1);
+            // Never the same weather two days running, so returning players notice the garden change.
+            for (int i = 0; i < 4; i++)
+            {
+                float r = Random.value;
+                Type = r < .40f ? DayType.Clear : r < .65f ? DayType.PartlyCloudy : r < .75f ? DayType.MistyMorning : r < .90f ? DayType.Showery : DayType.Rainy;
+                if (!hadDay || Type != previous) break;
+            }
             TimeOfDay = Random.Range(0f, .4f);
+            announcePending = true; announceAt = Time.time + 6f;
             Save();
             Debug.Log("[CatMe][World] New day: " + Type + ", starting at time " + TimeOfDay.ToString("F2"));
         }
 
-        void Save() { PlayerPrefs.SetInt(TypeKey, (int)Type); PlayerPrefs.SetFloat(TimeKey, TimeOfDay); PlayerPrefs.Save(); }
+        void Save() { PlayerPrefs.SetInt(TypeKey, (int)Type); PlayerPrefs.SetFloat(TimeKey, TimeOfDay); PlayerPrefs.SetString(SavedAtKey, System.DateTime.UtcNow.Ticks.ToString()); PlayerPrefs.Save(); }
+
+        static bool SavedLongAgo()
+        {
+            if (!long.TryParse(PlayerPrefs.GetString(SavedAtKey, ""), out long ticks)) return false;
+            return (System.DateTime.UtcNow - new System.DateTime(ticks, System.DateTimeKind.Utc)).TotalHours > NewDayAfterHours;
+        }
+
+        // One quiet line so the player notices what kind of day it is.
+        static string DayLine(DayType type)
+        {
+            switch (type)
+            {
+                case DayType.Clear: return "A clear, sunny day.";
+                case DayType.PartlyCloudy: return "Soft clouds drifting over.";
+                case DayType.MistyMorning: return "A misty start to the day.";
+                case DayType.Showery: return "Showers might pass by today.";
+                default: return "A rainy day. The tent is cosy.";
+            }
+        }
+
+        // After a short night the screen dims, a new day begins in the afternoon light, and the screen comes back.
+        System.Collections.IEnumerator Dawn()
+        {
+            dawning = true;
+            while (director.IsBusy || Suspended) yield return null;
+            yield return director.FadeTo(1f, 1.2f);
+            NewDay();
+            Cloudiness = cloudTarget = TargetCloud(); ScheduleShower();
+            lighting.ApplyPreset(Compose()); applyAt = Time.time + 1.5f;
+            nightApplied = Night; director.SetNightObjects(Night);
+            yield return director.FadeTo(0f, 1.2f);
+            nightFor = 0f; dawning = false; announceAt = Time.time + 1f;
+        }
 
         float TargetCloud()
         {
@@ -122,6 +167,13 @@ namespace CatMe.World
                 lighting.ApplyPreset(Compose());
             }
             if (!Suspended && Night != nightApplied) { nightApplied = Night; director.SetNightObjects(Night); }
+            nightFor = !Suspended && TimeOfDay >= 1f ? nightFor + dt : 0f;
+            if (nightFor > NightHoldSeconds && !dawning) StartCoroutine(Dawn());
+            if (announcePending && !dawning && Time.time >= announceAt && !Suspended)
+            {
+                var garden = FindAnyObjectByType<CatMe.Garden.GardenCompanionDemo>();
+                if (garden != null && garden.IsReady) { announcePending = false; garden.SetAppStatus(DayLine(Type)); }
+            }
             if (Time.time >= saveAt) { saveAt = Time.time + 20f; Save(); }
         }
 
