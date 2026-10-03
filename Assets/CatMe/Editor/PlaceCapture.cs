@@ -83,7 +83,7 @@ namespace CatMe.Editor
                 var legacy = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/CatMe/Resources/CompanionGarden/GardenEnvironment.prefab");
                 var rows = new (string path, float height)[][]
                 {
-                    new[] { ("Assets/ithappy/Animals_FREE/Prefabs/Deer_001.prefab", 1.35f), ("Assets/ithappy/Animals_FREE/Prefabs/Horse_001.prefab", 1.6f), ("Assets/ithappy/Animals_FREE/Prefabs/Chicken_001.prefab", .38f), ("Assets/Butterfly (Animated)/Prefab/Butterfly.prefab", .22f) },
+                    new[] { ("Assets/ithappy/Animals_FREE/Prefabs/Deer_001.prefab", 1.35f), ("Assets/ithappy/Animals_FREE/Prefabs/Horse_001.prefab", 1.6f), ("Assets/ithappy/Animals_FREE/Prefabs/Chicken_001.prefab", .38f), ("Assets/AI cartoon butterflies/AI cartoon butterflies/Models/Butterflies/Prefabs/Butterfly.prefab", .22f) },
                     new[] { ("Assets/Bublisher/3D Stylized Animated Dogs Kit/Prefabs/corgi.prefab", .42f), ("Assets/Bublisher/3D Stylized Animated Dogs Kit/Prefabs/pug.prefab", .38f), ("Assets/Bublisher/3D Stylized Animated Dogs Kit/Prefabs/cur.prefab", .5f), ("Assets/Bublisher/3D Stylized Animated Dogs Kit/Prefabs/germanshepherd.prefab", .68f), ("Assets/Bublisher/3D Stylized Animated Dogs Kit/Prefabs/chihuahua.prefab", .26f) },
                 };
                 var ground = GameObject.CreatePrimitive(PrimitiveType.Plane); ground.transform.SetParent(temp.transform); ground.transform.localScale = new Vector3(8, 1, 8); ground.GetComponent<Renderer>().sharedMaterial = Flat(new Color(.35f, .45f, .25f));

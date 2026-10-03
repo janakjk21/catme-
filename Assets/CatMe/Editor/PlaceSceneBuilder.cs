@@ -924,7 +924,7 @@ namespace CatMe.Editor
             var flies = new GameObject("Butterflies"); flies.transform.SetParent(root, false); flies.AddComponent<Butterflies>();
             for (int i = 0; i < 8; i++)
             {
-                var bf = Spawn("Assets/Butterfly (Animated)/Prefab/Butterfly.prefab", flies.transform, "Butterfly_" + i);
+                var bf = Spawn("Assets/AI cartoon butterflies/AI cartoon butterflies/Models/Butterflies/Prefabs/Butterfly.prefab", flies.transform, "Butterfly_" + i);
                 if (bf == null) break;
                 var b = Bounds(bf); float e = Mathf.Max(b.size.x, b.size.z); if (e > .001f) bf.transform.localScale *= .22f / e;
                 bf.transform.position = OnGround(new Vector3(Next(-5f, 5f), 0, Next(0f, 9f))) + Vector3.up * Next(.4f, 1.4f);
@@ -1206,7 +1206,7 @@ namespace CatMe.Editor
         // Standard-shader materials (imported from older packs) turn pink in URP; convert them in place.
         static void ConvertImportedMaterials()
         {
-            string[] folders = { "Assets/JTS_Shrine_Torii_Gates", "Assets/Free/Stones", "Assets/TileableBricksWall", "Assets/Butterfly (Animated)", "Assets/ALP_Assets/country house01", "Assets/LowPolyLivingRoomPack", "Assets/ithappy", "Assets/Bublisher", "Assets/VRChat/HomeKit" };
+            string[] folders = { "Assets/JTS_Shrine_Torii_Gates", "Assets/Free/Stones", "Assets/TileableBricksWall", "Assets/AI cartoon butterflies/AI cartoon butterflies/Models/Butterflies/Materials", "Assets/ALP_Assets/country house01", "Assets/LowPolyLivingRoomPack", "Assets/ithappy", "Assets/Bublisher", "Assets/VRChat/HomeKit" };
             var urp = Shader.Find("Universal Render Pipeline/Lit");
             int converted = 0;
             foreach (string guid in AssetDatabase.FindAssets("t:Material", folders.Where(AssetDatabase.IsValidFolder).ToArray()))
