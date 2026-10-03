@@ -32,6 +32,8 @@ Cat and dog (cloud, not compiled): `PetSounds` gives each species its own sounds
 
 Photo guardrails (cloud, not compiled): selfie is camera only (no library; "Open Settings" when refused); pet photos get Apple's on-device cat/dog check (wrong animal or several refused, none warns). Server half designed in `PHOTO_TO_3D.md` (moderation + vision check before credits), not built.
 
+Consent and policies (cloud, not compiled): consent screen before the first photo (nothing uploads without "I agree"; the app used to record consent automatically); server photo check built on `catme-ai` branch `claude/focused-faraday-eemw65` (41 tests pass, not deployed); privacy policy and terms with AI and photo policy drafted in `docs/legal/`.
+
 ## Current task
 
 Owner request: furnish the house and add an account-saved photo frame with a cat guide and contextual action. Unity compilation reports 0 errors and warnings; 22 focused local server tests pass (frame, privacy, existing API). Play Mode checks use a fake account API and isolated temporary save, never the player's photo or a provider. Evidence in `docs/implementation/house-photo-frame/`. Live account persistence requires owner-approved deployment of the sibling server; phone validation remains pending.

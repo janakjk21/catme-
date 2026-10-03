@@ -234,6 +234,7 @@ namespace CatMe.Garden
                 case "photo": ShowPetPhoto(); break;
                 case "person": ShowPersonPhoto(); break;
                 case "name": ShowName(); break;
+                case "consent": ShowConsent(); break;
             }
         }
 
@@ -275,7 +276,7 @@ namespace CatMe.Garden
                 ((RectTransform)card.transform).anchoredPosition = new Vector2(RightX + 400f, 40f);
                 var thumb = UiKit.CoverFrame(card.transform, Art.Load("GoodCatExample"), new Vector2(-310f, 0f), new Vector2(150f, 150f), 1f, "Good example");
                 UiKit.Label(card.transform, failMessage, 30, new Color(.35f, .14f, .09f), new Vector2(80f, 0f), new Vector2(540f, 160f), FontStyle.Bold, TextAnchor.MiddleLeft);
-                Primary(RightX, -120f, "Choose another", PickPetPhoto, 520f);
+                Primary(RightX, -120f, "Choose another", ChoosePetPhoto, 520f);
                 if (!failHard) TextLink(RightX + 560f, -120f, "Use it anyway", () => { failMessage = null; Next(); }, 330f);
             }
             else
@@ -283,9 +284,35 @@ namespace CatMe.Garden
                 Sub(RightX, 140f, "Take or pick one photo. We use it to build a 3D copy.", 110f);
                 if (species == Species.Dog) Tips(30f, "We can see all of them, from nose to tail", "There is lots of light", "Only your dog is in the photo");
                 else Tips(30f, "We can see their whole face", "There is lots of light", "Only your pet is in the photo");
-                Primary(RightX, -250f, petPhoto != null ? "Choose another" : "Choose a photo", PickPetPhoto, 520f);
-                TextLink(RightX, -360f, "Take a photo instead", PickPetPhoto, 360f);
+                Primary(RightX, -250f, petPhoto != null ? "Choose another" : "Choose a photo", ChoosePetPhoto, 520f);
+                TextLink(RightX, -360f, "Take a photo instead", ChoosePetPhoto, 360f);
             }
+        }
+
+        // The first photo waits for consent: the consent screen comes first, then the picker opens.
+        void ChoosePetPhoto()
+        {
+            if (!CatMe.Onboarding.CreationClient.ConsentGiven) { Show("consent"); return; }
+            PickPetPhoto();
+        }
+
+        // ---- consent: shown once (per consent version) before the first photo is chosen --------------------------------
+
+        void ShowConsent()
+        {
+            Chrome("consent", false);
+            ArtCard(Art.Load(species == Species.Dog ? "GoodDogExample" : "GoodCatExample"), .5f, true);
+            Title(RightX, 285f, "Before we make your pet");
+            Tips(165f, "Your photos go to our 3D partners to build your pet and you",
+                       "They stay private to your account",
+                       "Delete them any time in Settings",
+                       "Only use photos of your own pet and yourself");
+            UiKit.Label(safe, "Tripo makes pets, Meshy makes people and OpenAI checks that photos are safe. The 3D characters are made by AI and may not look exactly like the photo. By agreeing you confirm you are 13 or older.",
+                22, CatMeUIStyle.BodyInk, new Vector2(RightX + 400f, -190f), new Vector2(800f, 92f), FontStyle.Normal, TextAnchor.UpperLeft, "Consent detail");
+            Primary(RightX, -285f, "I agree", () => { CatMe.Onboarding.CreationClient.RecordConsent(); Show("photo"); PickPetPhoto(); }, 520f);
+            TextLink(RightX + 540f, -285f, "Not now", () => Show("photo"), 240f);
+            TextLink(RightX, -385f, "Privacy policy", () => Application.OpenURL(CatMe.Onboarding.CreationClient.PrivacyUrl), 300f);
+            TextLink(RightX + 320f, -385f, "Terms and AI policy", () => Application.OpenURL(CatMe.Onboarding.CreationClient.TermsUrl), 400f);
         }
 
         void PickPetPhoto()

@@ -73,7 +73,7 @@ Rejections and failures do not reduce the account's creation quota. A provider m
 | Where | Pet photo | Selfie | State |
 |---|---|---|---|
 | Phone (`CatMePhotoPicker.mm`) | Apple Vision animal detector: cat, dog, several, none. Wrong animal or several: refused. None: warning, may continue. | Front camera only; exactly one face; head-and-shoulders crop is all that is uploaded | built 2026-10-04, phone test pending |
-| Server (`checking` stage, before Tripo or Meshy) | 1. OpenAI moderation (`omni-moderation-latest`, free): flagged -> `unsafe`. 2. One small vision-model call returning JSON `{subject: cat, dog, other_animal, person or none; count; dark; blurry}` -> `not_a_cat`, `not_a_dog`, `multiple_subjects`, `too_dark`, `too_blurry`. | Same moderation; vision call `{faces, real_photo}` -> `owner_reference_failed` or `multiple_subjects` | to build (roadmap task 7) |
+| Server (`checking` stage, before Tripo or Meshy) | 1. OpenAI moderation (`omni-moderation-latest`, free): flagged -> `unsafe`. 2. One small vision-model call returning JSON `{subject: cat, dog, other_animal, person or none; count; dark; blurry}` -> `not_a_cat`, `not_a_dog`, `multiple_subjects`, `too_dark`, `too_blurry`. | Same moderation; vision call `{faces, real_photo}` -> `owner_reference_failed` or `multiple_subjects` | built on `catme-ai` branch `claude/focused-faraday-eemw65` (`mobile/photoCheck.js`, tests pass); on when `OPENAI_API_KEY` is set on Railway |
 
 - A rejected photo is deleted from Storage at once and does not use the account's quota. The app already shows a message for every reason above (`CreationClient.RejectMessage`).
 - Cost: moderation is free; the vision check is roughly a tenth of a cent per photo, far below one failed generation.
@@ -81,5 +81,5 @@ Rejections and failures do not reduce the account's creation quota. A provider m
 
 ## Not built yet
 
-- The server half of the photo checks above.
+- Deploying the server photo check (merge the branch, set `OPENAI_API_KEY` and `PHOTO_CHECK_REQUIRED=1` on Railway).
 - A real dog model per player; the dog path through Tripo is written but off by default.
