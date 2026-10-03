@@ -35,7 +35,7 @@ namespace CatMe.Garden
             if (PlayerPrefs.GetFloat("CatMe.Journey.StoryHold", 4.2f) > 6f) seconds *= 1.6f;   // Story linger setting
             text.text = line; shownAt = Time.unscaledTime; until = shownAt + seconds; cooldownUntil = until + 5f;
             bubble.gameObject.SetActive(true);
-            garden.Behavior.Sound(garden.CompanionAudio, moment == Moment.Petted ? "purr" : "call", .5f);
+            garden.Behavior.Sound(garden.CompanionAudio, moment == Moment.Petted ? PetCue.Happy : moment == Moment.Rain || moment == Moment.FollowMe || moment == Moment.VisitorNear || moment == Moment.Butterfly ? PetCue.Excited : PetCue.Hello, .5f);
             CatMe.World.Haptics.Soft();
             return true;
         }

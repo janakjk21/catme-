@@ -35,7 +35,6 @@ namespace CatMe.Garden
         private Animation humanWalkAnimation, humanCallAnimation, catAnimation;
         private AnimationState humanWalkState, sitState, beckonState, catWalkState;
         private AudioSource audioSource;
-        private AudioClip meow;
         private Text status;
         private GameObject statusPanel, catTray, pauseSheet;
         private Text followActionLabel;
@@ -56,6 +55,8 @@ namespace CatMe.Garden
         private float wanderAt, callStarted, ballStartedAt;
         private bool ballInFlight;
         private bool ballRejoining;
+        // Dog fetch: the ball rides in the pet's mouth until it is dropped at the owner's feet. throwCount guards delayed hides.
+        private bool ballCarried; private int throwCount; private float carryHeight = .25f;
         public event Action<float, bool> OwnerMoved;
         public event Action CallAccepted, CatArrived, CallUnavailable, BallReleased;
         public event Action<bool> BallFinished;
@@ -138,7 +139,6 @@ namespace CatMe.Garden
                 GroundProbe.LegacyGround = groundCollider;
                 audioSource = gameObject.AddComponent<AudioSource>();
                 audioSource.mute = PlayerPrefs.GetInt("CatMe.SoundEnabled", 1) == 0;
-                meow = Resources.Load<AudioClip>("CatMeAudio/cat_mewfood");
                 humanRoot = new GameObject("HumanPlayer").transform;
                 humanRoot.position = Grounded(new Vector3(0f, 0f, -2.15f));
                 catRoot = new GameObject("CatCompanion").transform;
@@ -347,10 +347,27 @@ namespace CatMe.Garden
                 SetStatus("The ball is ready to try again.");
             }
             if (calling && Time.time >= callStarted + 9f) { calling = false; CallUnavailable?.Invoke(); }
+            if (ballCarried && ball != null)
+            {
+                // Held in the mouth: just ahead of the pet's chest, at muzzle height for its size.
+                ball.position = catRoot.position + catRoot.forward * .24f + Vector3.up * carryHeight;
+            }
             if (ballRejoining && Vector3.Distance(catRoot.position, humanRoot.position) < 1.8f)
-            { ballRejoining = false; BallFinished?.Invoke(true); }
+            {
+                ballRejoining = false;
+                if (ballCarried && ball != null)
+                {
+                    ballCarried = false;
+                    Vector3 feet = humanRoot.position + humanRoot.forward * .55f;
+                    ball.position = Grounded(feet) + Vector3.up * .12f;
+                    CatMe.Pets.PetSounds.Play(audioSource, behavior.Species, CatMe.Pets.PetCue.Hello, .6f);
+                    SetStatus(behavior.BroughtBall(CatMe.Pets.PetRoster.NameForText(true)));
+                    StartCoroutine(HideBallLater(1.6f));
+                }
+                BallFinished?.Invoke(true);
+            }
             else if (ballRejoining && Time.time - ballStartedAt > 25f)
-            { ballRejoining = false; BallFinished?.Invoke(false); }
+            { ballRejoining = false; if (ballCarried) { ballCarried = false; StartCoroutine(HideBallLater(.1f)); } BallFinished?.Invoke(false); }
             if (fetching && !ball.gameObject.activeSelf) fetching = false;
             if (leadActive && !calling && !fetching)
             {
@@ -374,9 +391,12 @@ namespace CatMe.Garden
                 catTarget = Grounded(ClampGarden(ball.position, 0.25f));
                 if (Vector3.Distance(catRoot.position, catTarget) < 0.3f && ball.position.y < GroundY(ball.position) + 0.34f)
                 {
-                    ball.gameObject.SetActive(false); fetching = false; ballInFlight = false;
+                    fetching = false; ballInFlight = false;
                     follow = true; ballRejoining = true;
-                    SetStatus("Your cat found the ball.");
+                    string name = CatMe.Pets.PetRoster.NameForText(true);
+                    if (behavior.Retrieves) { ballCarried = true; carryHeight = PetHeight() * .62f; CatMe.Pets.PetSounds.Play(audioSource, behavior.Species, CatMe.Pets.PetCue.Excited, .6f); }
+                    else StartCoroutine(HideBallLater(2.5f));   // a cat pounces on it and leaves it lying there for a moment
+                    SetStatus(behavior.GotBall(name));
                     if (firstGardenStage == 4)
                     {
                         firstGardenStage = 5;
@@ -392,8 +412,8 @@ namespace CatMe.Garden
                     calling = false;
                     CatArrived?.Invoke();
                     if (UnityEngine.Random.value < .35f) Voice?.Say(CatMe.Pets.Moment.Arrived, 1.8f);
-                    if (meow != null) { audioSource.PlayOneShot(meow, 0.75f); DidMeow = true; }
-                    SetStatus("Your cat came when you called."); CatMe.World.Haptics.Soft();
+                    CatMe.Pets.PetSounds.Play(audioSource, behavior.Species, CatMe.Pets.PetCue.Hello, .75f); DidMeow = true;
+                    SetStatus(behavior.Came(CatMe.Pets.PetRoster.NameForText(true))); CatMe.World.Haptics.Soft();
                     if (firstGardenStage == 1)
                     {
                         firstGardenStage = 2;
@@ -475,7 +495,7 @@ namespace CatMe.Garden
         {
             follow = !follow; fetching = false; calling = false;
             if (followActionLabel != null) followActionLabel.text = follow ? "Roam" : "Together";
-            SetStatus(follow ? "Your cat is following you." : "Your cat is exploring the garden.");
+            SetStatus(follow ? CatMe.Pets.PetRoster.NameForText(true) + " is following you." : CatMe.Pets.PetRoster.NameForText(true) + " is exploring the garden.");
         }
 
         public void CallCat()
@@ -485,9 +505,9 @@ namespace CatMe.Garden
             CallAccepted?.Invoke();
             if (!catHidden && Vector3.Distance(catRoot.position,humanRoot.position)<.7f)
             {
-                if(meow!=null && audioSource!=null)audioSource.PlayOneShot(meow,.55f);
+                CatMe.Pets.PetSounds.Play(audioSource, behavior.Species, CatMe.Pets.PetCue.Hello, .55f);
                 CatArrived?.Invoke();
-                SetStatus("Your cat is here beside you.");
+                SetStatus(CatMe.Pets.PetRoster.NameForText(true) + " is right here beside you.");
                 return;
             }
             if (catHidden)
@@ -509,13 +529,29 @@ namespace CatMe.Garden
             SetStatus("You call " + CatMe.Pets.PetRoster.NameForText() + ".");
         }
 
+        // Height of the visible pet (cat model or dog), measured once when it picks up the ball.
+        private float PetHeight()
+        {
+            var renderers = catRoot.GetComponentsInChildren<Renderer>(false);
+            if (renderers.Length == 0) return .4f;
+            Bounds b = renderers[0].bounds; foreach (var r in renderers) b.Encapsulate(r.bounds);
+            return Mathf.Clamp(b.size.y, .2f, 1f);
+        }
+
+        private IEnumerator HideBallLater(float seconds)
+        {
+            int thrown = throwCount;
+            yield return new WaitForSeconds(seconds);
+            if (thrown == throwCount && !ballInFlight && !fetching && !ballCarried && ball != null) ball.gameObject.SetActive(false);
+        }
+
         public void ThrowBall()
         {
             if (!IsReady || inputBlocked || humanRoot == null || ball == null) return;
             if (ballInFlight || fetching || ballRejoining) { SetStatus("Let this ball settle first."); return; }
             if (journey != null && !journey.CanThrowBall(humanRoot.position)) { SetStatus("The ball is for open ground."); return; }
             if (firstGardenStage == 4) firstGardenStage = 4;
-            calling = false; fetching = true;
+            calling = false; fetching = true; ballCarried = false; throwCount++;
             ballStartedAt = Time.time;
             DidThrowBall = true;
             if (callingHuman != null) callingHuman.SetActive(false);
@@ -525,7 +561,7 @@ namespace CatMe.Garden
             ballVelocity = humanRoot.forward * 3.3f + Vector3.up * 3.3f;
             ballInFlight = true;
             BallReleased?.Invoke();
-            SetStatus("The ball rolls ahead. Your cat is following it.");
+            SetStatus("The ball rolls ahead. " + CatMe.Pets.PetRoster.NameForText(true) + " is chasing it.");
         }
 
         public void SetMove(Vector2 direction) { if (!inputBlocked) touchMoveInput = direction; }
@@ -561,7 +597,7 @@ namespace CatMe.Garden
             Vector3 hideSpot = ClampGarden(humanRoot.position + new Vector3(1.8f, 0f, 2.2f), 0.3f);
             catRoot.position = hideSpot;
             catRoot.gameObject.SetActive(false);
-            SetStatus(visualGuidance ? "Your cat is nearby. Follow the flower path and call when you are ready." : "Your cat is nearby, enjoying the garden.");
+            SetStatus(visualGuidance ? CatMe.Pets.PetRoster.NameForText(true) + " is nearby. Follow the flower path and call when you are ready." : CatMe.Pets.PetRoster.NameForText(true) + " is nearby, enjoying the garden.");
         }
 
         public void SkipFindCat()
@@ -581,7 +617,7 @@ namespace CatMe.Garden
             firstGardenStage = 3;
             firstWalkDistance = 0f;
             follow = true;
-            SetStatus("Walk a little way together. Your cat will catch up.");
+            SetStatus("Walk a little way together. " + CatMe.Pets.PetRoster.NameForText(true) + " will catch up.");
         }
 
         public void EndFirstGardenSession()

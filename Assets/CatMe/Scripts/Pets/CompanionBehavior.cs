@@ -40,13 +40,25 @@ namespace CatMe.Pets
             return pool[i];
         }
 
-        /// <summary>Species sound cue; plays nothing if the clip is not in the project.</summary>
-        public void Sound(AudioSource source, string cue, float volume = .6f)
-        {
-            if (source == null || source.mute) return;
-            var clip = Resources.Load<AudioClip>("CatMeAudio/" + (Species == Species.Dog ? "dog-" : "cat-") + cue);
-            if (clip != null) source.PlayOneShot(clip, volume);
-        }
+        /// <summary>Species sound for a moment (a cat meows and purrs, a dog barks and pants); see PetSounds.</summary>
+        public void Sound(AudioSource source, PetCue cue, float volume = .6f) => PetSounds.Play(source, Species, cue, volume);
+
+        // ---- house, tent, ball and frame moments: how long things take and what the status line says ([name] is the pet's name) ----
+        /// <summary>Seconds to finish a bowl, and how long it stays full afterwards.</summary>
+        public virtual float EatSeconds => 7f;
+        public virtual float FullSeconds => 45f;
+        /// <summary>True: brings the ball back and drops it at the owner's feet. False: pounces on it and leaves it.</summary>
+        public virtual bool Retrieves => false;
+        public virtual string HungryAtBowl(string name) => name + " is hungry. Fill the bowl.";
+        public virtual string Eating(string name) => name + " is eating, nibble by nibble.";
+        public virtual string AteAll(string name) => "All gone. " + name + " loved that.";
+        public virtual string StillFull(string name) => name + " is full. Maybe later.";
+        public virtual string ByTheFire(string name) => name + " curls up by the fire.";
+        public virtual string SeesPhoto(string name) => name + " looks up at the new photo.";
+        public virtual string GotBall(string name) => name + " pounced on the ball.";
+        public virtual string BroughtBall(string name) => name + " is back with you.";
+        public virtual string Came(string name) => name + " came when you called.";
+        public virtual string Asleep(string name) => name + " is asleep.";
 
         public static CompanionBehavior For(Species s) => s == Species.Dog ? (CompanionBehavior)new DogBehavior() : new CatBehavior();
     }
@@ -88,6 +100,19 @@ namespace CatMe.Pets
     public sealed class DogBehavior : CompanionBehavior
     {
         public override Species Species => Species.Dog;
+        public override float EatSeconds => 4f;     // gulps it down
+        public override float FullSeconds => 30f;
+        public override bool Retrieves => true;     // real fetch: brings the ball back
+        public override string HungryAtBowl(string name) => name + " is waiting by the bowl. Fill it up!";
+        public override string Eating(string name) => name + " is wolfing it down!";
+        public override string AteAll(string name) => "Licked clean! " + name + " loved that.";
+        public override string StillFull(string name) => name + " just ate. Maybe later.";
+        public override string ByTheFire(string name) => name + " stretches out by the fire.";
+        public override string SeesPhoto(string name) => name + " sniffs the new photo and wags.";
+        public override string GotBall(string name) => name + " got the ball!";
+        public override string BroughtBall(string name) => name + " dropped the ball at your feet.";
+        public override string Came(string name) => name + " came running!";
+        public override string Asleep(string name) => name + " is snoozing.";
         public override float Lateral => .6f;
         public override float Ahead => 1.0f;
         public override float Pace => 1.25f;

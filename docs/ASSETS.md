@@ -30,3 +30,17 @@ Before release, check each pack's licence allows use in a paid mobile app, and r
 
 - Real-feeling photos for examples; painterly garden scenes for hero and reveal art, warm cream, sage, pink and old-brass palette.
 - Import as Sprite, max size 2048; keep the subject so `CoverFrame` focus can keep it in frame.
+
+## Pet sounds to add (Resources/CatMeAudio)
+
+`Pets/PetSounds.cs` uses these when present; until then generated stand-ins play for the dog. Short (under 2 s), mono, 22-44 kHz WAV or OGG, with a licence for a paid app.
+
+| File | Used for |
+|---|---|
+| `dog-bark` | saying hello, being called, dropping the ball |
+| `dog-bark-excited` | rain, leading the way, seeing a visitor or butterfly |
+| `dog-pant` (loopable) | being petted, after dinner |
+| `dog-sigh` | settling by the fire or in bed |
+| `dog-eat` | eating |
+| `cat-eat` | eating (falls back to `cat_mewfood`) |
+

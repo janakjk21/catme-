@@ -25,7 +25,7 @@ namespace CatMe.Session
         InteractionPoint sitPoint;
         Transform eyeAnchor;
         float roomEnteredAt; bool rainStopped, rainedOnEntry;
-        AudioSource rainAudio; AudioClip rainClip; AudioClip meow;
+        AudioSource rainAudio; AudioClip rainClip;
         string lightingBefore = "Sunset";
         Vector3 doorSpot;
         Transform roomButtons; Button feedButton, sleepButton;
@@ -42,7 +42,9 @@ namespace CatMe.Session
         Transform bowl, food; Vector3 bowlCentre; float bowlRadius = .25f, fullUntil;
         bool feedLeading;
         Coroutine eating;
-        const float BowlReach = 1.8f, FullSeconds = 45f, EatSeconds = 7f;
+        const float BowlReach = 1.8f;
+        // Species decides the sounds, words and timing (a dog barks, gulps its food and retrieves; a cat meows, nibbles and purrs).
+        CompanionBehavior Pet => garden.Behavior ?? CompanionBehavior.For(PetRoster.Active.Kind);
         float Flat(Vector3 a, Vector3 b) => Vector2.Distance(new Vector2(a.x, a.z), new Vector2(b.x, b.z));
         bool NearBowl => bowl != null && Flat(garden.OwnerTransform.position, bowlCentre) < BowlReach;
         Vector3 EatSpot { get { Vector3 toRoom = houseSpot - bowlCentre; toRoom.y = 0f; if (toRoom.sqrMagnitude < .01f) toRoom = Vector3.back; var p = bowlCentre + toRoom.normalized * (bowlRadius + .3f); p.y = houseSpot.y; return p; } }
@@ -65,7 +67,6 @@ namespace CatMe.Session
         public void Initialize(GardenCompanionDemo demo, SessionDirector sessionDirector, Transform canvasRoot)
         {
             garden = demo; director = sessionDirector;
-            meow = Resources.Load<AudioClip>("CatMeAudio/cat-meow");
             rainAudio = gameObject.AddComponent<AudioSource>(); rainAudio.loop = true; rainAudio.spatialBlend = 0f; rainAudio.volume = 0f;
             rainClip = Resources.Load<AudioClip>("CatMeAudio/rain-light") ?? MakeRainNoise(); // real rain recording; the generated noise is only a fallback
             rainAudio.clip = rainClip; rainAudio.Play();
@@ -285,7 +286,7 @@ namespace CatMe.Session
             roomEnteredAt = Time.time; rainStopped = false;
             yield return director.FadeTo(0f, .6f);
             garden.SetInputBlocked(false);
-            if (meow != null && PlayerPrefs.GetInt("CatMe.SoundEnabled", 1) == 1) AudioSource.PlayClipAtPoint(meow, Camera.main.transform.position, .8f);
+            PetSounds.PlayAt(Camera.main.transform.position, Pet.Species, PetCue.Hello, .8f);
             garden.SetAppStatus(rainedOnEntry ? "Warm and dry by the fire. Listen to the rain." : "A cosy spot by the fire.");
             // The pet pads over to its cushion by the fire and settles there, facing the flames.
             var cushion = director.FindNamed("Tent_CatSpot");
@@ -301,7 +302,8 @@ namespace CatMe.Session
             if (state != State.InRoom) yield break;
             garden.SetCuriosity(Vector3.zero, 0f);
             garden.HoldCat(garden.SampledGroundPosition(cushion.position), cushion.eulerAngles.y);
-            garden.SetAppStatus(PetRoster.NameForText(true) + " is cosy by the fire.");
+            PetSounds.PlayAt(garden.CatPosition, Pet.Species, PetCue.Settle, .6f);
+            garden.SetAppStatus(Pet.ByTheFire(PetRoster.NameForText(true)));
         }
 
         IEnumerator LeaveTent()
@@ -427,12 +429,12 @@ namespace CatMe.Session
             string name = PetRoster.NameForText(true);
             if (feed == FeedStage.Filled) { StartEating(); return; }
             if (feed == FeedStage.Eating) return;
-            if (Time.time < fullUntil) { garden.SetAppStatus(name + " is full. Maybe later."); return; }
+            if (Time.time < fullUntil) { garden.SetAppStatus(Pet.StillFull(name)); return; }
             if (NearBowl) { FillBowl(); return; }
             StopEating(); garden.ReleaseCat(); catSleeping = false;
             garden.SetLead(EatSpot, false); feedLeading = true;
-            garden.SetAppStatus(name + " is hungry. Fill the bowl.");
-            Meow(.6f);
+            garden.SetAppStatus(Pet.HungryAtBowl(name));
+            PetSounds.PlayAt(garden.CatPosition, Pet.Species, PetCue.Excited, .6f);
         }
 
         void FillBowl()
@@ -491,12 +493,12 @@ namespace CatMe.Session
             Vector3 look = bowlCentre - spot; look.y = 0f;
             garden.HoldCat(spot, look.sqrMagnitude > .001f ? Quaternion.LookRotation(look).eulerAngles.y : 0f);
             feed = FeedStage.Eating;
-            Meow(.7f);
-            garden.SetAppStatus(name + " is eating.");
+            PetSounds.PlayAt(garden.CatPosition, Pet.Species, PetCue.Eat, .7f);
+            garden.SetAppStatus(Pet.Eating(name));
             // The mound goes down as the pet eats: pieces disappear one by one.
             int total = food.childCount, left = 0;
             for (int i = 0; i < total; i++) if (food.GetChild(i).gameObject.activeSelf) left++;
-            float step = EatSeconds / Mathf.Max(1, left);
+            float step = Pet.EatSeconds / Mathf.Max(1, left);
             for (int i = total - 1; i >= 0; i--)
             {
                 var piece = food.GetChild(i).gameObject; if (!piece.activeSelf) continue;
@@ -504,16 +506,12 @@ namespace CatMe.Session
                 piece.SetActive(false);
             }
             food.gameObject.SetActive(false);
-            feed = FeedStage.Empty; fullUntil = Time.time + FullSeconds; eating = null;
+            feed = FeedStage.Empty; fullUntil = Time.time + Pet.FullSeconds; eating = null;
             FindAnyObjectByType<CompanionLeader>()?.HadDinner();
             garden.ReleaseCat();
             FindAnyObjectByType<CatPetInput>()?.PopHearts(StoreCatalog.FirstOwned(StoreCategory.Food, PetRoster.Active.Kind) != null ? 5 : 3);
-            garden.SetAppStatus("All gone. " + name + " loved that.");
-        }
-
-        void Meow(float volume)
-        {
-            if (meow != null && PlayerPrefs.GetInt("CatMe.SoundEnabled", 1) == 1) AudioSource.PlayClipAtPoint(meow, garden.CatPosition, volume);
+            PetSounds.PlayAt(garden.CatPosition, Pet.Species, PetCue.Happy, .5f);
+            garden.SetAppStatus(Pet.AteAll(name));
         }
 
         // ---- photo frame: the pet comes to look at a new picture ----------------------------------------------------
@@ -534,7 +532,8 @@ namespace CatMe.Session
             garden.SetCuriosity(Vector3.zero, 0f);
             Vector3 look = houseFrame.transform.position - spot; look.y = 0f;
             garden.HoldCat(spot, look.sqrMagnitude > .001f ? Quaternion.LookRotation(look).eulerAngles.y : 0f);
-            Meow(.6f);
+            PetSounds.PlayAt(garden.CatPosition, Pet.Species, PetCue.Hello, .6f);
+            garden.SetAppStatus(Pet.SeesPhoto(PetRoster.NameForText(true)));
             FindAnyObjectByType<CatPetInput>()?.PopHearts(2);
             yield return new WaitForSeconds(2.5f);
             if (state == State.InHouse && eating == null) garden.ReleaseCat();
@@ -555,7 +554,8 @@ namespace CatMe.Session
             for (float t = 0f; t < 12f && Vector3.Distance(garden.CatPosition, bed.position) > .35f; t += Time.deltaTime) yield return null;
             garden.SetCuriosity(Vector3.zero, 0f);
             garden.HoldCat(bed.position + Vector3.up * .12f, bed.eulerAngles.y);   // neutral pose: no sleep animation exists yet
-            catSleeping = true; garden.SetAppStatus(PetRoster.NameForText(true) + " is asleep.");
+            catSleeping = true; garden.SetAppStatus(Pet.Asleep(PetRoster.NameForText(true)));
+            PetSounds.PlayAt(garden.CatPosition, Pet.Species, PetCue.Settle, .5f);
         }
 
         void SetRoomButtons(bool show)

@@ -69,6 +69,21 @@ Feeding with store food: "Dinner time: salmon bites. Here comes [name]."
 | Petted | Purr. / Mmm. / More. | Yes! Again! / Best day! / More, more! |
 | Called | Here. / Hello. / Yes? | Here! / Coming! / Right here! |
 
+## House, tent and ball lines by species (in app, `Pets/CompanionBehavior.cs`)
+
+| Moment | Cat | Dog |
+|---|---|---|
+| Hungry at the bowl | [Name] is hungry. Fill the bowl. | [Name] is waiting by the bowl. Fill it up! |
+| Eating | [Name] is eating, nibble by nibble. | [Name] is wolfing it down! |
+| Finished | All gone. [Name] loved that. | Licked clean! [Name] loved that. |
+| Still full | [Name] is full. Maybe later. | [Name] just ate. Maybe later. |
+| By the fire | [Name] curls up by the fire. | [Name] stretches out by the fire. |
+| New photo | [Name] looks up at the new photo. | [Name] sniffs the new photo and wags. |
+| Ball found | [Name] pounced on the ball. | [Name] got the ball! |
+| Back with the ball | [Name] is back with you. | [Name] dropped the ball at your feet. |
+| Called | [Name] came when you called. | [Name] came running! |
+| Asleep | [Name] is asleep. | [Name] is snoozing. |
+
 ## Pause menu (in app)
 
 Your pets · Store · Photo album · Account · Settings · Keep exploring

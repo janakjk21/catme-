@@ -38,7 +38,12 @@ Benches are kept clear of trees so they are always visible. The walled garden ha
 | Notices a visitor at | 4.8 m | 9 m |
 | Speaks | calm and short ("Follow me.") | eager ("This way! This way!") |
 
-Numbers live in `Pets/CompanionBehavior.cs`; each species owns its own lines.
+| Sounds (`Pets/PetSounds`) | meow to say hello, purr when petted or settling | bark to say hello, double bark when excited, happy panting when petted, a content sigh when settling, crunching while eating |
+| Ball | pounces on it and leaves it lying for a moment, then strolls back | real fetch: carries it back in its mouth and drops it at your feet |
+| Dinner | nibbles for about 7 s, then full for 45 s | gulps it down in about 4 s, then full for 30 s |
+| Lines in the house and tent | "[Name] curls up by the fire." "[Name] looks up at the new photo." | "[Name] stretches out by the fire." "[Name] sniffs the new photo and wags." |
+
+Numbers, timings and status lines live in `Pets/CompanionBehavior.cs`; each species owns its own lines. Sounds come from `Pets/PetSounds.cs`: recordings in `Resources/CatMeAudio` win; until the dog recordings exist, short generated stand-ins play so a dog is never silent and never meows.
 
 **The pet leads too** (`Session/CompanionLeader`): when it rains it heads for the tent ("It's raining. This way."); it invites a rest at benches; late in the walk it says it wants to go home or is hungry and trots toward the house, waiting for you (it gives up after a minute if you don't follow). A hungry pet goes straight to its bowl inside. Hunger is only words and a walk home, never a meter.
 

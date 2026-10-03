@@ -17,15 +17,14 @@ namespace CatMe.World
         const float HoldSeconds = .45f, TapSeconds = .3f, HitPixels = 150f, MovePixels = 36f;
         GardenCompanionDemo garden; Transform canvas; Camera view;
         bool pressed, petting; float pressedAt, nextHeartAt, nextPulseAt; Vector2 pressPos;
-        AudioSource purr; AudioClip purrClip; AudioClip meow;
+        AudioSource purr;   // the petting loop: a cat purrs, a dog pants happily (PetSounds)
         CameraProfile petProfile = new CameraProfile { name = "Pet", distance = 1.5f, height = .85f, pitch = 14f, fov = 46f, blendIn = 1.0f };
         Sprite heart; readonly List<(RectTransform rt, Image img, float t)> hearts = new List<(RectTransform, Image, float)>();
 
         public void Initialize(GardenCompanionDemo demo, Transform canvasRoot)
         {
             garden = demo; canvas = canvasRoot; view = Camera.main;
-            purrClip = Resources.Load<AudioClip>("CatMeAudio/cat-purr"); meow = Resources.Load<AudioClip>("CatMeAudio/cat-meow");
-            purr = gameObject.AddComponent<AudioSource>(); purr.loop = true; purr.clip = purrClip; purr.volume = 0f; purr.spatialBlend = 0f;
+            purr = gameObject.AddComponent<AudioSource>(); purr.loop = true; purr.volume = 0f; purr.spatialBlend = 0f;
         }
 
         void Update()
@@ -53,6 +52,8 @@ namespace CatMe.World
             if (petting && !held) EndPet();
         }
 
+        Pets.Species Species => garden.Behavior != null ? garden.Behavior.Species : Pets.PetRoster.Active.Kind;
+
         bool CatNear() => Vector3.Distance(garden.CatPosition, garden.OwnerPosition) < 4f;
 
         bool NearCat(Vector2 screen, float scale = 1f)
@@ -68,7 +69,7 @@ namespace CatMe.World
         {
             Haptics.Tap();
             garden.CallCat();                         // it comes to the owner and answers
-            if (meow != null && PlayerPrefs.GetInt("CatMe.SoundEnabled", 1) == 1) AudioSource.PlayClipAtPoint(meow, garden.CatPosition, .6f);
+            Pets.PetSounds.PlayAt(garden.CatPosition, Species, Pets.PetCue.Hello, .6f);
             SpawnHeart();
         }
 
@@ -77,8 +78,7 @@ namespace CatMe.World
             petting = true; nextHeartAt = nextPulseAt = 0f;
             garden.SetCatStill(true);
             garden.CameraRig?.PushProfile(petProfile);
-            bool dog = garden.Behavior != null && garden.Behavior.Species == Pets.Species.Dog;
-            var clip = dog ? Resources.Load<AudioClip>("CatMeAudio/dog-pant") : purrClip;   // silent until a dog clip is added
+            var clip = Pets.PetSounds.Clip(Species, Pets.PetCue.Happy);
             if (purr != null && clip != null) { if (purr.clip != clip) purr.clip = clip; if (!purr.isPlaying) purr.Play(); }
             garden.Voice?.Say(Pets.Moment.Petted, 2.2f);
             Haptics.Soft();

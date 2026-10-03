@@ -28,6 +28,8 @@ Feeding and frame (cloud, not compiled): bigger bowl and cat house (menu CatMe >
 
 Polish pass (cloud, not compiled): days now change (new day after a short night, on relaunch after 3 h or at night, never the same weather twice) with a day line; bigger tent and a furnished tent room with a fire (rebuild the place); leaving the tent anytime; Story linger lengthens all lines; Save to Photos in the album (needs NSPhotoLibraryAddUsageDescription, set by IOSDevelopmentBuild for development builds only); store food used at dinner; guest account text no longer mentions Apple only.
 
+Cat and dog (cloud, not compiled): `PetSounds` gives each species its own sounds (dog: bark, excited bark, pant, sigh, crunch; generated until recordings are added, see `docs/ASSETS.md`); dogs fetch the ball back and drop it at your feet, cats pounce and leave it (the ball no longer vanishes); species timings and lines for dinner, fire, frame, ball, call and sleep; no player-facing "Your cat" left for dogs.
+
 ## Current task
 
 Owner request: furnish the house and add an account-saved photo frame with a cat guide and contextual action. Unity compilation reports 0 errors and warnings; 22 focused local server tests pass (frame, privacy, existing API). Play Mode checks use a fake account API and isolated temporary save, never the player's photo or a provider. Evidence in `docs/implementation/house-photo-frame/`. Live account persistence requires owner-approved deployment of the sibling server; phone validation remains pending.
