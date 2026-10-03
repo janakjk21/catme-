@@ -7,6 +7,7 @@
 
 static NSString *catMePhotoPickerTarget = nil;
 static NSString *catMePhotoPickerCallback = @"OnCatPhotoPicked";
+static BOOL catMePhotoPickerPetCheck = NO;   // pet photos: ask Vision whether a cat or a dog is in the picture
 
 // Sends the saved JPEG path, "" for cancel, or "error:<reason>" for a person photo that cannot be used.
 static void CatMePhotoPickerSend(NSString *message) {
@@ -75,11 +76,40 @@ static NSString *CatMePhotoPickerCropToOneFace(UIImage *upright) {
     return path ?: @"error:save";
 }
 
+// Apple's on-device animal detector (cats and dogs). Returns "cat", "dog", "many" (more than one animal) or "none".
+// It is a free, instant first check on the phone; the server makes the final decision.
+static NSString *CatMePhotoPickerFindPet(UIImage *upright) {
+    CGImageRef image = upright.CGImage;
+    if (!image) return @"none";
+    if (@available(iOS 13.0, *)) {
+        VNRecognizeAnimalsRequest *request = [[VNRecognizeAnimalsRequest alloc] init];
+        VNImageRequestHandler *handler = [[VNImageRequestHandler alloc] initWithCGImage:image options:@{}];
+        NSError *error = nil;
+        if (![handler performRequests:@[request] error:&error]) return @"none";
+        int cats = 0, dogs = 0;
+        for (VNRecognizedObjectObservation *animal in request.results) {
+            if (animal.confidence < .5f || animal.labels.count == 0) continue;
+            NSString *label = animal.labels.firstObject.identifier;
+            if ([label isEqualToString:VNAnimalIdentifierCat]) cats++;
+            else if ([label isEqualToString:VNAnimalIdentifierDog]) dogs++;
+        }
+        if (cats + dogs > 1) return @"many";
+        if (cats == 1) return @"cat";
+        if (dogs == 1) return @"dog";
+    }
+    return @"none";
+}
+
 // Called on the main queue with a picked or captured image.
 static void CatMePhotoPickerFinish(UIImage *source) {
     UIImage *upright = CatMePhotoPickerUpright(source, 3000.0);
     if (!CatMePhotoPickerIsPerson()) {
-        CatMePhotoPickerSend(CatMePhotoPickerWriteJpeg(upright) ?: @"");
+        NSString *path = CatMePhotoPickerWriteJpeg(upright);
+        if (!path || !catMePhotoPickerPetCheck) { CatMePhotoPickerSend(path ?: @""); return; }
+        dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+            NSString *found = CatMePhotoPickerFindPet(upright);
+            dispatch_async(dispatch_get_main_queue(), ^{ CatMePhotoPickerSend([NSString stringWithFormat:@"pet:%@|%@", found, path]); });
+        });
         return;
     }
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
@@ -169,41 +199,54 @@ static void CatMePhotoPicker_PresentFrontCamera(void) {
     [presenter presentViewController:camera animated:YES completion:nil];
 }
 
-static void CatMePhotoPicker_OpenWithCallback(const char *gameObjectName, NSString *callback, BOOL useCamera) {
+static void CatMePhotoPicker_OpenWithCallback(const char *gameObjectName, NSString *callback, BOOL useCamera, BOOL petCheck) {
     NSString *target = gameObjectName == nullptr ? @"" : [NSString stringWithUTF8String:gameObjectName];
     dispatch_async(dispatch_get_main_queue(), ^{
         catMePhotoPickerTarget = target;
         catMePhotoPickerCallback = callback;
-        if (!useCamera || ![UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera]) {
-            CatMePhotoPicker_PresentLibrary();
-            return;
-        }
-        // Without camera permission the library still works, and its photos get the same face check.
+        catMePhotoPickerPetCheck = petCheck;
+        if (!useCamera) { CatMePhotoPicker_PresentLibrary(); return; }
+        // The selfie is camera only. A phone without a camera (simulator) falls back to the library so testing still works.
+        if (![UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera]) { CatMePhotoPicker_PresentLibrary(); return; }
         AVAuthorizationStatus status = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
         if (status == AVAuthorizationStatusAuthorized) {
             CatMePhotoPicker_PresentFrontCamera();
         } else if (status == AVAuthorizationStatusNotDetermined) {
             [AVCaptureDevice requestAccessForMediaType:AVMediaTypeVideo completionHandler:^(BOOL granted) {
                 dispatch_async(dispatch_get_main_queue(), ^{
-                    if (granted) CatMePhotoPicker_PresentFrontCamera(); else CatMePhotoPicker_PresentLibrary();
+                    if (granted) CatMePhotoPicker_PresentFrontCamera(); else CatMePhotoPickerSend(@"error:camera_denied");
                 });
             }];
         } else {
-            CatMePhotoPicker_PresentLibrary();
+            CatMePhotoPickerSend(@"error:camera_denied");   // the app offers a way to Settings
         }
     });
 }
 
+// Any photo, no checks (house frame).
 extern "C" void CatMePhotoPicker_Open(const char *gameObjectName) {
-    CatMePhotoPicker_OpenWithCallback(gameObjectName, @"OnCatPhotoPicked", NO);
+    CatMePhotoPicker_OpenWithCallback(gameObjectName, @"OnCatPhotoPicked", NO, NO);
+}
+
+// Pet photo from the library, with the cat-or-dog check.
+extern "C" void CatMePhotoPicker_OpenForPet(const char *gameObjectName) {
+    CatMePhotoPicker_OpenWithCallback(gameObjectName, @"OnCatPhotoPicked", NO, YES);
 }
 
 extern "C" void CatMePhotoPicker_OpenForHuman(const char *gameObjectName) {
-    CatMePhotoPicker_OpenWithCallback(gameObjectName, @"OnHumanPhotoPicked", NO);
+    CatMePhotoPicker_OpenWithCallback(gameObjectName, @"OnHumanPhotoPicked", NO, NO);
 }
 
 extern "C" void CatMePhotoPicker_TakeSelfie(const char *gameObjectName) {
-    CatMePhotoPicker_OpenWithCallback(gameObjectName, @"OnHumanPhotoPicked", YES);
+    CatMePhotoPicker_OpenWithCallback(gameObjectName, @"OnHumanPhotoPicked", YES, NO);
+}
+
+// Opens this app's page in the Settings app (camera permission was refused).
+extern "C" void CatMePhotoPicker_OpenSettings() {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSURL *url = [NSURL URLWithString:UIApplicationOpenSettingsURLString];
+        if (url) [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
+    });
 }
 
 // Copies an album photo into the phone's Photos library (needs NSPhotoLibraryAddUsageDescription in Info.plist).

@@ -40,7 +40,7 @@ namespace CatMe.Garden
 
         public void Begin(bool addMode)
         {
-            accountOnly = false; finishedResult = null; this.addMode = addMode; signedInFlow = addMode || (IsSignedIn != null && IsSignedIn()); loginFirst = false; species = Species.Cat; petPhoto = personPhoto = null; personFailMessage = null; petName = ""; created = null;
+            accountOnly = false; finishedResult = null; this.addMode = addMode; signedInFlow = addMode || (IsSignedIn != null && IsSignedIn()); loginFirst = false; species = Species.Cat; petPhoto = personPhoto = null; personFailMessage = null; failHard = false; petName = ""; created = null;
             if (root == null) { var s = UiKit.Screen(canvasRoot, "Onboarding", CatMeUIStyle.Mist); root = s.root; safe = s.safe; }
             root.SetActive(true); root.transform.SetAsLastSibling();
             Show("species");
@@ -66,6 +66,7 @@ namespace CatMe.Garden
         }
 
         string failMessage, personFailMessage;
+        bool failHard;   // the phone is sure the photo is wrong (other animal, several pets): no "Use it anyway"
 
         // ---- the pet starts being made as soon as its photo is chosen --------------------------------------------------
 
@@ -275,7 +276,7 @@ namespace CatMe.Garden
                 var thumb = UiKit.CoverFrame(card.transform, Art.Load("GoodCatExample"), new Vector2(-310f, 0f), new Vector2(150f, 150f), 1f, "Good example");
                 UiKit.Label(card.transform, failMessage, 30, new Color(.35f, .14f, .09f), new Vector2(80f, 0f), new Vector2(540f, 160f), FontStyle.Bold, TextAnchor.MiddleLeft);
                 Primary(RightX, -120f, "Choose another", PickPetPhoto, 520f);
-                TextLink(RightX + 560f, -120f, "Use it anyway", () => { failMessage = null; Next(); }, 330f);
+                if (!failHard) TextLink(RightX + 560f, -120f, "Use it anyway", () => { failMessage = null; Next(); }, 330f);
             }
             else
             {
@@ -291,11 +292,30 @@ namespace CatMe.Garden
         {
             photos.RequestPhoto(false, (path, message) =>
             {
+                failHard = false;
                 if (path == null) { failMessage = string.IsNullOrEmpty(message) ? null : message; Show("photo"); return; }
                 petPhoto = path;
+                string animal = PetCheckMessage(photos.LastPetCheck, out failHard);
+                if (animal != null) { failMessage = animal; Show("photo"); return; }
                 var check = ValidatePath(path, false);
                 if (check.ok) { failMessage = null; Next(); } else { failMessage = check.message; Show("photo"); }
-            });
+            }, null, false, true);
+        }
+
+        // The phone's own cat-or-dog check (Apple Vision, CatMePhotoPicker.mm). The server checks again before anything is made.
+        string PetCheckMessage(string seen, out bool hard)
+        {
+            hard = false;
+            string want = species == Species.Dog ? "dog" : "cat", other = species == Species.Dog ? "cat" : "dog";
+            switch (seen)
+            {
+                case null: return null;                          // not checked (editor)
+                case "many": hard = true; return "There is more than one in this photo. Try one with only your pet.";
+                case "none": return "We can't see a " + want + " in this photo. Try another one.";
+                default:
+                    if (seen == want) return null;
+                    hard = true; return "This looks like a " + other + ". Choose a photo of your " + want + ", or go back and pick " + (other == "cat" ? "Cat" : "Dog") + ".";
+            }
         }
 
         PhotoCheck ValidatePath(string path, bool person)
@@ -419,7 +439,8 @@ namespace CatMe.Garden
                 Tips(50f, "Your face is clear", "There is lots of light", "Only you are in the photo");
             }
             Primary(RightX, -250f, personPhoto != null || bad ? "Take another selfie" : "Take a selfie", () => PickPersonPhoto(true), 520f);
-            TextLink(RightX, -345f, "Choose a photo instead", () => PickPersonPhoto(false), 420f);
+            // Selfie only: the camera is the one way in. If camera access was refused, the player can turn it on in Settings.
+            if (personFailMessage == DeviceBridge.CameraDeniedMessage) TextLink(RightX, -345f, "Open Settings", DeviceBridge.OpenAppSettings, 420f);
             UiKit.Label(safe, "Your photos are private. You can delete them any time in Settings.", 24, CatMeUIStyle.BodyInk, new Vector2(RightX + 400f, -425f), new Vector2(800f, 44f), FontStyle.Normal, TextAnchor.MiddleLeft, "Privacy note");
         }
 

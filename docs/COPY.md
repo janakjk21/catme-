@@ -112,6 +112,9 @@ Your pets · Store · Photo album · Account · Settings · Keep exploring
 | No cat or dog found | We can't see a [cat/dog] in this photo. Try another one. |
 | More than one | There is more than one in this photo. Try one with only [your pet/you]. |
 | No face in the selfie | We can't see your face in this photo. Try a selfie in good light. |
+| Camera refused | Allow camera access to take your selfie. Link: Open Settings |
+| Wrong animal | This looks like a [dog/cat]. Choose a photo of your [cat/dog], or go back and pick [Dog/Cat]. |
+| Unsafe photo (server) | This photo can't be used. Please choose a different one. |
 | Face too small | Your face is too small in this photo. Take a closer selfie. |
 | Empty album | No photos yet. Tap the camera to take one. |
 | Empty pets list | Just you for now. Add a pet. |

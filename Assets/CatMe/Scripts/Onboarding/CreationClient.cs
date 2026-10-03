@@ -126,6 +126,7 @@ namespace CatMe.Onboarding
                 case "not_a_dog": return "We can't see a dog in this photo. Try another one.";
                 case "multiple_subjects": return "There is more than one in this photo. Try one with only your pet.";
                 case "too_dark": return "It's too dark to see them. Try again near a window.";
+                case "unsafe": return "This photo can't be used. Please choose a different one.";
                 case "too_blurry": return "That photo is blurry. A sharp, well-lit photo works best.";
                 case "too_small": return "That photo is too small. Pick one at least 512 pixels wide.";
                 case "pet_not_riggable": return "We could not build a walking body from that photo. Use a clear photo that shows the whole animal.";

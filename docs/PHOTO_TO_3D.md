@@ -68,7 +68,18 @@ Rejections and failures do not reduce the account's creation quota. A provider m
 | Provider steps | server `mobile/live.js`, `mobile/providers.js` |
 | Tests | server `mobile/*.test.js` (`npx vitest run`) |
 
+## Photo checks (before any credits are spent)
+
+| Where | Pet photo | Selfie | State |
+|---|---|---|---|
+| Phone (`CatMePhotoPicker.mm`) | Apple Vision animal detector: cat, dog, several, none. Wrong animal or several: refused. None: warning, may continue. | Front camera only; exactly one face; head-and-shoulders crop is all that is uploaded | built 2026-10-04, phone test pending |
+| Server (`checking` stage, before Tripo or Meshy) | 1. OpenAI moderation (`omni-moderation-latest`, free): flagged -> `unsafe`. 2. One small vision-model call returning JSON `{subject: cat, dog, other_animal, person or none; count; dark; blurry}` -> `not_a_cat`, `not_a_dog`, `multiple_subjects`, `too_dark`, `too_blurry`. | Same moderation; vision call `{faces, real_photo}` -> `owner_reference_failed` or `multiple_subjects` | to build (roadmap task 7) |
+
+- A rejected photo is deleted from Storage at once and does not use the account's quota. The app already shows a message for every reason above (`CreationClient.RejectMessage`).
+- Cost: moderation is free; the vision check is roughly a tenth of a cent per photo, far below one failed generation.
+- Why the server check is still needed: the phone check can be bypassed by a modified app; the raw upload sits in Storage before any generator sees it; and the pet path uses Tripo's image step, so it does not get the image-model refusals that the person path gets through Meshy's `gpt-image-2` step.
+
 ## Not built yet
 
-- A vision check (right animal, one subject, light, focus) before generating; today only the file type is checked.
+- The server half of the photo checks above.
 - A real dog model per player; the dog path through Tripo is written but off by default.
