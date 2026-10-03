@@ -26,7 +26,7 @@ Apple sign-in also needs, in Firebase > Authentication > Apple: your Apple Team 
 
 ## Server (Railway service `api`)
 
-Code: sibling folder `catme/worntag-api` (Node, Express, Firebase Admin). Railway project `worntag-api`, service `api`, address https://api-production-fbe0.up.railway.app. No GitHub repo yet, so deploys are manual.
+Code: sibling folder `catme/worntag-api` (Node, Express, Firebase Admin), GitHub repository `janakjk21/catme-ai`. Railway project `worntag-api`, service `api`, address https://api-production-fbe0.up.railway.app. The service deploys from `catme-ai/main`.
 
 First-time setup: `npm install`, then `npx @railway/cli login` and `npx @railway/cli link` to the project.
 
