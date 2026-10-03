@@ -35,6 +35,9 @@ namespace CatMe.Session
             }
         }
         public bool HasPhoto => photo != null;
+        /// <summary>Raised when the player puts a new picture in the frame (not when a saved one is restored).</summary>
+        public event Action PhotoAdded;
+        float nextAccountCheck;
         public bool CanInteract => !picking && !syncing;
         bool NeedsSave => File.Exists(SavedPhotoPath + ".unsynced");
         public string ButtonLabel => NeedsSave ? "Save photo" : HasPhoto ? "Change photo" : "Add a photo";
@@ -47,7 +50,13 @@ namespace CatMe.Session
             RefreshAccount();
         }
 
-        void Update() { RefreshAccount(); }
+        // A sign-in change is rare; checking once a second avoids searching the scene every frame.
+        void Update()
+        {
+            if (Time.unscaledTime < nextAccountCheck) return;
+            nextAccountCheck = Time.unscaledTime + 1f;
+            RefreshAccount();
+        }
 
         string AccountUid()
         {
@@ -138,7 +147,7 @@ namespace CatMe.Session
                 var garden = FindAnyObjectByType<GardenCompanionDemo>();
                 if (!string.IsNullOrEmpty(path))
                 {
-                    if (SavePhoto(path, out error)) { garden?.SetAppStatus("Your photo is in the frame. Saving to your account…"); _ = SaveToAccountAsync(); }
+                    if (SavePhoto(path, out error)) { garden?.SetAppStatus("Your photo is in the frame. Saving to your account…"); PhotoAdded?.Invoke(); _ = SaveToAccountAsync(); }
                 }
                 if (!string.IsNullOrEmpty(error)) garden?.SetAppStatus(error);
             }, "Choose a photo for the house frame");

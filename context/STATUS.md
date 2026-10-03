@@ -24,6 +24,8 @@ Branch `claude/focused-faraday-eemw65`: game words from `COPY.md` (tutorial with
 
 Owner push `b1633e8`: old 166 MB butterfly replaced by AI cartoon butterflies, Rain Particles pack added, place rebuilt. Follow-up (cloud, not compiled): butterflies now switch the pack Animator between flying and sitting, eight different species, rain pack wired into `PlaceWeather` with splashes and a phone particle cap, rain materials converted to URP by the existing menu, pack demo script `CharacterController.cs` removed. Needs: Convert Imported Materials To URP, Rebuild With Last Seed, Play Mode in rain.
 
+Feeding and frame (cloud, not compiled): bigger bowl and cat house (menu CatMe > Rooms > Refurnish House Room), "Fill the bowl" with kibble and the pet eating, pet leads home when hungry and to the bowl inside, pet admires a new frame photo, frame lead only while empty, frame account check once a second.
+
 ## Current task
 
 Owner request: furnish the house and add an account-saved photo frame with a cat guide and contextual action. Unity compilation reports 0 errors and warnings; 22 focused local server tests pass (frame, privacy, existing API). Play Mode checks use a fake account API and isolated temporary save, never the player's photo or a provider. Evidence in `docs/implementation/house-photo-frame/`. Live account persistence requires owner-approved deployment of the sibling server; phone validation remains pending.

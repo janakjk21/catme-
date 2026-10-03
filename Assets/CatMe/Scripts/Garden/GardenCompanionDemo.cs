@@ -283,7 +283,7 @@ namespace CatMe.Garden
             if (catWalkState != null) catWalkState.wrapMode = WrapMode.Loop;
             IsReady = catWalkState != null && humanWalkState != null;
             SetActivePet(CatMe.Pets.PetRoster.Active);
-            SetStatus("Move with the joystick. Your cat is exploring.");
+            SetStatus("Drag to walk. " + CatMe.Pets.PetRoster.NameForText(true) + " is right beside you.");
             Debug.Log($"[CatMe][Garden] Active local companions loaded | cat={Path.GetFileName(catPath)} | human={Path.GetFileName(humanPath)}.");
         }
 

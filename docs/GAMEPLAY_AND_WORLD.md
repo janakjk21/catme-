@@ -20,7 +20,7 @@ One place, `Scenes/Places/Place_HomeGarden_r2.unity`, loaded into `GardenCompani
 | Gate | opens onto the riverside walk; the river is only visible beyond it |
 | Riverside walk | the main route, with three benches facing the river and the tent halfway |
 | Tent | shelter when it rains: a dark inside view with rain sound, the pet beside you |
-| House | "Go into the house": an inside room (`Resources/Rooms/HouseRoom_r3.prefab`) with the supplied cat house and dog bowl, feed, bed, ball and go out. The cat leads toward a large wall frame. Its nearby Add a photo / Change photo action opens the existing picker. A private account photo and local cache restore it next time; failed uploads offer Save photo retry. |
+| House | "Go into the house": an inside room (`Resources/Rooms/HouseRoom_r3.prefab`) with the supplied cat house and a large food bowl, feed, bed, ball and go out. Walk up to the empty bowl and "Fill the bowl": brown kibble pours in, the pet walks over, eats it down piece by piece (about 7 s), hearts pop, then it is full for 45 s. "Feed" from the dock makes the pet lead you to the bowl. While the frame is empty the cat leads toward it; after a new photo the pet goes to look at it, meows and hearts pop. Its nearby Add a photo / Change photo action opens the existing picker. A private account photo and local cache restore it next time; failed uploads offer Save photo retry. |
 | Edges | invisible walls keep the pair on the route; trees, hedges and the far bank fill the view |
 | Look | Japanese garden at golden hour: cherry blossom, torii, stone lanterns, warm light |
 
@@ -40,7 +40,7 @@ Benches are kept clear of trees so they are always visible. The walled garden ha
 
 Numbers live in `Pets/CompanionBehavior.cs`; each species owns its own lines.
 
-**The pet leads too** (`Session/CompanionLeader`): when it rains it heads for the tent ("It's raining. This way."); it invites a rest at benches; late in the walk it mentions home or being hungry. Hunger is only words, never a meter.
+**The pet leads too** (`Session/CompanionLeader`): when it rains it heads for the tent ("It's raining. This way."); it invites a rest at benches; late in the walk it says it wants to go home or is hungry and trots toward the house, waiting for you (it gives up after a minute if you don't follow). A hungry pet goes straight to its bowl inside. Hunger is only words and a walk home, never a meter.
 
 **Curiosity** (`Session/CatCuriosity`): now and then the pet trots to a nearby spot and looks at it. When the player walks up, a keepsake is collected.
 

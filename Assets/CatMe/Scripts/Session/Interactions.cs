@@ -34,6 +34,18 @@ namespace CatMe.Session
         GameObject houseRoom;
         HousePhotoFrame houseFrame;
         bool frameLeading, frameAtAisle;
+        // Feeding: walk up to the bowl, fill it, and the pet comes over and eats it down.
+        enum HouseAction { None, Bowl, Frame }
+        enum FeedStage { Empty, Filled, Eating }
+        HouseAction houseAction;
+        FeedStage feed = FeedStage.Empty;
+        Transform bowl, food; Vector3 bowlCentre; float bowlRadius = .25f, fullUntil;
+        bool feedLeading;
+        Coroutine eating;
+        const float BowlReach = 1.8f, FullSeconds = 45f, EatSeconds = 7f;
+        float Flat(Vector3 a, Vector3 b) => Vector2.Distance(new Vector2(a.x, a.z), new Vector2(b.x, b.z));
+        bool NearBowl => bowl != null && Flat(garden.OwnerTransform.position, bowlCentre) < BowlReach;
+        Vector3 EatSpot { get { Vector3 toRoom = houseSpot - bowlCentre; toRoom.y = 0f; if (toRoom.sqrMagnitude < .01f) toRoom = Vector3.back; var p = bowlCentre + toRoom.normalized * (bowlRadius + .3f); p.y = houseSpot.y; return p; } }
         Vector3 FrameGuidePoint(float distance) { var p = houseFrame.transform.position + houseFrame.transform.forward * distance; p.y = houseSpot.y; return p; }
         bool NearFrame => houseFrame != null && Vector3.Distance(new Vector3(garden.OwnerTransform.position.x, 0, garden.OwnerTransform.position.z), new Vector3(houseFrame.transform.position.x, 0, houseFrame.transform.position.z)) < 2.6f;
         Transform RoomFind(string name)
@@ -86,8 +98,14 @@ namespace CatMe.Session
                 if (frameLeading && !frameAtAisle && Vector3.Distance(garden.CatPosition, FrameGuidePoint(4.45f)) < .35f)
                 { frameAtAisle = true; garden.SetLead(FrameGuidePoint(1.3f), false); }
                 if (frameLeading && NearFrame) { garden.ClearLead(); frameLeading = false; }
+                if (feedLeading && NearBowl) { garden.ClearLead(); feedLeading = false; }
+                // One contextual action at a time: the nearer of the bowl (when empty) and the frame.
+                bool bowlReady = NearBowl && feed == FeedStage.Empty && Time.time >= fullUntil;
+                bool frameReady = NearFrame && houseFrame.CanInteract;
+                houseAction = bowlReady && (!frameReady || Flat(garden.OwnerTransform.position, bowlCentre) < Flat(garden.OwnerTransform.position, houseFrame.transform.position)) ? HouseAction.Bowl
+                    : frameReady ? HouseAction.Frame : HouseAction.None;
                 active = houseFrame != null ? houseFrame.GetComponent<InteractionPoint>() : null;
-                SetButton(NearFrame && houseFrame.CanInteract ? houseFrame.ButtonLabel : null); return;
+                SetButton(houseAction == HouseAction.Bowl ? "Fill the bowl" : houseAction == HouseAction.Frame ? houseFrame.ButtonLabel : null); return;
             }
             if (state == State.Busy) { SetButton(null); return; }
             if (state == State.Sitting) { SeatedCatWander(); SetButton("Stand up"); return; }
@@ -122,8 +140,15 @@ namespace CatMe.Session
             bool visible = buttonGroup.alpha > .01f || show;
             if (button.gameObject.activeSelf != visible) button.gameObject.SetActive(visible);
             // In the world, the prompt floats above the thing it belongs to (R-INT-04); otherwise it sits at the bottom.
-            Vector3? anchor = state == State.InHouse && houseFrame != null && show ? houseFrame.transform.position : state == State.Free && active != null && show ? active.transform.position + Vector3.up * 1.15f : (Vector3?)null;
+            Vector3? anchor = state == State.InHouse && show ? HouseAnchor() : state == State.Free && active != null && show ? active.transform.position + Vector3.up * 1.15f : (Vector3?)null;
             PlaceButton(anchor);
+        }
+
+        Vector3? HouseAnchor()
+        {
+            if (houseAction == HouseAction.Bowl) return bowlCentre + Vector3.up * .75f;
+            if (houseAction == HouseAction.Frame && houseFrame != null) return houseFrame.transform.position;
+            return null;
         }
 
         void PlaceButton(Vector3? world)
@@ -172,7 +197,10 @@ namespace CatMe.Session
             switch (state)
             {
                 case State.Free: if (active == null) return; if (active.kind == InteractionKind.Sit) StartCoroutine(Sit(active)); else if (active.kind == InteractionKind.EnterTent) StartCoroutine(EnterTent()); else if (active.kind == InteractionKind.EnterHouse) StartCoroutine(EnterHouse()); break;
-                case State.InHouse: if (NearFrame && houseFrame.CanInteract) houseFrame.Interact(); break;
+                case State.InHouse:
+                    if (houseAction == HouseAction.Bowl) FillBowl();
+                    else if (houseAction == HouseAction.Frame && NearFrame && houseFrame.CanInteract) houseFrame.Interact();
+                    break;
                 case State.Sitting: StartCoroutine(StandUp()); break;
                 case State.InRoom: if (rainStopped) StartCoroutine(LeaveTent()); break;
             }
@@ -298,8 +326,15 @@ namespace CatMe.Session
             yield return director.FadeTo(0f, .6f);
             garden.SetInputBlocked(false); // walk around with the joystick and look with a drag
             state = State.InHouse;
+            FindBowl();
             houseFrame = houseRoom != null ? houseRoom.GetComponentInChildren<HousePhotoFrame>() : null;
-            if (houseFrame != null)
+            if (houseFrame != null) { houseFrame.PhotoAdded -= OnFramePhotoAdded; houseFrame.PhotoAdded += OnFramePhotoAdded; }
+            var leader = FindAnyObjectByType<CompanionLeader>();
+            if (leader != null && leader.WantsDinner && bowl != null && feed == FeedStage.Empty)
+            {
+                Feed();   // a hungry pet goes straight to its bowl; the frame can wait
+            }
+            else if (houseFrame != null && !houseFrame.HasPhoto)
             {
                 // The coffee table blocks a diagonal route. First use the open aisle beside it.
                 garden.ReleaseCat(); garden.SetLead(FrameGuidePoint(4.45f), false); frameLeading = true; frameAtAisle = false;
@@ -311,6 +346,7 @@ namespace CatMe.Session
         {
             state = State.Busy;
             yield return director.FadeTo(1f, .5f);
+            StopEating(); feedLeading = false;
             garden.ReleaseCat(); garden.ClearLead(); frameLeading = false; garden.SetCuriosity(Vector3.zero, 0f);
             garden.PlaceOwnerOnly(doorSpot, doorYaw);
             garden.SetOwnerVisible(true);
@@ -323,20 +359,172 @@ namespace CatMe.Session
             state = State.Free;
         }
 
-        void ThrowBall() { garden.ClearLead(); frameLeading = false; garden.ReleaseCat(); catSleeping = false; garden.ThrowBall(); }
+        void ThrowBall() { StopEating(); feedLeading = false; garden.ClearLead(); frameLeading = false; garden.ReleaseCat(); catSleeping = false; garden.ThrowBall(); }
 
+        // ---- feeding ---------------------------------------------------------------------------------------------------
+
+        void FindBowl()
+        {
+            bowl = RoomFind("Dog bowl") ?? RoomFind("Cat_Bowl");
+            if (bowl == null) return;
+            var renderers = bowl.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length > 0)
+            {
+                Bounds b = renderers[0].bounds; foreach (var r in renderers) b.Encapsulate(r.bounds);
+                bowlCentre = new Vector3(b.center.x, b.min.y, b.center.z); bowlRadius = Mathf.Max(.12f, Mathf.Min(b.extents.x, b.extents.z));
+                if (food == null) food = BuildFood(bowl.parent, new Vector3(b.center.x, b.min.y + b.size.y * .5f, b.center.z), bowlRadius * .62f, b.size.y);
+            }
+            else { bowlCentre = bowl.position; bowlRadius = .25f; if (food == null) food = BuildFood(bowl.parent, bowl.position + Vector3.up * .06f, .15f, .12f); }
+            food.gameObject.SetActive(feed != FeedStage.Empty);
+        }
+
+        // A small brown mound of kibble that sits inside the bowl (built once; hidden while the bowl is empty).
+        static Transform BuildFood(Transform parent, Vector3 centre, float radius, float bowlHeight)
+        {
+            var root = new GameObject("Bowl food").transform; root.SetParent(parent, true); root.position = centre;
+            Material light = null, dark = null;
+            var rng = new System.Random(11);
+            for (int i = 0; i < 30; i++)
+            {
+                var piece = GameObject.CreatePrimitive(PrimitiveType.Sphere); piece.name = "Kibble"; piece.transform.SetParent(root, false);
+                Destroy(piece.GetComponent<Collider>());
+                var renderer = piece.GetComponent<Renderer>();
+                if (light == null) { light = new Material(renderer.sharedMaterial) { color = new Color(.55f, .33f, .16f) }; dark = new Material(light) { color = new Color(.40f, .23f, .11f) }; }
+                renderer.sharedMaterial = i % 3 == 0 ? dark : light;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                float angle = (float)rng.NextDouble() * Mathf.PI * 2f, d = Mathf.Sqrt((float)rng.NextDouble()) * radius;
+                float mound = (1f - (d / Mathf.Max(radius, .01f)) * (d / Mathf.Max(radius, .01f))) * bowlHeight * .35f;
+                float size = Mathf.Lerp(.035f, .05f, (float)rng.NextDouble()) * Mathf.Clamp(radius / .25f, .8f, 1.6f);
+                piece.transform.localPosition = new Vector3(Mathf.Cos(angle) * d, mound, Mathf.Sin(angle) * d);
+                piece.transform.localScale = new Vector3(size, size * .7f, size);
+            }
+            root.gameObject.SetActive(false);
+            return root;
+        }
+
+        // Dock "Feed": the pet leads you to the bowl; at the bowl the contextual button fills it.
         void Feed()
         {
             garden.ClearLead(); frameLeading = false;
-            var bowl = RoomFind("Cat_Bowl"); if (bowl == null) return;
-            garden.ReleaseCat(); catSleeping = false;
-            garden.SetCuriosity(bowl.position + bowl.forward * .45f, 9f);   // walks to the bowl and stays there
-            garden.SetAppStatus("Dinner time.");
-            if (meow != null && PlayerPrefs.GetInt("CatMe.SoundEnabled", 1) == 1) AudioSource.PlayClipAtPoint(meow, houseSpot, .7f);
+            if (bowl == null) FindBowl();
+            if (bowl == null) return;
+            string name = PetRoster.NameForText(true);
+            if (feed == FeedStage.Filled) { StartEating(); return; }
+            if (feed == FeedStage.Eating) return;
+            if (Time.time < fullUntil) { garden.SetAppStatus(name + " is full. Maybe later."); return; }
+            if (NearBowl) { FillBowl(); return; }
+            StopEating(); garden.ReleaseCat(); catSleeping = false;
+            garden.SetLead(EatSpot, false); feedLeading = true;
+            garden.SetAppStatus(name + " is hungry. Fill the bowl.");
+            Meow(.6f);
+        }
+
+        void FillBowl()
+        {
+            if (bowl == null || feed != FeedStage.Empty) return;
+            feed = FeedStage.Filled; feedLeading = false; garden.ClearLead();
+            Haptics.Tap();
+            StartCoroutine(PourFood());
+            StartEating();
+        }
+
+        IEnumerator PourFood()
+        {
+            food.gameObject.SetActive(true);
+            bool reduced = PlayerPrefs.GetInt("CatMe.ReduceMotion", 0) == 1;
+            for (int i = 0; i < food.childCount; i++)
+            {
+                var piece = food.GetChild(i); piece.gameObject.SetActive(true);
+                if (!reduced) { Vector3 rest = piece.localPosition; piece.localPosition = rest + Vector3.up * .25f; StartCoroutine(Drop(piece, rest)); }
+                if (!reduced && i % 3 == 0) yield return null;
+            }
+        }
+
+        static IEnumerator Drop(Transform piece, Vector3 rest)
+        {
+            Vector3 from = piece.localPosition;
+            for (float t = 0f; t < 1f && piece != null; t += Time.deltaTime / .22f) { piece.localPosition = Vector3.Lerp(from, rest, t * t); yield return null; }
+            if (piece != null) piece.localPosition = rest;
+        }
+
+        void StartEating()
+        {
+            if (eating != null) StopCoroutine(eating);
+            eating = StartCoroutine(EatRoutine());
+        }
+
+        void StopEating()
+        {
+            if (eating == null) return;
+            StopCoroutine(eating); eating = null;
+            if (feed == FeedStage.Eating) feed = FeedStage.Filled;   // the food stays; Feed resumes it
+            garden.SetCuriosity(Vector3.zero, 0f); garden.ReleaseCat();
+        }
+
+        IEnumerator EatRoutine()
+        {
+            string name = PetRoster.NameForText(true);
+            garden.ClearLead(); garden.ReleaseCat(); catSleeping = false;
+            Vector3 spot = EatSpot;
+            garden.SetCuriosity(spot, 10f);
+            garden.SetAppStatus("Dinner time. Here comes " + PetRoster.NameForText() + ".");
+            for (float t = 0f; t < 10f && Flat(garden.CatPosition, spot) > .35f; t += Time.deltaTime) yield return null;
+            garden.SetCuriosity(Vector3.zero, 0f);
+            Vector3 look = bowlCentre - spot; look.y = 0f;
+            garden.HoldCat(spot, look.sqrMagnitude > .001f ? Quaternion.LookRotation(look).eulerAngles.y : 0f);
+            feed = FeedStage.Eating;
+            Meow(.7f);
+            garden.SetAppStatus(name + " is eating.");
+            // The mound goes down as the pet eats: pieces disappear one by one.
+            int total = food.childCount, left = 0;
+            for (int i = 0; i < total; i++) if (food.GetChild(i).gameObject.activeSelf) left++;
+            float step = EatSeconds / Mathf.Max(1, left);
+            for (int i = total - 1; i >= 0; i--)
+            {
+                var piece = food.GetChild(i).gameObject; if (!piece.activeSelf) continue;
+                yield return new WaitForSeconds(step);
+                piece.SetActive(false);
+            }
+            food.gameObject.SetActive(false);
+            feed = FeedStage.Empty; fullUntil = Time.time + FullSeconds; eating = null;
+            FindAnyObjectByType<CompanionLeader>()?.HadDinner();
+            garden.ReleaseCat();
+            FindAnyObjectByType<CatPetInput>()?.PopHearts(3);
+            garden.SetAppStatus("All gone. " + name + " loved that.");
+        }
+
+        void Meow(float volume)
+        {
+            if (meow != null && PlayerPrefs.GetInt("CatMe.SoundEnabled", 1) == 1) AudioSource.PlayClipAtPoint(meow, garden.CatPosition, volume);
+        }
+
+        // ---- photo frame: the pet comes to look at a new picture ----------------------------------------------------
+
+        void OnFramePhotoAdded()
+        {
+            if (state != State.InHouse || houseFrame == null || eating != null) return;
+            StartCoroutine(AdmireFrame());
+        }
+
+        IEnumerator AdmireFrame()
+        {
+            garden.ClearLead(); frameLeading = false; garden.ReleaseCat(); catSleeping = false;
+            Vector3 spot = FrameGuidePoint(1.1f);
+            garden.SetCuriosity(spot, 8f);
+            for (float t = 0f; t < 8f && Flat(garden.CatPosition, spot) > .35f && state == State.InHouse; t += Time.deltaTime) yield return null;
+            if (state != State.InHouse) yield break;
+            garden.SetCuriosity(Vector3.zero, 0f);
+            Vector3 look = houseFrame.transform.position - spot; look.y = 0f;
+            garden.HoldCat(spot, look.sqrMagnitude > .001f ? Quaternion.LookRotation(look).eulerAngles.y : 0f);
+            Meow(.6f);
+            FindAnyObjectByType<CatPetInput>()?.PopHearts(2);
+            yield return new WaitForSeconds(2.5f);
+            if (state == State.InHouse && eating == null) garden.ReleaseCat();
         }
 
         void Sleep()
         {
+            StopEating(); feedLeading = false;
             garden.ClearLead(); frameLeading = false;
             var bed = RoomFind("Cat_Bed"); if (bed == null) return;
             StartCoroutine(SleepRoutine(bed));

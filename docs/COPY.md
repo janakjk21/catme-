@@ -34,6 +34,8 @@ Pet button shows the pet's name. Fan: **Ball**, **Roam**, **Call**. Corner butto
 
 In the house: Throw ball, Feed, Bed, Go out (in app).
 
+Feeding: bowl button "Fill the bowl". Feed from the dock away from the bowl: "[Name] is hungry. Fill the bowl." (the pet leads to the bowl). Filled: "Dinner time. Here comes [name]." Eating: "[Name] is eating." Done: "All gone. [Name] loved that." Within 45 s: "[Name] is full. Maybe later." Hungry on the walk: "Follow [name] home for dinner." (the pet leads to the house).
+
 House frame: "Add a photo here". Cat guide: "Follow me. Let's put a photo in the frame." Contextual action: "Add a photo", "Change photo", or "Save photo" after an unsuccessful upload. Picker: "Choose a photo for the house frame". Account saved: "Your photo is saved in your account." Cloud failure: "Saved on this phone. Use Save photo at the frame to try again." Local failure: "That photo could not be saved. Choose another photo or free some space."
 
 ## Status lines

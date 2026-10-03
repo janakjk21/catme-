@@ -11,6 +11,7 @@ namespace CatMe.Editor
         const string RoomPath = "Assets/CatMe/Resources/Rooms/HouseRoom_r3.prefab";
         const string ArtPath = "Assets/CatMe/Art/Rooms/";
 
+        [MenuItem("CatMe/Rooms/Refurnish House Room")]
         public static void Install()
         {
             AssetDatabase.Refresh();
@@ -31,9 +32,10 @@ namespace CatMe.Editor
             {
                 var old = root.Find(name); if (old != null) Object.DestroyImmediate(old.gameObject);
             }
-            Prop(root, "cat_house.glb", "Cat house", centre + new Vector3(1.8f, 0f, -.2f), 180f, 1.1f, true, true);
-            Vector3 bowlPosition = centre + new Vector3(1f, 0f, .3f);
-            Prop(root, "dog_bowl.glb", "Dog bowl", bowlPosition, 0f, .55f, false);
+            // Big enough to read from the follow camera: the house about as tall as the owner's waist, the bowl a clear dish on the floor.
+            Prop(root, "cat_house.glb", "Cat house", centre + new Vector3(1.9f, 0f, -.3f), 180f, 1.45f, true, true);
+            Vector3 bowlPosition = centre + new Vector3(.9f, 0f, .4f);
+            Prop(root, "dog_bowl.glb", "Dog bowl", bowlPosition, 0f, .8f, false);
             var bowlAnchor = root.Find("Cat_Bowl"); if (bowlAnchor != null) bowlAnchor.position = bowlPosition;
             var frame = new GameObject("House photo frame"); frame.transform.SetParent(root, false);
             frame.transform.position = centre + new Vector3(.5f, 1.75f, -5.55f);

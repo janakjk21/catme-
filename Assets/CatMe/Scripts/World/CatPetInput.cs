@@ -101,6 +101,9 @@ namespace CatMe.World
 
         // ---- floating hearts (procedural sprite, no asset needed) ----------------------------------------------------
 
+        /// <summary>A few hearts float up from the pet (used by other moments, such as eating or admiring the photo frame).</summary>
+        public void PopHearts(int count) { for (int i = 0; i < count; i++) SpawnHeart(); }
+
         void SpawnHeart()
         {
             if (canvas == null || view == null) return;
