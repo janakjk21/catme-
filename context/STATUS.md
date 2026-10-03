@@ -18,6 +18,10 @@ Last updated: 2026-10-03
 - Walk animations of generated models in motion. Person model is 43.7 MB (aim under 25 MB).
 - Photo-frame picker and contextual button on a physical iPhone. Account save and cross-device restore against live Firebase are unverified: the new server frame endpoints have not been deployed. The installed build 17 does not contain this feature.
 
+## Changed 2026-10-03 in a cloud session (not compiled; no Unity there)
+
+Branch `claude/focused-faraday-eemw65`: game words from `COPY.md` (tutorial with the pet's name, status lines, messages); selfie front camera with a one-face check and head-and-shoulders crop (`CatMePhotoPicker.mm`, `DeviceBridge`, selfie screen); onboarding screen fade and Back/Close inside the safe area; a generated person is loaded once instead of twice. Compile, Play Mode and an iPhone build are needed before any of it counts as done (`context/CLAUDE_TASKS.md` 5 to 8).
+
 ## Current task
 
 Owner request: furnish the house and add an account-saved photo frame with a cat guide and contextual action. Unity compilation reports 0 errors and warnings; 22 focused local server tests pass (frame, privacy, existing API). Play Mode checks use a fake account API and isolated temporary save, never the player's photo or a provider. Evidence in `docs/implementation/house-photo-frame/`. Live account persistence requires owner-approved deployment of the sibling server; phone validation remains pending.

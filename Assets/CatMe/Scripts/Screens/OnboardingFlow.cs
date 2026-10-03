@@ -40,7 +40,7 @@ namespace CatMe.Garden
 
         public void Begin(bool addMode)
         {
-            accountOnly = false; finishedResult = null; this.addMode = addMode; signedInFlow = addMode || (IsSignedIn != null && IsSignedIn()); loginFirst = false; species = Species.Cat; petPhoto = personPhoto = null; petName = ""; created = null;
+            accountOnly = false; finishedResult = null; this.addMode = addMode; signedInFlow = addMode || (IsSignedIn != null && IsSignedIn()); loginFirst = false; species = Species.Cat; petPhoto = personPhoto = null; personFailMessage = null; petName = ""; created = null;
             if (root == null) { var s = UiKit.Screen(canvasRoot, "Onboarding", CatMeUIStyle.Mist); root = s.root; safe = s.safe; }
             root.SetActive(true); root.transform.SetAsLastSibling();
             Show("species");
@@ -55,7 +55,7 @@ namespace CatMe.Garden
             switch (s)
             {
                 case "photo": Show("photo"); break;
-                case "photofail": failMessage = "That photo is too dark. Try near a window so the face and ears show."; Show("photo"); break;
+                case "photofail": failMessage = "It's too dark to see them. Try again near a window."; Show("photo"); break;
                 case "login": BeginLogin(); break;
                 case "person": Show("person"); break;
                 case "making": signedInFlow = true; OnCreate = (n, sp, ph, ow, rep) => new System.Threading.Tasks.TaskCompletionSource<CatMe.Onboarding.CreationResult>().Task; petPhoto = null; BeginEarlyCreation(); ShowMaking(); break;
@@ -65,7 +65,7 @@ namespace CatMe.Garden
             }
         }
 
-        string failMessage;
+        string failMessage, personFailMessage;
 
         // ---- the pet starts being made as soon as its photo is chosen --------------------------------------------------
 
@@ -148,7 +148,12 @@ namespace CatMe.Garden
             TextLink(RightX, -290f, "Choose another photo", () => { failMessage = string.IsNullOrEmpty(result.rejectReason) ? null : result.error; Show("photo"); }, 420f);
         }
 
-        void Clear() { spinner = null; companion = null; foreach (Transform c in safe) { c.gameObject.SetActive(false); UnityEngine.Object.Destroy(c.gameObject); } }
+        void Clear()
+        {
+            spinner = null; companion = null;
+            foreach (Transform c in safe) { c.gameObject.SetActive(false); UnityEngine.Object.Destroy(c.gameObject); }
+            ScreenFade.Play(safe);   // every screen is built right after Clear, so it fades in
+        }
 
         // ---- shared pieces -------------------------------------------------------------------------------------------
 
@@ -156,8 +161,8 @@ namespace CatMe.Garden
         {
             if (creationStarted || (!addMode && current == "species")) back = false;
             var flow = Flow(); int i = flow.IndexOf(current);
-            if (back) UiKit.IconButton(safe, "back", new Vector2(-860f, 470f), GoBack, "Back");
-            if (!loginFirst && !creationStarted && addMode) UiKit.IconButton(safe, "close", new Vector2(860f, 470f), () => { Hide(); OnCancelled?.Invoke(); }, "Close");
+            if (back) UiKit.IconButton(safe, "back", new Vector2(-860f, 440f), GoBack, "Back");
+            if (!loginFirst && !creationStarted && addMode) UiKit.IconButton(safe, "close", new Vector2(860f, 440f), () => { Hide(); OnCancelled?.Invoke(); }, "Close");
             if (i >= 0 && !accountOnly) UiKit.Rail(safe, flow.Count, i, new Vector2(0f, -490f));
         }
 
@@ -398,13 +403,34 @@ namespace CatMe.Garden
         void ShowPersonPhoto()
         {
             Chrome("person");
+            bool bad = personFailMessage != null;
             ArtCard(personPhoto != null ? Art.FromFile(personPhoto) : Art.Load("PersonPhotoExample"), 0f, true);
             Title(RightX, 280f, "Now show us you");
-            Sub(RightX, 170f, "One happy photo of your face. We make a little 3D you to walk with your pet.", 110f);
-            Tips(50f, "Your face is clear", "There is lots of light", "Only you are in the photo");
-            Primary(RightX, -250f, personPhoto != null ? "Choose another" : "Take a selfie", () =>
-                photos.RequestPhoto(true, (path, msg) => { if (path != null) { personPhoto = path; ownerTcs?.TrySetResult(path); Next(); } else Show("person"); }), 520f);
-            UiKit.Label(safe, "Your photos are private. You can delete them any time in Settings.", 24, CatMeUIStyle.BodyInk, new Vector2(RightX + 400f, -350f), new Vector2(800f, 44f), FontStyle.Normal, TextAnchor.MiddleLeft, "Privacy note");
+            if (bad)
+            {
+                var card = CatMeUIStyle.Card(safe, "Photo problem", new Vector2(800f, 190f), new Color(.98f, .91f, .88f), CatMeUIStyle.Elevation.Resting);
+                ((RectTransform)card.transform).anchoredPosition = new Vector2(RightX + 400f, 60f);
+                UiKit.CoverFrame(card.transform, Art.Load("PersonPhotoExample"), new Vector2(-310f, 0f), new Vector2(150f, 150f), 1f, "Good example");
+                UiKit.Label(card.transform, personFailMessage, 30, new Color(.35f, .14f, .09f), new Vector2(80f, 0f), new Vector2(540f, 160f), FontStyle.Bold, TextAnchor.MiddleLeft);
+            }
+            else
+            {
+                Sub(RightX, 170f, "One happy photo of your face. We make a little 3D you to walk with your pet.", 110f);
+                Tips(50f, "Your face is clear", "There is lots of light", "Only you are in the photo");
+            }
+            Primary(RightX, -250f, personPhoto != null || bad ? "Take another selfie" : "Take a selfie", () => PickPersonPhoto(true), 520f);
+            TextLink(RightX, -345f, "Choose a photo instead", () => PickPersonPhoto(false), 420f);
+            UiKit.Label(safe, "Your photos are private. You can delete them any time in Settings.", 24, CatMeUIStyle.BodyInk, new Vector2(RightX + 400f, -425f), new Vector2(800f, 44f), FontStyle.Normal, TextAnchor.MiddleLeft, "Privacy note");
+        }
+
+        // The phone checks for exactly one face and keeps only the head and shoulders (DeviceBridge, CatMePhotoPicker.mm).
+        void PickPersonPhoto(bool selfieCamera)
+        {
+            photos.RequestPhoto(true, (path, message) =>
+            {
+                if (path == null) { personFailMessage = string.IsNullOrEmpty(message) ? personFailMessage : message; Show("person"); return; }
+                personFailMessage = null; personPhoto = path; ownerTcs?.TrySetResult(path); Next();
+            }, null, selfieCamera);
         }
 
         // ---- name ----------------------------------------------------------------------------------------------------
@@ -481,5 +507,43 @@ namespace CatMe.Garden
             Sub(RightX, -10f, "Say hello to " + created.name + ". You can walk together now.");
             Primary(RightX, -170f, "Say hello", () => { Hide(); OnFinished?.Invoke(created); }, 520f);
         }
+    }
+
+    /// <summary>A short fade-in for each onboarding screen. Reduce motion shows the screen at once. Runs on unscaled time,
+    /// because the game is paused while onboarding is open.</summary>
+    internal sealed class ScreenFade : MonoBehaviour
+    {
+        const float Seconds = .22f;
+        CanvasGroup group;
+        float started;
+
+        public static void Play(RectTransform target)
+        {
+            if (target == null) return;
+            var fade = target.GetComponent<ScreenFade>();
+            if (fade == null) fade = target.gameObject.AddComponent<ScreenFade>();
+            fade.Begin();
+        }
+
+        void Begin()
+        {
+            if (group == null) group = GetComponent<CanvasGroup>();
+            if (group == null) group = gameObject.AddComponent<CanvasGroup>();
+            // Batch renders (Editor/UiCapture) build screens outside Play Mode and capture them at once.
+            bool reduced = !Application.isPlaying || PlayerPrefs.GetInt("CatMe.ReduceMotion", 0) == 1;
+            group.alpha = reduced ? 1f : 0f;
+            started = Time.unscaledTime;
+            enabled = !reduced;
+        }
+
+        void Update()
+        {
+            float t = Mathf.Clamp01((Time.unscaledTime - started) / Seconds);
+            group.alpha = 1f - (1f - t) * (1f - t);   // ease out
+            if (t >= 1f) enabled = false;
+        }
+
+        // A screen hidden mid-fade must never come back half transparent.
+        void OnDisable() { if (group != null) group.alpha = 1f; }
     }
 }

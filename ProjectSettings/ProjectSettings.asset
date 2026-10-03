@@ -427,7 +427,7 @@ PlayerSettings:
   enableInternalProfiler: 0
   logObjCUncaughtExceptions: 1
   enableCrashReportAPI: 0
-  cameraUsageDescription: 
+  cameraUsageDescription: Take a selfie so we can make a little 3D you to walk with your pet.
   locationUsageDescription: 
   microphoneUsageDescription: 
   bluetoothUsageDescription: 

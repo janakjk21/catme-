@@ -72,6 +72,17 @@ namespace CatMe.Pets
         public static bool HasOwnPet { get { Ensure(); return data.pets.Exists(IsOwn); } }
         static bool IsOwn(PetProfile p) => !string.IsNullOrEmpty(p.serverId) || !string.IsNullOrEmpty(p.photoPath);
 
+        /// <summary>The active pet's name for player-facing text (COPY.md [Name]); "your cat" or "your dog" while it has none.</summary>
+        public static string NameForText(bool startOfSentence = false)
+        {
+            PetProfile pet = Active;
+            string name = pet?.name?.Trim();
+            // The stand-in pet is called "Your cat"; that is not a name.
+            if (string.IsNullOrEmpty(name) || name.StartsWith("Your ", StringComparison.Ordinal))
+                name = pet != null && pet.Kind == Species.Dog ? "your dog" : "your cat";
+            return startOfSentence && name.Length > 0 ? char.ToUpperInvariant(name[0]) + name.Substring(1) : name;
+        }
+
         public static PetProfile Get(string id) { Ensure(); return data.pets.Find(p => p.id == id); }
 
         /// <summary>Adds a pet (copying its photo into the pet's own folder) and makes it active.</summary>

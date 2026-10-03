@@ -2,7 +2,7 @@
 
 Every word the player reads. This file is the source: the app is changed to match it. Rules are in `DESIGN.md` (Words). Use the `copywriting` skill for new text.
 
-"In app" marks text already in the code; everything else is approved and still to be put in (roadmap task 8). `[Name]` is the pet's name; use "your cat" or "your dog" before it has one.
+"In app" marks text already in the code. Everything below is in the app as of 2026-10-03 (roadmap task 8), still to be checked in Play Mode. `[Name]` is the pet's name; use "your cat" or "your dog" before it has one.
 
 ## Onboarding (in app)
 
@@ -17,7 +17,7 @@ The screens and their words are in `ONBOARDING_FLOW.md`.
 | Ball | Roll the ball. Watch [Name] run after it. | Throw the ball, link Not now |
 | Done | You did it. The garden is yours. | none |
 
-In app today: "Drag here to walk.", "Call your cat.", "Roll the ball and let your cat follow.", buttons "Call your cat", "Play ball".
+When the tutorial is skipped, the Done line is not shown.
 
 ## Play screen
 
@@ -44,7 +44,7 @@ House frame: "Add a photo here". Cat guide: "Follow me. Let's put a photo in the
 | Rain stops | The rain has stopped. (in app) |
 | In the tent | Listen to the rain. (in app) |
 | Feeding | Dinner time. (in app) |
-| Pet asleep | [Name] is asleep. (in app: "Sleeping.") |
+| Pet asleep | [Name] is asleep. |
 
 ## What the pet says (in app, `Pets/CompanionBehavior.cs`)
 
@@ -57,7 +57,7 @@ House frame: "Add a photo here". Cat guide: "Follow me. Let's put a photo in the
 | Bench | Can we rest here? / A nice spot to sit. / Shall we sit a while? | Can we sit? Please? / Rest here? Okay? / Sit time! |
 | Home | Shall we head home? / It's getting late. / Home soon? | Home? Dinner? / Can we go home now? / Home! Home! |
 | Hungry | I'm getting hungry. / Is it dinner time? / I could eat something. | I'm so hungry! / Is it food time? / Snacks? Please? |
-| Visitor | Who's that? / Someone's coming. (replace "Hm. A dog.") | Who's that? Who's that? / A friend! / Ooh, a dog! |
+| Visitor | Who's that? / Someone's coming. | Who's that? Who's that? / A friend! / Ooh, a dog! |
 | Butterfly | Oooh. / Look at that. / Mine. | Wheee! / Wait for me! / Got it! Almost! |
 | Petted | Purr. / Mmm. / More. | Yes! Again! / Best day! / More, more! |
 | Called | Here. / Hello. / Yes? | Here! / Coming! / Right here! |
@@ -89,6 +89,8 @@ Your pets · Store · Photo album · Account · Settings · Keep exploring
 | Photo too dark | It's too dark to see them. Try again near a window. |
 | No cat or dog found | We can't see a [cat/dog] in this photo. Try another one. |
 | More than one | There is more than one in this photo. Try one with only [your pet/you]. |
+| No face in the selfie | We can't see your face in this photo. Try a selfie in good light. |
+| Face too small | Your face is too small in this photo. Take a closer selfie. |
 | Empty album | No photos yet. Tap the camera to take one. |
 | Empty pets list | Just you for now. Add a pet. |
 | Delete photos confirm | Delete your photos? Your photos will be removed from our server and this phone. Your pets stay. Buttons: Delete my photos, Keep my photos |

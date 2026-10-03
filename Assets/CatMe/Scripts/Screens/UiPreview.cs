@@ -41,7 +41,7 @@ namespace CatMe.Garden
             else if (name == "dialog" || name == "toast")
             {
                 var bg = UiKit.Rect(canvasRoot, "bg", Vector2.zero, new Vector2(2000f, 1200f)); bg.gameObject.AddComponent<UnityEngine.UI.Image>().color = new Color(.2f, .3f, .24f);
-                if (name == "dialog") new ConfirmDialog(canvasRoot).Show("Delete your account?", "This removes your pets, photos and saved walks. It cannot be undone.", "Keep it", "Delete everything", null, null);
+                if (name == "dialog") new ConfirmDialog(canvasRoot).Show("Delete your account?", "Your pets and photos will be removed for good.", "Keep my account", "Delete account", null, null);
                 else { var toast = Toast.Create(canvasRoot); toast.Show("Mochi is ready", "Meet Mochi", null, 600f); toast.SnapShown(); }
             }
             else if (name == "loading" || name == "offline" || name == "failed")

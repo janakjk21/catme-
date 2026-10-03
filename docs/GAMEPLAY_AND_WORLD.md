@@ -59,7 +59,7 @@ Numbers live in `Pets/CompanionBehavior.cs`; each species owns its own lines.
 
 ## The first walk (tutorial)
 
-Three steps, each shown as one short hint (`Onboarding/TutorialController`): **walk** ("Drag here to walk.") -> **call** the pet ("Call your cat.") -> **roll the ball** and watch it chase. The ball step can be put off. After that the garden is free play.
+Three steps, each shown as one short hint (`Onboarding/TutorialController`, words in `COPY.md`): **walk** ("Drag to walk.") -> **call** the pet ("Call [Name]. They will come to you.") -> **roll the ball** and watch it chase. The ball step can be put off. After that the garden is free play.
 
 ## The living world
 
@@ -86,6 +86,4 @@ A third-person camera follows the pair at a comfortable height (`Garden/Companio
 
 ## Planned
 
-- Fade between onboarding screens.
 - The player's own downloaded dog model (dogs use the built-in corgi today).
-- Gameplay words updated to the reviewed copy deck (tutorial hints, settings lines).

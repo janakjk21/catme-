@@ -30,4 +30,4 @@ PluginImporter:
       settings:
         AddToEmbeddedBinaries: false
         CompileFlags:
-        FrameworkDependencies: PhotosUI.framework;Photos.framework
+        FrameworkDependencies: PhotosUI.framework;Photos.framework;Vision.framework;AVFoundation.framework

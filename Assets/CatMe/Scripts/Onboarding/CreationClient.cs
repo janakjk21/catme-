@@ -75,7 +75,7 @@ namespace CatMe.Onboarding
                     if (pet != null && (pet.status == "ready" || pet.status == "failed" || pet.status == "rejected")) break;
                     await Task.Delay(2000);
                 }
-                if (pet == null || pet.status == "failed") { result.error = "We could not make your pet. Nothing was used from your free pets."; ClearPending(); return result; }
+                if (pet == null || pet.status == "failed") { result.error = "We couldn't make your pet this time. Try again."; ClearPending(); return result; }
                 if (pet.status == "rejected") { result.rejectReason = pet.rejectReason; result.error = RejectMessage(pet.rejectReason); ClearPending(); return result; }
                 if (pet.status != "ready") { result.error = "This is taking longer than expected. Your pet will keep being made; open the app again soon."; return result; }
 
@@ -122,10 +122,10 @@ namespace CatMe.Onboarding
         {
             switch (reason)
             {
-                case "not_a_cat": return "We could not find a cat in that photo. Use one clear photo of your cat.";
-                case "not_a_dog": return "We could not find a dog in that photo. Use one clear photo of your dog.";
-                case "multiple_subjects": return "There is more than one animal or person in that photo. Crop to one.";
-                case "too_dark": return "That photo is too dark. Try near a window so the face and ears show.";
+                case "not_a_cat": return "We can't see a cat in this photo. Try another one.";
+                case "not_a_dog": return "We can't see a dog in this photo. Try another one.";
+                case "multiple_subjects": return "There is more than one in this photo. Try one with only your pet.";
+                case "too_dark": return "It's too dark to see them. Try again near a window.";
                 case "too_blurry": return "That photo is blurry. A sharp, well-lit photo works best.";
                 case "too_small": return "That photo is too small. Pick one at least 512 pixels wide.";
                 case "pet_not_riggable": return "We could not build a walking body from that photo. Use a clear photo that shows the whole animal.";

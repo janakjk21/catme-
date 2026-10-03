@@ -1,5 +1,6 @@
 using System.Collections;
 using CatMe.Garden;
+using CatMe.Pets;
 using CatMe.World;
 using UnityEngine;
 using UnityEngine.UI;
@@ -348,7 +349,7 @@ namespace CatMe.Session
             for (float t = 0f; t < 12f && Vector3.Distance(garden.CatPosition, bed.position) > .35f; t += Time.deltaTime) yield return null;
             garden.SetCuriosity(Vector3.zero, 0f);
             garden.HoldCat(bed.position + Vector3.up * .12f, bed.eulerAngles.y);   // neutral pose: no sleep animation exists yet
-            catSleeping = true; garden.SetAppStatus("Sleeping.");
+            catSleeping = true; garden.SetAppStatus(PetRoster.NameForText(true) + " is asleep.");
         }
 
         void SetRoomButtons(bool show)

@@ -69,7 +69,7 @@ namespace CatMe.Pets
         static readonly string[] bench = { "Can we rest here?", "A nice spot to sit.", "Shall we sit a while?" };
         static readonly string[] home = { "Shall we head home?", "It's getting late.", "Home soon?" };
         static readonly string[] hungry = { "I'm getting hungry.", "Is it dinner time?", "I could eat something." };
-        static readonly string[] visitor = { "Who's that?", "Hm. A dog.", "Someone's coming." };
+        static readonly string[] visitor = { "Who's that?", "Someone's coming." };
         static readonly string[] fly = { "Oooh.", "Look at that.", "Mine." };
         static readonly string[] pet = { "Purr.", "Mmm.", "More." };
         static readonly string[] arrive = { "Here.", "Hello.", "Yes?" };

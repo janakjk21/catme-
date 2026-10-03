@@ -30,7 +30,7 @@ namespace CatMe.Pets
             // Very dark photos hide the markings we need.
             var pixels = image.GetPixels32(); double sum = 0; int step = Mathf.Max(1, pixels.Length / 4000), n = 0;
             for (int i = 0; i < pixels.Length; i += step) { var c = pixels[i]; sum += (c.r + c.g + c.b) / 3.0; n++; }
-            if (n > 0 && sum / n < 28) return PhotoCheck.Fail("too_dark", "This photo is quite dark. Try one in good light.");
+            if (n > 0 && sum / n < 28) return PhotoCheck.Fail("too_dark", "It's too dark to see them. Try again near a window.");
             return PhotoCheck.Pass();
         }
     }

@@ -261,7 +261,9 @@ namespace CatMe.Garden
             if (activePet != null && activePet.Kind == CatMe.Pets.Species.Cat && !string.IsNullOrEmpty(activePet.modelPath) && File.Exists(activePet.modelPath)) catPath = activePet.modelPath;
             loadedCatModel = catPath;
             string humanPath = File.Exists(savedHuman) ? savedHuman : Path.Combine(folder, "human-walking.glb");
-            string callPath = File.Exists(savedHuman) ? savedHuman : Path.Combine(folder, "human-call.glb");
+            // A generated person has only a walk clip, so the call gesture exists only for the bundled person.
+            // Loading the same large person model a second time would only double its memory.
+            string callPath = File.Exists(savedHuman) ? null : Path.Combine(folder, "human-call.glb");
             // Provider pixel framing and authored GLB units vary, so enforce one shared pair scale after import.
             catAnimation = await LoadCharacter(catPath, catRoot, CompanionScaleStandards.CatHeightMeters, true);
             catWalkState = FirstState(catAnimation);
@@ -272,7 +274,7 @@ namespace CatMe.Garden
             humanHand = FindHumanHand(walkingHuman.transform);
             callingHuman = new GameObject("CallingHuman");
             callingHuman.transform.SetParent(humanRoot, false);
-            humanCallAnimation = await LoadCharacter(callPath, callingHuman.transform, CompanionScaleStandards.OwnerHeightMeters, false);
+            humanCallAnimation = callPath == null ? null : await LoadCharacter(callPath, callingHuman.transform, CompanionScaleStandards.OwnerHeightMeters, false);
             sitState = FindState(humanCallAnimation, "Chair_Sit_Idle_F");
             beckonState = FindState(humanCallAnimation, "Call_Gesture");
             if (sitState != null) sitState.wrapMode = WrapMode.Loop;
@@ -504,7 +506,7 @@ namespace CatMe.Garden
                 if (callingHuman != null) callingHuman.SetActive(true);
                 if (humanCallAnimation != null) { beckonState.wrapMode = WrapMode.Once; humanCallAnimation.Play(beckonState.name); DidCallGesturePlay = true; }
             }
-            SetStatus("You call your cat.");
+            SetStatus("You call " + CatMe.Pets.PetRoster.NameForText() + ".");
         }
 
         public void ThrowBall()

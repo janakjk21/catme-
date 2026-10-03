@@ -181,6 +181,8 @@ namespace CatMe.Editor
             supportedOrientations.AddString("UIInterfaceOrientationLandscapeLeft");
             supportedOrientations.AddString("UIInterfaceOrientationLandscapeRight");
             root.SetString("CFBundleDisplayName", "WornTag");
+            // The selfie screen opens the front camera (CatMePhotoPicker.mm).
+            root.SetString("NSCameraUsageDescription", "Take a selfie so we can make a little 3D you to walk with your pet.");
             // Google sign-in: the client id, and the reversed client id as the URL scheme Google returns to (from GoogleService-Info.plist).
             string firebasePlistPath = Path.Combine(Application.dataPath, "GoogleService-Info.plist");
             if (File.Exists(firebasePlistPath))
@@ -227,6 +229,8 @@ namespace CatMe.Editor
             project.AddFileToBuild(target, pickerFile);
             project.AddFrameworkToProject(target, "PhotosUI.framework", false);
             project.AddFrameworkToProject(target, "Photos.framework", false);
+            project.AddFrameworkToProject(target, "Vision.framework", false);
+            project.AddFrameworkToProject(target, "AVFoundation.framework", false);
             // Unity already adds Assets/Plugins/iOS/CatMeAppleSignIn.mm to UnityFramework.
             // Adding a second copy here produces duplicate native symbols at link time.
             project.AddFrameworkToProject(target, "AuthenticationServices.framework", false);

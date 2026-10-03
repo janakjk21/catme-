@@ -107,14 +107,14 @@ namespace CatMe.Garden
 
         public void ShowOffline(Action retry, Action continueOffline)
         {
-            Begin("No connection", "You can still walk the garden. Making a new pet needs the internet.");
+            Begin("No internet", "Your pet is saved on this phone. Try again when you're back online.");
             UiKit.NestedButton(safe, "Try again", new Vector2(0f, -150f), 460f, CatMeUIStyle.Pine, () => { Hide(); retry?.Invoke(); }, 34, "Retry");
             UiKit.Link(safe, "Continue offline", new Vector2(0f, -270f), new Vector2(360f, 70f), () => { Hide(); continueOffline?.Invoke(); }, 28, TextAnchor.MiddleCenter);
         }
 
         public void ShowFailed(string petName, Action retry, Action choosePhoto)
         {
-            Begin("We could not make " + petName, "That was our side, not your photo. Nothing has been used from your free pets.");
+            Begin("We couldn't make " + petName + " this time", "That was our side, not your photo. Nothing has been used from your free pets.");
             UiKit.NestedButton(safe, "Try again", new Vector2(0f, -150f), 460f, CatMeUIStyle.Pine, () => { Hide(); retry?.Invoke(); }, 34, "Retry");
             UiKit.Link(safe, "Choose another photo", new Vector2(0f, -270f), new Vector2(420f, 70f), () => { Hide(); choosePhoto?.Invoke(); }, 28, TextAnchor.MiddleCenter);
         }

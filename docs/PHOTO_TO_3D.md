@@ -6,7 +6,8 @@ Every step from the moment the player picks a photo to the 3D pet walking in the
 
 ```
 PHONE                                   API (Railway)                          PROVIDERS
-1 pick photo, shrink to 1536 px JPEG
+1 pick photo (selfie: front camera, one face,
+  cropped to head and shoulders), shrink to 1536 px JPEG
 2 sign in (Firebase)  -- ID token -->   3 /session: create user, free quota
 4 /consent                              record photo consent
 5 /uploads            <-- signed link   15-minute write link to users/{uid}/photos/{id}.jpg
@@ -59,7 +60,7 @@ Rejections and failures do not reduce the account's creation quota. A provider m
 
 | Step | File |
 |---|---|
-| Picking and saving the photo | app `Scripts/Garden/DeviceBridge.cs` |
+| Picking and saving the photo, selfie camera and face crop | app `Scripts/Garden/DeviceBridge.cs`, `Plugins/iOS/CatMePhotoPicker.mm` |
 | Upload, create, poll, download | app `Scripts/Onboarding/CreationClient.cs`, `MobileApi.cs` |
 | Saving the model per pet, loading it | app `Scripts/Garden/CatMeAppFlow.cs` (`OnCreated`), `GardenCompanionDemo.LoadCharacters` |
 | Routes | server `mobile/index.js` |

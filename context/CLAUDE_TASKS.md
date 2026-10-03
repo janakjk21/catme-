@@ -45,6 +45,8 @@ Follows `docs/PHOTO_TO_3D.md`, `docs/QUALITY.md` (budget under 25 MB).
 
 ## 5. Gameplay words
 
+**Code written 2026-10-03 (cloud session, no Unity there): needs a compile and the Play Mode check below.** Pet names come from `PetRoster.NameForText`.
+
 Follows `docs/COPY.md`. Skill: `copywriting`.
 
 - Put every line marked "to be put in" into the code: tutorial hints and buttons (`CatMeAppFlow.RefreshGuide`), status lines (`Session/Interactions.cs`), the "Who's that?" cat line (`Pets/CompanionBehavior.cs`), settings lines, empty states, error messages.
@@ -53,11 +55,15 @@ Follows `docs/COPY.md`. Skill: `copywriting`.
 
 ## 6. A call pose for generated people
 
+App side done 2026-10-03: a generated person no longer loads its large model a second time for the call; Call keeps the walking person. The server plan below is still open.
+
 Follows `docs/GAMEPLAY_AND_WORLD.md` (Controls: Call).
 
 - A generated person has only a walk clip; the Call action falls back to it. Option: Meshy's animation endpoint for a "wave/call" action on the existing rig (`createAnimation` in the old web pipeline, `clonecatme/server/meshy.js`). Server-side plan and unit tests only; real use needs the owner's approval (credits).
 
 ## 7. Screen fade and small polish
+
+**Code written 2026-10-03 (cloud session): `ScreenFade` in `OnboardingFlow.cs` (0.22 s, off with Reduce motion); Back and Close moved to y 440. Needs a compile, `UiCapture` renders and Play Mode.**
 
 Follows `docs/DESIGN.md` (Motion and feel).
 
@@ -65,7 +71,13 @@ Follows `docs/DESIGN.md` (Motion and feel).
 - The Back button sits too close to the top edge on the photo screens (see renders); move it inside the safe area.
 - Done when: rendered with `UiCapture` and played in Play Mode.
 
-## 8. QA pass
+## 8. Selfie: front camera and face crop
+
+**Code written 2026-10-03 (cloud session): needs an Xcode build and a phone test.** `CatMePhotoPicker.mm` opens the front camera ("Take a selfie") or the library ("Choose a photo instead"); Vision must find exactly one face; only a head-and-shoulders crop is saved and uploaded. Messages in `COPY.md`. Camera permission text set in Player Settings and `IOSDevelopmentBuild`.
+
+- Server follow-up (`worntag-api/mobile/ownerPrompt.js`): the person prompt still asks to keep the photo's outfit and footwear, which a head-and-shoulders crop cannot show. Rewrite it for a face-only reference (face and hair from the photo, a simple neutral outfit) and unit-test the request body. A real check spends Meshy credits: owner approval.
+
+## 9. QA pass
 
 Follows `docs/QA_PASS.md`. Report only, into `context/QA_REPORT.md`. No new creations unless the owner approves one.
 

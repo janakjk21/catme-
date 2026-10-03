@@ -229,8 +229,8 @@ namespace CatMe.Garden
             surface.GetComponent<Image>().raycastTarget = false;
             surface.transform.SetAsFirstSibling();
             guideHint.transform.SetParent(surface.transform, false); guideHint.rectTransform.anchoredPosition = Vector2.zero;
-            guideAction = MakeButton(guide.transform, "Teaching action", "Call your cat", new Vector2(1, 0), new Vector2(-170, 164), new Vector2(260, 70), CatMeUIStyle.Olive, true, () => { if (tutorial.Progress.objective == "call") garden.CallCat(); else garden.ThrowBall(); });
-            guideLater = MakeButton(guide.transform, "Skip ball", "Maybe later", new Vector2(1, 0), new Vector2(-170, 90), new Vector2(260, 58), CatMeUIStyle.CreamGlass, false, () => tutorial.SkipBall());
+            guideAction = MakeButton(guide.transform, "Teaching action", "Call", new Vector2(1, 0), new Vector2(-170, 164), new Vector2(260, 70), CatMeUIStyle.Olive, true, () => { if (tutorial.Progress.objective == "call") garden.CallCat(); else garden.ThrowBall(); });
+            guideLater = MakeButton(guide.transform, "Skip ball", "Not now", new Vector2(1, 0), new Vector2(-170, 90), new Vector2(260, 58), CatMeUIStyle.CreamGlass, false, () => tutorial.SkipBall());
             MakeButton(guide.transform, "Skip introduction", "Skip introduction", new Vector2(.5f, 1), new Vector2(0, -65), new Vector2(300, 60), CatMeUIStyle.CreamGlass, false, () => tutorial.Skip());
             guideHelp = MakeButton(guide.transform, "Guide help", "Show hint", new Vector2(.5f, 0), new Vector2(0, 85), new Vector2(220, 56), CatMeUIStyle.CreamGlass, false, () => { guideTime = 0; guideHint.transform.parent.gameObject.SetActive(true); });
             guide.SetActive(false);
@@ -241,8 +241,9 @@ namespace CatMe.Garden
             guideTime = 0; guideHelpShown = false;
             if (guide == null) return;
             string step = tutorial.Progress.objective;
-            guideHint.text = step == "walk" ? "Drag here to walk." : step == "call" ? "Call your cat." : "Roll the ball and let your cat follow.";
-            guideAction.GetComponentInChildren<Text>().text = step == "call" ? "Call your cat" : "Play ball";
+            string name = PetRoster.NameForText();
+            guideHint.text = step == "walk" ? "Drag to walk." : step == "call" ? "Call " + name + ". They will come to you." : "Roll the ball. Watch " + name + " run after it.";
+            guideAction.GetComponentInChildren<Text>().text = step == "call" ? "Call " + name : "Throw the ball";
             guideAction.gameObject.SetActive(step == "call" || step == "ball");
             guideLater.gameObject.SetActive(step == "ball");
             guideHelp.gameObject.SetActive(false);
@@ -442,7 +443,7 @@ namespace CatMe.Garden
         {
             garden.EndFirstGardenSession();
             SetGameplayControlsVisible(true);
-            garden.SetAppStatus("");
+            garden.SetAppStatus(tutorial.Progress.skipped ? "" : "You did it. The garden is yours.");
         }
 
         private void OpenSettings()

@@ -40,8 +40,10 @@ namespace CatMe.Garden
 
         // ---- photos -------------------------------------------------------------------------------------------------------
 
-        /// <summary>Opens the photo picker (editor: a file dialog) and reports the saved JPEG path, or null with a short reason.</summary>
-        public void RequestPhoto(bool human, Action<string, string> done, string editorTitle = null)
+        /// <summary>Opens the photo picker (editor: a file dialog) and reports the saved JPEG path, or null with a short reason.
+        /// On iPhone a person photo must show exactly one face and is cropped to the head and shoulders before it is saved;
+        /// <paramref name="selfieCamera"/> opens the front camera instead of the library.</summary>
+        public void RequestPhoto(bool human, Action<string, string> done, string editorTitle = null, bool selfieCamera = false)
         {
             if (picking) return;
             picking = true; pickingHuman = human; photoDone = done;
@@ -51,7 +53,9 @@ namespace CatMe.Garden
             if (!string.IsNullOrEmpty(auto)) { OnPhotoPicked(auto); return; }
             OnPhotoPicked(EditorUtility.OpenFilePanel(editorTitle ?? (human ? "Choose a photo of you" : "Choose a photo of your pet"), "", "png,jpg,jpeg"));
 #elif UNITY_IOS
-            if (human) CatMePhotoPicker_OpenForHuman(gameObject.name); else CatMePhotoPicker_Open(gameObject.name);
+            if (human && selfieCamera) CatMePhotoPicker_TakeSelfie(gameObject.name);
+            else if (human) CatMePhotoPicker_OpenForHuman(gameObject.name);
+            else CatMePhotoPicker_Open(gameObject.name);
 #else
             Finish(null, "Photos can be chosen on iPhone or in the Unity editor.");
 #endif
@@ -64,6 +68,7 @@ namespace CatMe.Garden
         void OnPhotoPicked(string path)
         {
             if (string.IsNullOrWhiteSpace(path)) { Finish(null, null); return; }
+            if (path.StartsWith("error:", StringComparison.Ordinal)) { Finish(null, PersonPhotoMessage(path.Substring(6))); return; }
             Texture2D decoded = null;
             try
             {
@@ -88,6 +93,18 @@ namespace CatMe.Garden
 #if UNITY_IOS && !UNITY_EDITOR
                 if (Path.GetFileName(path).StartsWith("catme-photo-") && Path.GetFullPath(path).StartsWith(Path.GetFullPath(Application.temporaryCachePath))) { try { File.Delete(path); } catch (IOException) { } }
 #endif
+            }
+        }
+
+        // Words for the native face check (COPY.md, Messages).
+        static string PersonPhotoMessage(string reason)
+        {
+            switch (reason)
+            {
+                case "no_face": return "We can't see your face in this photo. Try a selfie in good light.";
+                case "many_faces": return "There is more than one in this photo. Try one with only you.";
+                case "face_small": return "Your face is too small in this photo. Take a closer selfie.";
+                default: return "This photo could not be read. Choose another one.";
             }
         }
 
@@ -176,6 +193,7 @@ namespace CatMe.Garden
         [DllImport("__Internal")] static extern void CatMeGoogleSignIn_Open(string target);
         [DllImport("__Internal")] static extern void CatMePhotoPicker_Open(string target);
         [DllImport("__Internal")] static extern void CatMePhotoPicker_OpenForHuman(string target);
+        [DllImport("__Internal")] static extern void CatMePhotoPicker_TakeSelfie(string target);
         [DllImport("__Internal")] static extern void CatMeAppleSignIn_Open(string target);
 #endif
     }

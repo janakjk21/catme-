@@ -427,7 +427,7 @@ namespace CatMe.Garden
         void MovePhoto(int direction){if(photos.Length==0)return;deleteArmed=false;photoIndex=(photoIndex+direction+photos.Length)%photos.Length;ShowPhoto();}
         void ShowPhoto()
         {
-            if(photos.Length==0){galleryImage.sprite=null;galleryImage.color=new Color(.2f,.22f,.2f,1);galleryCaption.text="No photos yet. Tap the camera while you walk.";deletePhoto.interactable=false;return;}
+            if(photos.Length==0){galleryImage.sprite=null;galleryImage.color=new Color(.2f,.22f,.2f,1);galleryCaption.text="No photos yet. Tap the camera to take one.";deletePhoto.interactable=false;return;}
             deletePhoto.interactable=true;
             var bytes=File.ReadAllBytes(photos[photoIndex]);var texture=new Texture2D(2,2,TextureFormat.RGBA32,false);
             if(!texture.LoadImage(bytes)){Destroy(texture);galleryCaption.text="This photo could not be opened.";return;}
@@ -436,7 +436,7 @@ namespace CatMe.Garden
             if(File.Exists(json)){try{var data=JsonUtility.FromJson<PhotoMetadata>(File.ReadAllText(json));detail=ZoneLabel(data.zone)+"  ·  "+DateTime.Parse(data.createdUtc).ToLocalTime().ToString("d MMM, HH:mm");}catch{}}
             galleryCaption.text=detail;
         }
-        void RefreshGalleryCaption(){if(gallery.activeSelf&&photos.Length==0)galleryCaption.text="No photos yet. Tap the camera while you walk.";}
+        void RefreshGalleryCaption(){if(gallery.activeSelf&&photos.Length==0)galleryCaption.text="No photos yet. Tap the camera to take one.";}
         void DeleteSelectedPhoto()
         {
             if(photos.Length==0)return;
