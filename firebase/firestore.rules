@@ -1,0 +1,78 @@
+rules_version = '2';
+// WornTag Firestore rules. Design: docs/production/08_DATA_MODEL_AND_CONNECTIONS.md
+// Clients read their own tree and change only a short list of harmless fields.
+// The API and worker use the Admin SDK, which bypasses these rules.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function changedOnly(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
+    function smallString(v, max) { return v is string && v.size() <= max; }
+
+    match /users/{uid} {
+      allow get: if isOwner(uid);
+      allow list, create, delete: if false;
+      allow update: if isOwner(uid)
+        && changedOnly(['displayName', 'activePetId', 'settings', 'locale', 'timezone', 'consent'])
+        && (!('displayName' in request.resource.data) || smallString(request.resource.data.displayName, 40))
+        && (!('locale' in request.resource.data) || smallString(request.resource.data.locale, 20))
+        && (!('consent' in request.resource.data) || request.resource.data.consent.diff(resource.data.consent).affectedKeys().hasOnly(['marketing']));
+
+      match /wallet/{id} { allow get, list: if isOwner(uid); allow write: if false; }
+      match /ledger/{id} { allow get, list: if isOwner(uid); allow write: if false; }
+      match /photos/{id} { allow get, list: if isOwner(uid); allow write: if false; }
+      match /requests/{id} { allow read, write: if false; }
+
+      match /pets/{petId} {
+        allow get, list: if isOwner(uid);
+        allow update: if isOwner(uid) && changedOnly(['name']) && smallString(request.resource.data.name, 32) && request.resource.data.name.size() > 0;
+        allow create, delete: if false;
+        match /models/{version} { allow get, list: if isOwner(uid); allow write: if false; }
+      }
+
+      match /owner/{ownerId} {
+        allow get, list: if isOwner(uid);
+        allow write: if false;
+        match /models/{version} { allow get, list: if isOwner(uid); allow write: if false; }
+      }
+
+      match /saves/{petId} {
+        allow get, list: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(['place', 'position', 'yaw', 'timeOfDay', 'weather', 'keepsakes', 'tutorial', 'lastWalkAt', 'schema', 'updatedAt'])
+          && request.resource.data.keepsakes.size() <= 64;
+        allow delete: if isOwner(uid);
+      }
+
+      match /album/{photoId} { allow get, list: if isOwner(uid); allow write: if false; }
+
+      match /inventory/{itemId} { allow get, list: if isOwner(uid); allow write: if false; }
+
+      match /devices/{deviceId} {
+        allow get, list, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(['platform', 'appVersion', 'osVersion', 'model', 'fcmToken', 'notificationsEnabled', 'lastSeenAt', 'createdAt'])
+          && smallString(request.resource.data.get('fcmToken', ''), 4096);
+      }
+
+      match /purchases/{id} { allow get, list: if isOwner(uid); allow write: if false; }
+      match /entitlements/{id} { allow get, list: if isOwner(uid); allow write: if false; }
+      // Legacy collections from the first server draft.
+      match /jobs/{id} { allow get, list: if isOwner(uid); allow write: if false; }
+      match /pairs/{id} { allow get, list: if isOwner(uid); allow write: if false; }
+    }
+
+    match /catalog/{itemId} { allow get, list: if signedIn(); allow write: if false; }
+    match /config/{doc} { allow get: if signedIn(); allow list, write: if false; }
+    match /legal/{version} { allow get, list: if true; allow write: if false; }
+
+    // Server-only collections.
+    match /jobs/{jobId} { allow read, write: if false; }
+    match /deletions/{id} { allow read, write: if false; }
+    match /audit/{id} { allow read, write: if false; }
+    match /mergeRequests/{id} { allow read, write: if false; }
+
+    match /{document=**} { allow read, write: if false; }
+  }
+}

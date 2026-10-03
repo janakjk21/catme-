@@ -1,0 +1,12 @@
+{
+  "indexes": [
+    { "collectionGroup": "jobs", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "leaseUntil", "order": "ASCENDING" } ] },
+    { "collectionGroup": "photos", "queryScope": "COLLECTION_GROUP", "fields": [ { "fieldPath": "retentionUntil", "order": "ASCENDING" } ] },
+    { "collectionGroup": "ledger", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "createdAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "devices", "queryScope": "COLLECTION_GROUP", "fields": [ { "fieldPath": "fcmToken", "order": "ASCENDING" } ] },
+    { "collectionGroup": "inventory", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownedAt", "order": "DESCENDING" } ] }
+  ],
+  "fieldOverrides": [
+    { "collectionGroup": "requests", "fieldPath": "expireAt", "ttl": true, "indexes": [] }
+  ]
+}

@@ -1,0 +1,11 @@
+rules_version = '2';
+// WornTag Storage rules. Uploads go through short-lived signed URLs issued by the API, so clients never write directly.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /users/{uid}/photos/{path=**} { allow read: if request.auth != null && request.auth.uid == uid; allow write: if false; }
+    match /users/{uid}/models/{path=**} { allow read: if request.auth != null && request.auth.uid == uid; allow write: if false; }
+    match /users/{uid}/avatar/{path=**} { allow read: if request.auth != null && request.auth.uid == uid; allow write: if false; }
+    match /users/{uid}/album/{path=**} { allow read: if request.auth != null && request.auth.uid == uid; allow write: if false; }
+    match /{path=**} { allow read, write: if false; }
+  }
+}

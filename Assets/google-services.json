@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "866984205544",
+    "project_id": "catme-8a634",
+    "storage_bucket": "catme-8a634.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:866984205544:android:b21943149570b24994bd5d",
+        "android_client_info": {
+          "package_name": "com.catme.home"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApSBINaFEbTkoIIj0cmgvltfnOiHu9oBw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

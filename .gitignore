@@ -1,0 +1,57 @@
+# Unity generated content
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+
+# IDE files
+.idea/
+.vs/
+.vscode/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Secrets and downloaded/generated cats
+.env
+.env.*
+!.env.example
+GeneratedCats/
+DownloadedCats/
+LocalFixtures/
+# Keep the downloaded SDK archive outside source control; imported packages live in Assets.
+/firebase_unity_sdk_*.zip
+# Local-only packaged development cat
+/Assets/StreamingAssets/Cats/*.glb
+# Local prototype provider credentials; intentionally embedded only in local builds
+/Assets/Resources/CompanionProviderKeys.json
+/Assets/Resources/CompanionProviderKeys.json.meta
+
+# Private credentials are retained outside Unity import/build paths.
+/.local-private/
+
+# Firebase desktop/Editor native libraries (reinstall from the Firebase Unity SDK)
+/Assets/Firebase/Plugins/x86_64/
+/Assets/Firebase/Plugins/x86_64.meta
+
+# Firebase project config (keep local; this repo is public)
+GoogleService-Info.plist
+google-services.json

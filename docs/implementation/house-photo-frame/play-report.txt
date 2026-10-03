@@ -1,0 +1,1 @@
+PASS: actual house entry; direct frame raycast; mouse tap invokes picker and saves; invalid replacement preserves photo; recreated frame restores photo; deletion clears photo display. frame=3159

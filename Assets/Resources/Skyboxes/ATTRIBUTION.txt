@@ -1,0 +1,3 @@
+Stylized Skyboxes FREE by Staggart Creations.
+Imported assets: Sky_Sunset.mat and its referenced Sunset.exr cubemap.
+Original Unity package paths: Packages/xyz.staggartcreations.skyboxes/Skyboxes/Sky_Sunset.mat and Skyboxes/HDRI/Sunset.exr.

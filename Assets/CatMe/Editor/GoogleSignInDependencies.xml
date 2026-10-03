@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Google Sign-In for iPhone. Added as a Swift package, like Firebase, so both share one copy of Google's
+     networking and utility libraries (a CocoaPods copy next to Firebase's Swift packages links twice). -->
+<dependencies>
+  <remoteSwiftPackage url="https://github.com/google/GoogleSignIn-iOS.git" version="9.0.0" upToNextMajor="true">
+    <swiftPackage name="GoogleSignIn" replacesPod="GoogleSignIn"/>
+  </remoteSwiftPackage>
+  <iosPods>
+    <iosPod name="GoogleSignIn" version="~> 9.0" minTargetSdk="15.0" />
+  </iosPods>
+</dependencies>
