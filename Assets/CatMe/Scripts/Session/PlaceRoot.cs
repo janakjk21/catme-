@@ -18,6 +18,8 @@ namespace CatMe.Session
         public string startWeather = "Dry";
         public float rainRampFromZ, rainRampToZ = 1f;
         public Collider shelterVolume;
+        [Tooltip("Rain Particles pack instance (inactive in the scene); PlaceWeather drives it. Without it the code-built rain is used.")]
+        public ParticleSystem rainEffect;
         public string clearedLightingPreset = "Sunset";
         public float shelterHoldSeconds = 10f;
 

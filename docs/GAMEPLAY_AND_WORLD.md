@@ -66,8 +66,8 @@ Three steps, each shown as one short hint (`Onboarding/TutorialController`, word
 | System | What it does |
 |---|---|
 | Day (`World/DayDirector`) | each session picks a day; light moves from afternoon to sunset and blue hour, clouds come and go, short showers pass, lanterns and windows light at dusk. A relaunch resumes the same day. |
-| Weather (`Session/PlaceWeather`) | rain, with wind before it; the pet leads to the tent |
-| Butterflies (`World/Butterflies`) | drift through flowers, land, scatter when you walk close; gone at dusk and in rain |
+| Weather (`Session/PlaceWeather`) | rain, with wind before it; the pet leads to the tent. Drops come from the Rain Particles pack (capped for phones) and leave a splash and ring where they hit; roofs stop them. Without the pack the place falls back to code-built rain. |
+| Butterflies (`World/Butterflies`) | eight species from the AI cartoon butterflies pack drift through flowers, flap while flying and fold their wings when they land, scatter when you walk close; gone at dusk and in rain |
 | Visiting dog (`World/DogVisitor`) | a neighbour's dog walks the riverside path, stops, wags, sits, walks on |
 | Wildlife (`World/Wildlife`) | deer, horse and chickens across the river, scenery only |
 | Sound | garden ambience, rain, purr, meow, UI taps; Sound setting turns it off |

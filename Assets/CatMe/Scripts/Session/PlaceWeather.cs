@@ -8,7 +8,11 @@ namespace CatMe.Session
     public sealed class PlaceWeather : MonoBehaviour
     {
         const int MaxParticles = 420;
+        // Phone budget for the Rain Particles pack: drops, and splashes/rings spawned where drops die.
+        const int PackMaxDrops = 600, PackMaxSplashes = 300;
+        const float PackFullRate = 300f;
         ParticleSystem rain;
+        ParticleSystem packRain;
         Transform view;
         float intensity, targetIntensity, wetness;
         float shelteredFor;
@@ -42,6 +46,7 @@ namespace CatMe.Session
         public void EnterPlace(PlaceRoot root)
         {
             place = root; shelteredFor = clearingFor = 0f;
+            SetUpPackRain(root.rainEffect);
             switch (root.startWeather)
             {
                 case "Raining": Set(WeatherState.Raining, 1f); break;
@@ -92,12 +97,46 @@ namespace CatMe.Session
             if (State == WeatherState.Dry) wetness = Mathf.MoveTowards(wetness, 0f, dt / 40f);
             Shader.SetGlobalFloat("_CatMeWetness", wetness);
 
-            var emission = rain.emission;
-            float rate = reduced || Suppressed ? 0f : 220f * intensity;
+            float strength = reduced || Suppressed ? 0f : intensity;
+            if (packRain != null)
+            {
+                Drive(rain, 0f);
+                Drive(packRain, PackFullRate * strength);
+            }
+            else Drive(rain, 220f * strength);
+        }
+
+        // Emits at the given rate above the view; stops emitting (letting falling drops finish) when the rate is near zero.
+        void Drive(ParticleSystem system, float rate)
+        {
+            if (system == null) return;
+            if (rate > 1f && !system.gameObject.activeSelf) system.gameObject.SetActive(true);
+            var emission = system.emission;
             emission.rateOverTime = rate;
-            if (rate > 1f && !rain.isPlaying) rain.Play();
-            else if (rate <= 1f && rain.isPlaying) rain.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-            rain.transform.position = view.position + Vector3.up * 7f;
+            if (rate > 1f && !system.isPlaying) system.Play();
+            else if (rate <= 1f && system.isPlaying) system.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+            system.transform.position = view.position + Vector3.up * 7f;
+        }
+
+        // The pack's emitter shoots along its local -Z; turn it so the drops fall. Drops collide with the world (roofs stop them),
+        // and its two child systems are death sub-emitters (splash and ring where a drop hits).
+        void SetUpPackRain(ParticleSystem pack)
+        {
+            if (packRain != null && packRain != pack) packRain.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            packRain = pack;
+            if (packRain == null) return;
+            packRain.transform.rotation = Quaternion.FromToRotation(Vector3.forward, Vector3.up);
+            var main = packRain.main; main.playOnAwake = false; main.simulationSpace = ParticleSystemSimulationSpace.World; main.maxParticles = PackMaxDrops;
+            // A drop dies where it hits, so its splash and ring appear on the ground or roof, never in the air.
+            var collision = packRain.collision; collision.enabled = true; collision.type = ParticleSystemCollisionType.World;
+            collision.mode = ParticleSystemCollisionMode.Collision3D; collision.quality = ParticleSystemCollisionQuality.Low;
+            collision.lifetimeLoss = 1f; collision.bounce = 0f; collision.maxCollisionShapes = 64;
+            foreach (var child in packRain.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                if (child == packRain) continue;
+                var childMain = child.main; childMain.maxParticles = PackMaxSplashes; childMain.simulationSpace = ParticleSystemSimulationSpace.World;
+            }
+            var emission = packRain.emission; emission.rateOverTime = 0f;
         }
 
         public float Intensity => intensity;

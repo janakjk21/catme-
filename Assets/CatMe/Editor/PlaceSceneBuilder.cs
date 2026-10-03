@@ -257,6 +257,9 @@ namespace CatMe.Editor
             pr.ambienceVolume = .16f; pr.placeId = s.id; pr.displayName = s.display; pr.lightingPreset = s.lighting; pr.cameraProfile = s.camera;
             pr.ambienceResource = s.ambience; pr.startWeather = s.weather;
             if (s.weather == "RainRamp") { pr.rainRampFromZ = 16f; pr.rainRampToZ = 40f; }
+            // Rain streaks with ground splashes and rings (Rain Particles pack). Kept inactive; PlaceWeather turns it on when it rains.
+            var rainFx = Spawn(RainPrefab, root, "Rain effect");
+            if (rainFx != null) { rainFx.SetActive(false); pr.rainEffect = rainFx.GetComponent<ParticleSystem>(); }
             MakeTerrain(s);
             PathRibbon(s);
             AddPostVolume();
@@ -901,6 +904,8 @@ namespace CatMe.Editor
         // ---- Phase 5: butterflies, background animals across the river and in the side woods, and the visiting dog -------------------------
 
         const string AnimalsFolder = "Assets/ithappy/Animals_FREE/Prefabs/";
+        const string ButterflyPrefabs = "Assets/AI cartoon butterflies/AI cartoon butterflies/Models/Butterflies/Prefabs/";
+        const string RainPrefab = "Assets/Rain Particles/Prefabs/Rain Particles.prefab";
         const string DogsFolder = "Assets/Bublisher/3D Stylized Animated Dogs Kit/Prefabs/";
 
         static void BuildLivingWorld(PlaceSpec p, float G, float L)
@@ -924,7 +929,8 @@ namespace CatMe.Editor
             var flies = new GameObject("Butterflies"); flies.transform.SetParent(root, false); flies.AddComponent<Butterflies>();
             for (int i = 0; i < 8; i++)
             {
-                var bf = Spawn("Assets/AI cartoon butterflies/AI cartoon butterflies/Models/Butterflies/Prefabs/Butterfly.prefab", flies.transform, "Butterfly_" + i);
+                // A different species for each butterfly (the pack has Butterfly and Butterfly_2 to Butterfly_10).
+                var bf = Spawn(ButterflyPrefabs + (i == 0 ? "Butterfly" : "Butterfly_" + (i + 1)) + ".prefab", flies.transform, "Butterfly_" + i);
                 if (bf == null) break;
                 var b = Bounds(bf); float e = Mathf.Max(b.size.x, b.size.z); if (e > .001f) bf.transform.localScale *= .22f / e;
                 bf.transform.position = OnGround(new Vector3(Next(-5f, 5f), 0, Next(0f, 9f))) + Vector3.up * Next(.4f, 1.4f);
@@ -1235,8 +1241,32 @@ namespace CatMe.Editor
                 }
                 EditorUtility.SetDirty(m); converted++;
             }
+            converted += ConvertParticleMaterials("Assets/Rain Particles/Materials");
             AssetDatabase.SaveAssets();
-            Debug.Log("[CatMe][Places] Converted " + converted + " imported materials to URP Lit.");
+            Debug.Log("[CatMe][Places] Converted " + converted + " imported materials to URP.");
+        }
+
+        // Built-in particle materials (Rain Particles pack) -> URP Particles/Unlit, alpha blended, keeping texture and tint.
+        static int ConvertParticleMaterials(string folder)
+        {
+            var unlit = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (unlit == null || !AssetDatabase.IsValidFolder(folder)) return 0;
+            int converted = 0;
+            foreach (string guid in AssetDatabase.FindAssets("t:Material", new[] { folder }))
+            {
+                var m = AssetDatabase.LoadAssetAtPath<Material>(AssetDatabase.GUIDToAssetPath(guid));
+                if (m == null || m.shader == null || m.shader.name.StartsWith("Universal Render Pipeline") || m.name.StartsWith("Demo-")) continue;
+                Debug.Log("[CatMe][Places] Converting particle material " + m.name + " (" + m.shader.name + ")");
+                Texture main = m.HasProperty("_MainTex") ? m.GetTexture("_MainTex") : null;
+                Color color = m.HasProperty("_Color") ? m.GetColor("_Color") : m.HasProperty("_TintColor") ? m.GetColor("_TintColor") : Color.white;
+                m.shader = unlit;
+                m.SetTexture("_BaseMap", main); m.SetColor("_BaseColor", color);
+                m.SetFloat("_Surface", 1f); m.SetFloat("_Blend", 0f); m.SetOverrideTag("RenderType", "Transparent");
+                m.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha); m.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                m.SetFloat("_ZWrite", 0f); m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT"); m.renderQueue = 3000;
+                EditorUtility.SetDirty(m); converted++;
+            }
+            return converted;
         }
 
         static void Curiosity(string name, Vector3 p, string keepsake, string line, PrimitiveType shape, Vector3 size, Color color)

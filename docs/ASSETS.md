@@ -15,7 +15,7 @@
 
 ## Third-party packs in use
 
-Ghibli-style nature set, ALP assets, Anime Trees, Bublisher (Dogs Kit), Butterfly (Animated), JTS Shrine Torii Gates, PolyOne water, TileableBricksWall, WoodenParkBench, Waldemarst, ithappy Animals, Low-Poly Objects Pack, LowPolyLivingRoomPack, Furniture_ges1, Persian Carpet, Rolling Balls, Fristy Mobile CG, VRChat Home Kit, Free.
+Ghibli-style nature set, ALP assets, Anime Trees, Bublisher (Dogs Kit), AI cartoon butterflies (Mixall; textures 512 on iOS; its demo `CharacterController.cs` removed because it hides Unity's class of the same name), Rain Particles (Game Seed Assets; materials converted to URP by CatMe > Places > Convert Imported Materials To URP), JTS Shrine Torii Gates, PolyOne water, TileableBricksWall, WoodenParkBench, Waldemarst, ithappy Animals, Low-Poly Objects Pack, LowPolyLivingRoomPack, Furniture_ges1, Persian Carpet, Rolling Balls, Fristy Mobile CG, VRChat Home Kit, Free.
 
 Before release, check each pack's licence allows use in a paid mobile app, and remove packs the map no longer uses (their demo scenes are not in the build).
 

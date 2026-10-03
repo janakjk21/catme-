@@ -7,11 +7,13 @@ namespace CatMe.World
 {
     /// <summary>
     /// A few butterflies drift around the player through the flowers, land briefly, scatter when the owner walks close, and disappear at dusk and in rain.
-    /// The butterfly objects are placed under this component by PlaceSceneBuilder; their own wing animation plays automatically.
+    /// The butterfly objects are placed under this component by PlaceSceneBuilder. Their Animator (AI cartoon butterflies pack) has an
+    /// integer "State": 0 folds the wings (sitting), 1 flaps; it is set here whenever a butterfly lands or takes off.
     /// </summary>
     public sealed class Butterflies : MonoBehaviour
     {
-        sealed class Flier { public Transform t; public Vector3 target; public float waitUntil, fleeUntil, speed = 1f, phase; public bool landed; }
+        sealed class Flier { public Transform t; public Animator anim; public Vector3 target; public float waitUntil, fleeUntil, speed = 1f, phase; public bool landed, flapping, flapSet; }
+        static readonly int StateParam = Animator.StringToHash("State");
         readonly List<Flier> fliers = new List<Flier>();
         GardenCompanionDemo garden; SessionDirector director;
         bool hidden;
@@ -27,7 +29,7 @@ namespace CatMe.World
         void Start()
         {
             garden = FindAnyObjectByType<GardenCompanionDemo>(); director = SessionDirector.Instance;
-            foreach (Transform child in transform) fliers.Add(new Flier { t = child, phase = Random.value * 10f });
+            foreach (Transform child in transform) fliers.Add(new Flier { t = child, anim = WingAnimator(child), phase = Random.value * 10f });
         }
 
         void Update()
@@ -35,12 +37,14 @@ namespace CatMe.World
             if (garden == null || garden.OwnerTransform == null) { garden = FindAnyObjectByType<GardenCompanionDemo>(); return; }
             Vector3 owner = garden.OwnerTransform.position;
             bool away = director != null && director.Day != null && (director.Day.Night || director.Day.Suspended || (director.WeatherController != null && director.WeatherController.Intensity > .25f));
-            if (away != hidden) { hidden = away; foreach (var f in fliers) f.t.gameObject.SetActive(!hidden); }
+            // A re-enabled Animator starts again in its default (sitting) state, so the wing state is set again after showing.
+            if (away != hidden) { hidden = away; foreach (var f in fliers) { f.t.gameObject.SetActive(!hidden); f.flapSet = false; } }
             if (hidden) return;
             foreach (var f in fliers)
             {
                 float dist = Vector3.Distance(f.t.position, owner);
                 if (dist < 2.1f && Time.time > f.fleeUntil) { f.fleeUntil = Time.time + 2.2f; f.landed = false; f.speed = 2.6f; Vector3 away2 = (f.t.position - owner); away2.y = 0; f.target = f.t.position + away2.normalized * 6f + Vector3.up * 1.6f; }
+                Flap(f, !f.landed);
                 if (f.landed) { if (Time.time > f.waitUntil) PickTarget(f, owner); else continue; }
                 Vector3 to = f.target - f.t.position;
                 if (to.magnitude < .2f)
@@ -55,6 +59,19 @@ namespace CatMe.World
                 f.t.position += (dir + wobble * .5f).normalized * f.speed * Time.deltaTime;
                 Vector3 flat = new Vector3(dir.x, 0, dir.z); if (flat.sqrMagnitude > .001f) f.t.rotation = Quaternion.Slerp(f.t.rotation, Quaternion.LookRotation(flat), 4f * Time.deltaTime);
             }
+        }
+
+        static Animator WingAnimator(Transform butterfly)
+        {
+            var anim = butterfly.GetComponentInChildren<Animator>(true);
+            return anim != null && anim.runtimeAnimatorController != null ? anim : null;
+        }
+
+        static void Flap(Flier f, bool flapping)
+        {
+            if (f.anim == null || (f.flapSet && f.flapping == flapping) || !f.anim.isActiveAndEnabled) return;
+            f.flapping = flapping; f.flapSet = true;
+            f.anim.SetInteger(StateParam, flapping ? 1 : 0);
         }
 
         void PickTarget(Flier f, Vector3 owner)
