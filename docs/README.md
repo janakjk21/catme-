@@ -14,6 +14,8 @@ These docs are the source of truth. Code follows them; when code and a doc disag
 | [ROADMAP.md](ROADMAP.md) | what to build next, in order, and when each task is done |
 | [ONBOARDING_FLOW.md](ONBOARDING_FLOW.md) | the onboarding flow: login, cat or dog, pet photo, selfie, garden |
 | [DESIGN.md](DESIGN.md) | design principles, colours, type, layout grid, components, which skills to use |
+| [MENUS_AND_ACCOUNT.md](MENUS_AND_ACCOUNT.md) | menu, account, settings, your pets, album, store and garden controls: flow, states and the white / bone / sage look |
+| [LAUNCH_AUDIT.md](LAUNCH_AUDIT.md) | pre-launch audit: every open issue with file references, fixes and "done when"; task order in `context/CLAUDE_TASKS.md` |
 | [COPY.md](COPY.md) | every word the player reads |
 | [GAMEPLAY_AND_WORLD.md](GAMEPLAY_AND_WORLD.md) | the map, how the player and the pet move, controls, weather and wildlife |
 | [PHOTO_TO_3D.md](PHOTO_TO_3D.md) | every step from a photo to the 3D pet: app, API, Firebase, Tripo and Meshy |
@@ -30,7 +32,7 @@ These docs are the source of truth. Code follows them; when code and a doc disag
 ## Which doc wins
 
 1. `ROADMAP.md` decides what is worked on.
-2. `ONBOARDING_FLOW.md`, `COPY.md` and `DESIGN.md` decide what the player sees.
+2. `ONBOARDING_FLOW.md`, `MENUS_AND_ACCOUNT.md`, `COPY.md` and `DESIGN.md` decide what the player sees.
 3. The other docs decide how it is built.
 
 Change the doc first, then the code, in the same change. Lasting decisions go in [../context/DECISIONS.md](../context/DECISIONS.md).

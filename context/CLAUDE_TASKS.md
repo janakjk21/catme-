@@ -10,6 +10,69 @@ Work a Claude Code session can pick up and finish without the owner, in this ord
 
 ---
 
+## Launch tasks (2026-10-04): do these first, in this order
+
+Source of truth: `docs/LAUNCH_AUDIT.md` (item numbers below) and `docs/MENUS_AND_ACCOUNT.md` (menus, account, settings, look). Read both before starting. Work on branch `claude/focused-faraday-eemw65` in both repos (app `janakjk21/catme`, server `janakjk21/catme-ai`).
+
+**If you cannot run Unity** (cloud session): keep each C# change small and compile-safe, add or extend EditMode tests in `Assets/CatMe/Tests` for logic, and list in your final message exactly what the owner must compile, play and check. Never hand-edit `.unity`, `.prefab` or `.asset` files; world changes go through `Editor/PlaceSceneBuilder.cs`. Server: `npm test` must pass.
+
+**Already done and validated, do not redo:** spend limits and daily caps, selfie person prompt, pet markings, restore pets, resume creation, bad-model fallback, policy links, EditMode tests, and (code only) lookout, river mesh, mountains, full day cycle. See "Validation of ChatGPT's fixes" in the audit.
+
+### L1. Account, sign-out and per-account storage (audit 31a, 31b; `MENUS_AND_ACCOUNT.md` section 4) - highest priority
+- Store all local data under `Profiles/{uid}/` (`PetRoster.cs:35`, `LocalPlayerProfile.cs:34`, `DeviceBridge.HumanModelPath`, house frame cache, downloads). Migrate `Profiles/local-guest` into the first signed-in uid once.
+- `RestoreAccountAsync` must restore into that account's folder only, so account B never sees account A's pets.
+- Sign out: save, sign out of Firebase, clear in-memory roster, models, frame and pending job, reload to Login. Guests get confirm C1 first.
+- Account screen: the two states (guest, signed in), "Save my pets with Google" linking, which account you are signed in with, the "Your data" section, confirms C1 to C4.
+- Done when: EditMode tests cover per-uid paths and the guest migration; owner Play Mode: sign out returns to Login and a second account sees none of the first account's pets.
+
+### L2. Menus and look (`MENUS_AND_ACCOUNT.md` sections 1 to 9, taste rules; audit 27, 28)
+- Add the colour tokens (`Stone`, `SageDeep`, `Sage`, `SageTint`) to `CatMeUIStyle.cs`; sage is the only accent; retire brass and black main buttons on these screens.
+- Menu becomes a right-side list sheet; "Back to the garden" is the only close wording; Store has one entry point.
+- Never show menu, camera, joystick or paw buttons outside the garden (Login, onboarding, Making) (27c).
+- Your pets: Add a pet first, walking-now state, being made / failed / stand-in states, rename and remove, page dots; same chip for cat and dog; name rules.
+- Settings: grouped, renamed toggles, Account row, privacy, terms, version; scroll hint.
+- Photo album: caption above buttons, previous / next, Save to Photos, captures without HUD or watermark (27e).
+- Paw menu labels readable (27f); one-line contextual card above the paw button (27g).
+- Remove eyebrow `Tag()` labels and the brand dot; replace the 35 code-drawn icons in `UiIcons.cs` with one licensed family (Phosphor Regular suggested; the owner provides the sprites if you cannot download).
+- Login per section 4b.
+- Done when: the section 11 checklist in `MENUS_AND_ACCOUNT.md` passes.
+
+### L3. Joystick and camera (audit 31c, 31d)
+- Floating joystick inside the safe area, travel ~110, dead zone 0.15, eased response; set `deferSystemGesturesMode` for the bottom edge; remove the silent half-speed slowdown or explain it.
+- Camera: one zone at a time by priority with ~1 m hysteresis; keep distance and FOV close between profiles and never flip the screen offset side; replace `Snap()` cuts with a 0.25 s fade (off with Reduce motion); remove or slow the idle orbit; stop the steering feedback loop (slower yaw follow, or lock the steering frame while the stick is held).
+- Done when: owner plays a 5-minute walk and the camera never jumps without a fade, and holding a diagonal walks straight.
+
+### L4. Errors and resume follow-ups (audit 9, 10, 4)
+- Server (`catme-ai`): give each creation refusal its own message instead of "Creation cannot start yet." (`index.js:204,274`): QUOTA_EXHAUSTED, JOB_IN_PROGRESS, ACCOUNT_DELETING, SESSION_REQUIRED.
+- App: show a retry line for `errorCode == CHECK_UNAVAILABLE` ("We couldn't check your photo just now. Try again in a minute."); make the offline message neutral (no "your pet is saved" before a pet exists).
+- Resume: migrate the old `WornTag.Creation.Pending` key once; never hard-code species "cat" in the fallback (store species in the pending record); one location for the person model.
+- Server: a guest that links Google gets the normal pet quota.
+- Done when: tests cover each message and the migration.
+
+### L5. Garden during Making, reveal in the garden (audit 13, 30)
+- After the selfie and naming, open the garden in daylight with the bundled stand-in and a "[Name] is being made" banner; the tutorial runs here; swap in the real models when ready with a short reveal; local notification if backgrounded.
+- Name the pet before the wait (move the Name screen ahead of Making).
+- Done when: a new player reaches the garden within a minute of the selfie.
+
+### L6. World fixes (audit 27a, 27b, 29, 16, 18)
+- Find and fix the white wedges on the ground in front of the house (27a).
+- Find the source of "Touch was already deallocated" (27b); `CompanionCamera.cs:272-275`, `World/CatPetInput.cs:36` are the touch readers.
+- A new day starts at morning (~0.12), not dawn.
+- Lived-in house instead of the derelict one, textured garden wall, a real lantern instead of the beige cube, varied and thinned flowers away from the camera side, path detail, river tinted by time of day (unlit shader glows at night) (29).
+- River: one access point where the pet can reach the water; list the audio clips needed (river loop, footsteps by surface, birds by time of day, night insects, music day and night, dog recordings) in `docs/ASSETS.md` for the owner to supply.
+- Done when: builder changes compile; the owner runs CatMe > Rebuild With Last Seed and checks.
+
+### L7. Dogs get their own model (audit 6; task 3 below)
+
+### L8. Photo tips and crash reports (audit 28, 23)
+- Pet photo tips: "Their whole body, nose to tail", "Lots of light", "Only your pet".
+- Add Firebase Crashlytics and a few funnel events (onboarding step reached, creation result and reason, time to ready, first walk finished); update the privacy policy draft.
+
+### Owner only (do not attempt)
+Renew the Apple signing profile (expires 2026-10-08); paid Apple team and Sign in with Apple (audit 12); publish Firebase rules (8); Railway: lower `CATME_FREE_PETS` / `CATME_FREE_OWNERS` from 1,000, set realistic daily caps, set `OPENAI_API_KEY` and `PHOTO_CHECK_REQUIRED=1`; merge both branches to `main` (Railway deploys the server from `main`); fill and publish the privacy policy and terms (11); run Rebuild With Last Seed and commit the scene; re-save the Firebase plugin `.meta` files in the editor (26); provide audio clips and icon sprites; approve credits for one real person, one real cat and one real dog.
+
+---
+
 ## 1. Account deletion and photo deletion (needed for the App Store)
 
 Follows `docs/ACCOUNTS_AND_PRIVACY.md`. Skills: `ui-ugui`, `copywriting`.

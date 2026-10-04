@@ -475,8 +475,9 @@ namespace CatMe.Garden
                     else if (distance > leash * .67f) catSpeed = Mathf.Max(catSpeed, 1.6f * behavior.Pace);
                     if (curiosityPlay && Time.time < curiosityUntil) catSpeed = Mathf.Max(catSpeed, 1.5f + .35f * Mathf.Sin(Time.time * 5f)); // bouncy, walk clip only
                 }
-                if (catWalkState != null) catWalkState.speed = Mathf.Clamp(catSpeed / 1.18f, .75f, 1.7f);
-                MoveGrounded(catRoot, delta.normalized * catSpeed * Time.deltaTime, 0.16f, CompanionScaleStandards.CatHeightMeters);
+                // Longer strides on a bigger cat: play the walk clip slower per metre so the paws do not skate.
+                if (catWalkState != null) catWalkState.speed = Mathf.Clamp(catSpeed / (1.18f * CompanionScaleStandards.CatScale), .55f, 1.7f);
+                MoveGrounded(catRoot, delta.normalized * catSpeed * Time.deltaTime, 0.16f * CompanionScaleStandards.CatScale, CompanionScaleStandards.CatHeightMeters);
                 catRoot.rotation = Quaternion.Slerp(catRoot.rotation, Quaternion.LookRotation(delta), 8f * Time.deltaTime);
                 if (catWalkState != null) catWalkState.enabled = true;
             }

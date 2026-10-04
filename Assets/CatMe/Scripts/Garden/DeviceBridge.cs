@@ -239,7 +239,11 @@ namespace CatMe.Garden
     internal static class CompanionScaleStandards
     {
         public const float OwnerHeightMeters = 1.70f;
-        public const float CatHeightMeters = 0.46f;
+        // Real ears-to-paws is ~0.46 m, but at that size the pet is hard to spot from the follow camera; ~1.4x reads as "my cat".
+        public const float CatHeightMeters = 0.65f;
+        /// <summary>The cat size the walk speed, clip rate and collision radius were tuned at; scale those by CatScale.</summary>
+        public const float TunedCatHeightMeters = 0.46f;
+        public static float CatScale => CatHeightMeters / TunedCatHeightMeters;
 
         public static float ScaleForMeasuredHeight(float measuredHeight, float targetHeight)
         {
