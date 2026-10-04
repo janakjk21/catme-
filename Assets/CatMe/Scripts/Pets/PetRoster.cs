@@ -27,7 +27,7 @@ namespace CatMe.Pets
     /// </summary>
     public static class PetRoster
     {
-        [Serializable] sealed class Save { public int schema = 1; public string activeId; public List<PetProfile> pets = new List<PetProfile>(); }
+        [Serializable] sealed class Save { public int schema = 1; public string activeId; public List<PetProfile> pets = new List<PetProfile>(); public List<string> hiddenServerIds = new List<string>(); }
 
         static Save data;
         public static event Action Changed;
@@ -97,6 +97,7 @@ namespace CatMe.Pets
             if (string.IsNullOrEmpty(serverId)) return null;
             var existing = data.pets.Find(p => p.serverId == serverId);
             if (existing != null) return existing;
+            if (data.hiddenServerIds != null && data.hiddenServerIds.Contains(serverId)) return null;   // removed from this player's pets
             data.pets.RemoveAll(p => !IsOwn(p));
             Species kind = string.Equals(serverSpecies, "dog", StringComparison.OrdinalIgnoreCase) ? Species.Dog : Species.Cat;
             var pet = new PetProfile
@@ -126,7 +127,67 @@ namespace CatMe.Pets
         }
 
         public static void SetActive(string id) { Ensure(); if (data.pets.Exists(p => p.id == id) && data.activeId != id) { data.activeId = id; Write(); Changed?.Invoke(); } }
-        public static void Rename(string id, string name) { Ensure(); var p = Get(id); if (p != null && !string.IsNullOrWhiteSpace(name)) { p.name = name.Trim(); Write(); Changed?.Invoke(); } }
+        /// <summary>Renames a pet. Returns false when the name breaks the rule in <see cref="CleanName"/>.</summary>
+        public static bool Rename(string id, string name)
+        {
+            Ensure();
+            var p = Get(id); string clean = CleanName(name);
+            if (p == null || clean == null) return false;
+            p.name = clean; Write(); Changed?.Invoke();
+            return true;
+        }
+
+        public const int NameMaxLength = 20;
+
+        /// <summary>
+        /// The name rule (MENUS_AND_ACCOUNT section 6): spaces trimmed and runs of spaces made single, 1 to 20 characters,
+        /// letters, numbers, spaces, apostrophes and hyphens only. Returns null when the name can't be used.
+        /// </summary>
+        public static string CleanName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return null;
+            var sb = new System.Text.StringBuilder();
+            bool space = false;
+            foreach (char c in name.Trim())
+            {
+                if (char.IsWhiteSpace(c)) { if (!space) sb.Append(' '); space = true; continue; }
+                space = false;
+                if (!char.IsLetterOrDigit(c) && c != '\'' && c != '-' && c != '\u2019') return null;
+                sb.Append(c == '\u2019' ? '\'' : c);
+            }
+            string clean = sb.ToString();
+            return clean.Length >= 1 && clean.Length <= NameMaxLength ? clean : null;
+        }
+
+        /// <summary>True when the pet can be removed: not the last one, and not one still being made.</summary>
+        public static bool CanRemove(string id, string pendingServerId)
+        {
+            Ensure();
+            var p = Get(id);
+            return p != null && data.pets.Count > 1 && (string.IsNullOrEmpty(pendingServerId) || p.serverId != pendingServerId);
+        }
+
+        /// <summary>
+        /// Removes a pet from this account's list on this phone, with its photo and model copies. A pet saved on the server is
+        /// remembered as removed so signing in again doesn't bring it back. The list never becomes empty.
+        /// </summary>
+        public static bool Remove(string id)
+        {
+            Ensure();
+            var p = Get(id);
+            if (p == null || data.pets.Count <= 1) return false;
+            data.pets.Remove(p);
+            if (!string.IsNullOrEmpty(p.serverId))
+            {
+                if (data.hiddenServerIds == null) data.hiddenServerIds = new List<string>();
+                if (!data.hiddenServerIds.Contains(p.serverId)) data.hiddenServerIds.Add(p.serverId);
+            }
+            if (data.activeId == id) data.activeId = data.pets[0].id;
+            try { string folder = PetFolder(id); if (Directory.Exists(folder)) Directory.Delete(folder, true); }
+            catch (Exception e) { Debug.LogWarning("[CatMe][Pets] Could not delete pet files: " + e.Message); }
+            Write(); Changed?.Invoke();
+            return true;
+        }
 
         /// <summary>Test hook: forget the in-memory copy so the file is re-read.</summary>
         public static void RemovePhotoCopies()

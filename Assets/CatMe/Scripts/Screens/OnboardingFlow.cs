@@ -147,7 +147,7 @@ namespace CatMe.Garden
             {
                 float a = i / 10f * Mathf.PI * 2f; float s = 14f + i * 1.6f;
                 var d = UiKit.Rect(spinner, "Dot", new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 230f, new Vector2(s, s));
-                var im = d.gameObject.AddComponent<Image>(); im.sprite = UiKit.Circle; im.color = new Color(CatMeUIStyle.Sunset.r, CatMeUIStyle.Sunset.g, CatMeUIStyle.Sunset.b, .25f + .075f * i); im.raycastTarget = false;
+                var im = d.gameObject.AddComponent<Image>(); im.sprite = UiKit.Circle; im.color = new Color(CatMeUIStyle.Sage.r, CatMeUIStyle.Sage.g, CatMeUIStyle.Sage.b, .25f + .075f * i); im.raycastTarget = false;
             }
             Title(RightX, 250f, PetLabel + " is being made");
             stageLabels = new Text[Stages.Length]; stageDots = new Image[Stages.Length];
@@ -232,12 +232,7 @@ namespace CatMe.Garden
 
         Text Title(float x, float y, string text) { var t = UiKit.Label(safe, text, 64, CatMeUIStyle.Pine, new Vector2(x + 430f, y), new Vector2(860f, 170f), FontStyle.Bold, TextAnchor.MiddleLeft, "Title"); return t; }
         Text Sub(float x, float y, string text, float h = 110f) => UiKit.Label(safe, text, 34, CatMeUIStyle.BodyInk, new Vector2(x + 360f, y), new Vector2(720f, h), FontStyle.Normal, TextAnchor.UpperLeft, "Subtitle");
-        void Tag(float x, float y, string text)
-        {
-            float w = 60f + text.Length * 17f;
-            UiKit.Chip(safe, text.ToUpperInvariant(), new Color(.153f, .137f, .129f, .08f), CatMeUIStyle.PineSoft, new Vector2(x + w / 2f, y), new Vector2(w, 46f), 20);
-        }
-        Button Primary(float x, float y, string label, Action a, float w = 470f) => UiKit.NestedButton(safe, label, new Vector2(x + w / 2f, y), w, CatMeUIStyle.Pine, a);
+        Button Primary(float x, float y, string label, Action a, float w = 470f) => UiKit.NestedButton(safe, label, new Vector2(x + w / 2f, y), w, CatMeUIStyle.SageDeep, a);
         Button Ghost(float x, float y, string label, Action a, float w = 470f)
         {
             var b = UiKit.NestedButton(safe, label, new Vector2(x + w / 2f, y), w, CatMeUIStyle.Tile, a, 32, label, false);
@@ -286,7 +281,7 @@ namespace CatMe.Garden
             Chrome("photo");
             string who = species == Species.Dog ? "dog" : "cat";
             bool bad = failMessage != null;
-            var ring = bad ? new Color(.79f, .33f, .23f) : petPhoto != null ? CatMeUIStyle.Pine : CatMeUIStyle.Sunset;
+            var ring = bad ? CatMeUIStyle.Danger : petPhoto != null ? CatMeUIStyle.SageDeep : CatMeUIStyle.Sage;
             Sprite pic = petPhoto != null ? Art.FromFile(petPhoto) : null;
             ArtCard(pic ?? Art.Load(species == Species.Dog ? "GoodDogExample" : "GoodCatExample"), .5f, true);
             Title(RightX, 260f, "Show us your " + who);
@@ -491,23 +486,28 @@ namespace CatMe.Garden
             ShowLogin();
         }
 
+        /// <summary>Turn on once the paid Apple team and Sign in with Apple work on the phone.</summary>
+        public static bool AppleSignInAvailable = false;
+
         void ShowLogin()
         {
             step = "login"; Clear();
             ArtCard(Art.Load("WelcomeGardenHero"), .5f, false, 1f);
             if (accountOnly) UiKit.IconButton(safe, "close", new Vector2(860f, 470f), () => { accountOnly = false; Hide(); OnAccountDone?.Invoke(); }, "Close");   // keep the walker and the cat, who are on the right of the painting
             const float x = RightX + 310f, w = 620f;
-            var dot = UiKit.Rect(safe, "Brand dot", new Vector2(RightX + 12f, 390f), new Vector2(22f, 22f)); var di = dot.gameObject.AddComponent<Image>(); di.sprite = UiKit.Circle; di.color = CatMeUIStyle.Sunset; di.raycastTarget = false;
-            UiKit.Label(safe, "WornTag", 36, CatMeUIStyle.Pine, new Vector2(RightX + 140f, 390f), new Vector2(200f, 50f), FontStyle.Bold, TextAnchor.MiddleLeft, "Brand");
+            // Wordmark (no dot), title, one line of 20 words or fewer with the reassurance, then the buttons; nothing under them.
+            UiKit.Label(safe, "WornTag", 36, CatMeUIStyle.Ink, new Vector2(RightX + 100f, 390f), new Vector2(200f, 50f), FontStyle.Bold, TextAnchor.MiddleLeft, "Brand");
             Title(RightX, 250f, "Your pet, in a garden,\nwith you.");
-            Sub(RightX, 60f, "Show us a photo of your pet. We make a little 3D pet that looks just like them. Then you can walk together.", 140f);
-            ProviderButton("apple", "Continue with Apple", new Vector2(x, -110f), w, new Color(.118f, .102f, .094f), Color.white, () => Provider("apple"), "Apple");
-            ProviderButton("google", "Continue with Google", new Vector2(x, -230f), w, CatMeUIStyle.Paper, CatMeUIStyle.Pine, () => Provider("google"), "Google");
-            UiKit.Link(safe, "Try it free, no sign-in", new Vector2(RightX + 200f, -335f), new Vector2(400f, 70f), () => Provider("guest"));
-            UiKit.Label(safe, "Signing in saves your pet if you get a new phone.", 24, CatMeUIStyle.BodyInk, new Vector2(x, -395f), new Vector2(w, 44f), FontStyle.Normal, TextAnchor.MiddleLeft, "Login note");
+            Sub(RightX, 70f, "We turn a photo of your pet into a little 3D pet. Sign in to keep it on a new phone.", 120f);
+            float y = -90f;
+            // Apple appears only once Sign in with Apple works (paid Apple team).
+            if (AppleSignInAvailable) { ProviderButton("apple", "Continue with Apple", new Vector2(x, y), w, new Color(.118f, .102f, .094f), Color.white, () => Provider("apple"), "Apple"); y -= 120f; }
+            ProviderButton("google", "Continue with Google", new Vector2(x, y), w, CatMeUIStyle.Paper, CatMeUIStyle.Ink, () => Provider("google"), "Google");
+            var free = UiKit.Button(safe, "Try it free", new Vector2(x, y - 115f), new Vector2(w, 84f), CatMeUIStyle.Mist, false, () => Provider("guest"), 30, "Try it free");
+            free.GetComponentInChildren<Text>().color = CatMeUIStyle.SageDeep;
             TextLink(LeftX, -445f, "Privacy policy", () => Application.OpenURL(CatMe.Onboarding.CreationClient.PrivacyUrl), 300f);
             TextLink(LeftX + 320f, -445f, "Terms and AI policy", () => Application.OpenURL(CatMe.Onboarding.CreationClient.TermsUrl), 400f);
-            if (!string.IsNullOrEmpty(emailError)) UiKit.Label(safe, emailError, 24, CatMeUIStyle.Danger, new Vector2(x, -450f), new Vector2(w, 56f), FontStyle.Bold, TextAnchor.MiddleLeft, "Account error");
+            if (!string.IsNullOrEmpty(emailError)) UiKit.Label(safe, emailError, 24, CatMeUIStyle.Danger, new Vector2(x, y - 210f), new Vector2(w, 56f), FontStyle.Bold, TextAnchor.MiddleLeft, "Account error");
         }
 
         // ---- owner photo ---------------------------------------------------------------------------------------------
@@ -589,7 +589,7 @@ namespace CatMe.Garden
                 {
                     stageLabels[i].color = i == now ? CatMeUIStyle.Ink : i < now ? CatMeUIStyle.Pine : new Color(.49f, .56f, .52f);
                     stageLabels[i].fontStyle = i == now ? FontStyle.Bold : FontStyle.Normal;
-                    stageDots[i].color = i == now ? CatMeUIStyle.Sunset : i < now ? CatMeUIStyle.Pine : new Color(.153f, .137f, .129f, .18f);
+                    stageDots[i].color = i == now ? CatMeUIStyle.SageDeep : i < now ? CatMeUIStyle.Sage : new Color(.153f, .137f, .129f, .18f);
                 }
             }
         }
@@ -615,7 +615,6 @@ namespace CatMe.Garden
             if (created == null) created = PetRoster.Active;
             var art = Art.Load(created.Kind == Species.Cat ? "CatReveal" : "DogReveal");
             ArtCard(art ?? Art.FromFile(created.photoPath) ?? Art.Load("PlaceholderCat"), .5f, false);
-            Tag(RightX, 280f, "Ready");
             Title(RightX, 150f, "Look who is here!\nMeet " + created.name);
             Sub(RightX, -10f, "Say hello to " + created.name + ". You can walk together now.");
             Primary(RightX, -170f, "Say hello", () => { Hide(); OnFinished?.Invoke(created); }, 520f);

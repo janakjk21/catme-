@@ -50,6 +50,9 @@ Why this palette: beige paper + brass + espresso ink is the most common AI-made 
 9. **Fraunces for titles only.** The brand guide names Fraunces, so it stays, but only for sheet and screen titles (56 and up). Buttons, rows, chips, notes and toasts are DM Sans.
 10. **No em-dashes in player-facing text.** Today there are none; keep it that way (use a full stop, comma or colon).
 
+### Icons (owner)
+`Screens/UiIcons.cs` already loads a sprite from `Resources/UI/Icons/{name}.png` when one exists, before drawing its own. To switch to one family (Phosphor Regular suggested), add white-on-transparent PNGs, 128 × 128, with these names: `paw pause call walk ball sit arrow camera album gear store pets account bowl bed door up back close plus check trash share mail lock speaker vibrate bulb book clock motion heart`. Provider marks (`apple`, `google`) come from each provider's official button artwork, not from the icon family.
+
 ### Type, shape and spacing
 - Fraunces SemiBold for sheet titles (56); DM Sans for everything else: row titles 34 Medium, row notes 24 Regular, buttons 32 Bold.
 - Sheets: 40 pt corner radius, one soft shadow (`CatMeUIStyle.SetElevation`). Rows and tiles: 28 pt radius. Buttons: full pill.
@@ -181,7 +184,7 @@ A sheet like the menu, titled "Settings", back arrow top left (returns to the me
 
 Toggles: track `Stone` off, `SageDeep` on, knob `Paper`. The whole row is the tap target, not just the switch. The sheet scrolls when it doesn't fit, with a fade at the bottom edge so scrolling is obvious.
 
-Today Settings has no Account, privacy, terms or version, and uses "Story notes / Story linger" (`CatMeAppFlow.cs`).
+Built 2026-10-04 (L2) in `CatMeAppFlow.BuildSettings`. Music is not listed until there is music. The delete buttons moved to Account.
 
 ---
 

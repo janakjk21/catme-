@@ -598,7 +598,8 @@ namespace CatMe.Garden
             ClearMovement();
             appFlow?.SaveProgress();
             journey?.SaveNow();
-            if (Application.isMobilePlatform && pauseSheet != null && !pauseSheet.activeSelf) OpenPause();
+            // Only in the garden: never over Login, onboarding or the Making screen (audit 27c).
+            if (Application.isMobilePlatform && gameplayHudVisible && pauseSheet != null && !pauseSheet.activeSelf) OpenPause();
         }
         private void OnDestroy() { appFlow?.SaveProgress(); appFlow?.Dispose(); }
         public void SetAppStatus(string value) => SetStatus(value);
@@ -874,13 +875,15 @@ namespace CatMe.Garden
                 var b = UiKit.Button(catTray.transform, "", pos, new Vector2(112f, 112f), CatMeUIStyle.PaperGlass, false, action, 30, name);
                 var img = b.GetComponent<Image>(); img.sprite = UiKit.Circle; img.type = Image.Type.Simple;
                 UiKit.Icon(b.transform, icon, Vector2.zero, 60f, CatMeUIStyle.Pine);
-                var cap = UiKit.Label(b.transform, label, 28, Color.white, new Vector2(0f, -86f), new Vector2(200f, 40f), FontStyle.Bold, TextAnchor.MiddleCenter, "Caption");
-                cap.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, .7f);
+                // Readable over any scene: the label sits on a Paper pill, never loose white text (audit 27f).
+                var pill = CatMeUIStyle.Card(b.transform, "Caption pill", new Vector2(120f, 44f), CatMeUIStyle.Paper, CatMeUIStyle.Elevation.Resting);
+                ((RectTransform)pill.transform).anchoredPosition = new Vector2(0f, -86f); pill.GetComponent<Image>().raycastTarget = false;
+                var cap = UiKit.Label(pill.transform, label, 26, CatMeUIStyle.Ink, Vector2.zero, new Vector2(116f, 40f), FontStyle.Bold, TextAnchor.MiddleCenter, "Caption");
                 return b;
             }
             Fan("Ball action", "ball", "Ball", new Vector2(-185f, 20f), () => { CloseCatTray(); ThrowBall(); });
             var followButton = Fan("Follow action", "walk", "Roam", new Vector2(-150f, 190f), () => { CloseCatTray(); ToggleFollow(); });
-            followActionLabel = followButton.transform.Find("Caption")?.GetComponent<Text>();
+            followActionLabel = followButton.transform.Find("Caption pill/Caption")?.GetComponent<Text>();
             Fan("Call action", "call", "Call", new Vector2(-10f, 230f), () => { CloseCatTray(); CallCat(); });
             catTray.SetActive(false);
         }
@@ -895,27 +898,86 @@ namespace CatMe.Garden
 
         private void CloseCatTray() { if (catTray != null) catTray.SetActive(false); SetInputBlocked(false); }
 
+        // ---- Menu (docs/MENUS_AND_ACCOUNT.md section 3): a right-side sheet with one list and one way back ----------------------
+
+        /// <summary>Turn on when the store ships; until then it has no entry point.</summary>
+        internal const bool StoreShipped = false;
+        private Text menuPetLine, menuAccountNote;
+        private Image menuPetPhoto;
+        private Sprite menuPetSprite;
+
         private void BuildPauseSheet(Transform parent)
         {
-            pauseSheet = new GameObject("Pause sheet", typeof(RectTransform), typeof(Image));
-            pauseSheet.transform.SetParent(parent, false);
-            var rect = pauseSheet.GetComponent<RectTransform>(); rect.anchorMin=Vector2.zero;rect.anchorMax=Vector2.one;rect.offsetMin=rect.offsetMax=Vector2.zero;
-            pauseSheet.GetComponent<Image>().color = new Color(.03f,.06f,.05f,.75f);
-            // Side sheet: five destinations and one way back. Starting a new outing and returning to the title are no longer offered here.
-            var card = CatMeUIStyle.Card(pauseSheet.transform, "Pause card", new Vector2(640f, 900f), CatMeUIStyle.PaperGlass, CatMeUIStyle.Elevation.Floating);
-            ((RectTransform)card.transform).anchoredPosition = new Vector2(580f, 0f);
-            UiKit.Label(card.transform, "Paused", 54, CatMeUIStyle.Pine, new Vector2(-95f, 370f), new Vector2(380f, 80f), FontStyle.Bold, TextAnchor.MiddleLeft, "Title");
-            void Tile(string name, string icon, string label, float x, float y, Action action) => UiKit.IconTile(card.transform, icon, label, new Vector2(x, y), new Vector2(280f, 180f), action, name);
-            Tile("Your pets", "pets", "Your pets", -150f, 205f, () => { ResumePause(); appFlow?.OpenPets(); });
-            Tile("Pet store", "store", "Store", 150f, 205f, () => { ResumePause(); appFlow?.OpenStore(); });
-            Tile("Photo album", "album", "Photo album", -150f, 10f, () => { ResumePause(); journey?.OpenPhotoAlbum(); });
-            Tile("Your companions", "account", "Account", 150f, 10f, () => { ResumePause(); appFlow?.OpenAccount(); });
-            Tile("Settings", "gear", "Settings", -150f, -185f, () => { ResumePause(); appFlow?.OpenSettingsFromPause(); });
-            UiKit.NestedButton(card.transform, "Keep exploring", new Vector2(0f, -330f), 560f, CatMeUIStyle.Pine, ResumePause, 36, "Keep exploring");
+            var screen = UiKit.Screen(parent, "Pause sheet", new Color(CatMeUIStyle.Ink.r, CatMeUIStyle.Ink.g, CatMeUIStyle.Ink.b, .35f));
+            pauseSheet = screen.root;
+            // Tapping the dimmed game closes the menu.
+            var scrim = pauseSheet.AddComponent<Button>(); scrim.transition = Selectable.Transition.None; scrim.onClick.AddListener(ResumePause);
+            var sheet = CatMeUIStyle.Card(screen.safe, "Menu sheet", new Vector2(720f, 960f), CatMeUIStyle.Paper, CatMeUIStyle.Elevation.Floating);
+            var sr = (RectTransform)sheet.transform;
+            sr.anchorMin = new Vector2(1f, 0f); sr.anchorMax = new Vector2(1f, 1f); sr.pivot = new Vector2(1f, .5f);
+            sr.sizeDelta = new Vector2(720f, -48f); sr.anchoredPosition = new Vector2(-24f, 0f);
+            RectTransform AtTop(RectTransform r, float y) { r.anchorMin = r.anchorMax = new Vector2(.5f, 1f); r.anchoredPosition = new Vector2(r.anchoredPosition.x, y); return r; }
+
+            AtTop(UiKit.Label(sheet.transform, "Menu", 56, CatMeUIStyle.Ink, new Vector2(0f, 0f), new Vector2(624f, 76f), FontStyle.Bold, TextAnchor.MiddleLeft, "Title").rectTransform, -70f);
+            // The active pet: tapping it opens Your pets.
+            var petRow = UiKit.Button(sheet.transform, "", Vector2.zero, new Vector2(624f, 96f), CatMeUIStyle.Paper, false, () => { ResumePause(); appFlow?.OpenFromMenu("pets"); }, 26, "Walking with");
+            AtTop((RectTransform)petRow.transform, -160f);
+            var photo = new GameObject("Pet photo", typeof(RectTransform), typeof(Image)); photo.transform.SetParent(petRow.transform, false);
+            var pr = (RectTransform)photo.transform; pr.sizeDelta = new Vector2(72f, 72f); pr.anchoredPosition = new Vector2(-266f, 0f);
+            menuPetPhoto = photo.GetComponent<Image>(); menuPetPhoto.sprite = UiKit.Circle; menuPetPhoto.color = CatMeUIStyle.SageTint; menuPetPhoto.raycastTarget = false; menuPetPhoto.preserveAspect = true;
+            photo.AddComponent<Mask>().showMaskGraphic = true;
+            menuPetLine = UiKit.Label(petRow.transform, "", 28, CatMeUIStyle.MutedInk, new Vector2(40f, 0f), new Vector2(500f, 60f), FontStyle.Normal, TextAnchor.MiddleLeft, "Walking with line");
+
+            float y = -280f;
+            void Row(string name, string icon, string title, Action action, bool withNote = false)
+            {
+                var row = UiKit.Button(sheet.transform, "", Vector2.zero, new Vector2(624f, 112f), CatMeUIStyle.Mist, false, action, 26, name);
+                AtTop((RectTransform)row.transform, y); y -= 136f;
+                var disc = new GameObject("Icon disc", typeof(RectTransform), typeof(Image)); disc.transform.SetParent(row.transform, false);
+                var dr = (RectTransform)disc.transform; dr.sizeDelta = new Vector2(64f, 64f); dr.anchoredPosition = new Vector2(-250f, 0f);
+                var di = disc.GetComponent<Image>(); di.sprite = UiKit.Circle; di.color = CatMeUIStyle.SageTint; di.raycastTarget = false;
+                UiKit.Icon(disc.transform, icon, Vector2.zero, 40f, CatMeUIStyle.SageDeep);
+                UiKit.Label(row.transform, title, 34, CatMeUIStyle.Ink, new Vector2(10f, withNote ? 16f : 0f), new Vector2(400f, 48f), FontStyle.Normal, TextAnchor.MiddleLeft, "Title");
+                if (withNote) menuAccountNote = UiKit.Label(row.transform, "", 24, CatMeUIStyle.SageDeep, new Vector2(10f, -22f), new Vector2(400f, 36f), FontStyle.Normal, TextAnchor.MiddleLeft, "Note");
+                UiKit.Icon(row.transform, "arrow", new Vector2(270f, 0f), 34f, CatMeUIStyle.Sage);
+            }
+            Row("Your pets", "pets", "Your pets", () => { ResumePause(); appFlow?.OpenFromMenu("pets"); });
+            Row("Photo album", "album", "Photo album", () => { ResumePause(); appFlow?.OpenFromMenu("album"); });
+            if (StoreShipped) Row("Pet store", "store", "Store", () => { ResumePause(); appFlow?.OpenFromMenu("store"); });
+            Row("Your companions", "account", "Account", () => { ResumePause(); appFlow?.OpenFromMenu("account"); }, true);
+            Row("Settings", "gear", "Settings", () => { ResumePause(); appFlow?.OpenFromMenu("settings"); });
+
+            var back = UiKit.NestedButton(sheet.transform, "Back to the garden", Vector2.zero, 624f, CatMeUIStyle.SageDeep, ResumePause, 32, "Back to the garden");
+            var br = (RectTransform)back.transform; br.anchorMin = br.anchorMax = new Vector2(.5f, 0f); br.anchoredPosition = new Vector2(0f, 90f);
             pauseSheet.SetActive(false);
         }
 
-        private void OpenPause() { if (pauseSheet == null) return; replayArmed=false;if(replayActionLabel!=null)replayActionLabel.text="Start new outing";CloseCatTray(); ClearMovement(); pauseSheet.SetActive(true); pauseSheet.transform.SetAsLastSibling(); SetInputBlocked(true); journey?.SaveNow(); Time.timeScale=0f; }
+        // Filled in each time the menu opens: who is walking now, and the account nudge.
+        private void RefreshMenu()
+        {
+            var pet = CatMe.Pets.PetRoster.Active;
+            if (menuPetLine != null) menuPetLine.text = "Walking with " + CatMe.Pets.PetRoster.NameForText();
+            if (menuPetPhoto != null)
+            {
+                if (menuPetSprite != null) { Destroy(menuPetSprite.texture); Destroy(menuPetSprite); menuPetSprite = null; }
+                menuPetSprite = Art.FromFile(pet?.photoPath);
+                menuPetPhoto.sprite = menuPetSprite != null ? menuPetSprite : UiKit.Circle;
+                menuPetPhoto.color = menuPetSprite != null ? Color.white : CatMeUIStyle.SageTint;
+            }
+            if (menuAccountNote != null) menuAccountNote.text = appFlow?.AccountRowNote() ?? "";
+        }
+
+        /// <summary>Back from a screen opened from the menu returns to the menu.</summary>
+        internal void OpenMenu() => OpenPause();
+        /// <summary>The photo album from the menu; <paramref name="onClosed"/> runs when its Back is tapped.</summary>
+        internal void OpenPhotoAlbum(System.Action onClosed)
+        {
+            if (journey == null) { onClosed?.Invoke(); return; }
+            journey.AlbumClosed = onClosed;
+            journey.OpenPhotoAlbum();
+        }
+
+        private void OpenPause() { if (pauseSheet == null || !gameplayHudVisible) return; replayArmed=false;if(replayActionLabel!=null)replayActionLabel.text="Start new outing";CloseCatTray(); ClearMovement(); RefreshMenu(); pauseSheet.SetActive(true); pauseSheet.transform.SetAsLastSibling(); SetInputBlocked(true); journey?.SaveNow(); Time.timeScale=0f; }
         private void ResumePause() { if (pauseSheet != null) pauseSheet.SetActive(false); replayArmed=false;Time.timeScale=1f; SetInputBlocked(false); ClearMovement(); }
         private void ConfirmReplay() { if(!replayArmed){replayArmed=true;replayActionLabel.text="Tap again to restart outing";return;}ResumePause();BeginConnectedOuting(); }
 

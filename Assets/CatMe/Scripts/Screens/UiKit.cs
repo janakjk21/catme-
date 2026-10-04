@@ -211,7 +211,7 @@ namespace CatMe.Garden
             var r = (RectTransform)go.transform; r.anchorMin = r.anchorMax = new Vector2(.5f, .5f); r.pivot = new Vector2(.5f, .5f); r.anchoredPosition = pos; r.sizeDelta = dims;
             go.GetComponent<Image>().color = new Color(0, 0, 0, 0);
             var b = go.GetComponent<Button>(); b.onClick.AddListener(() => { CatMe.World.UiSounds.Click(); action(); });
-            Label(go.transform, text, fontSize, CatMeUIStyle.Pine, Vector2.zero, dims, FontStyle.Bold, align);
+            Label(go.transform, text, fontSize, CatMeUIStyle.SageDeep, Vector2.zero, dims, FontStyle.Bold, align);
             return b;
         }
 
@@ -221,8 +221,8 @@ namespace CatMe.Garden
             var icon = string.IsNullOrEmpty(glyph) ? null : UiIcons.Get(glyph);
             var b = Button(parent, icon != null ? "" : glyph, pos, new Vector2(88f, 88f), CatMeUIStyle.Paper, false, action, 44, name);
             var img = b.GetComponent<Image>(); img.sprite = Circle; img.type = Image.Type.Simple; img.color = new Color(.98f, .99f, .98f, .88f);
-            b.GetComponentInChildren<Text>().color = CatMeUIStyle.Pine;
-            if (icon != null) Icon(b.transform, glyph, Vector2.zero, 46f, CatMeUIStyle.Pine);
+            b.GetComponentInChildren<Text>().color = CatMeUIStyle.SageDeep;
+            if (icon != null) Icon(b.transform, glyph, Vector2.zero, 46f, CatMeUIStyle.SageDeep);
             return b;
         }
 
@@ -244,18 +244,18 @@ namespace CatMe.Garden
             return b;
         }
 
-        /// <summary>Progress rail: done segments in pine, the current one long and in sunset, the rest faint.</summary>
+        /// <summary>Progress rail: one segment size everywhere; done in sage, the current one in deep sage, the rest faint.</summary>
         internal static void Rail(Transform parent, int count, int active, Vector2 pos)
         {
             var row = Rect(parent, "Progress", pos, new Vector2(count * 90f, 20f));
-            float x = 0f, total = 0f; for (int i = 0; i < count; i++) total += (i == active ? 68f : 40f) + 10f; total -= 10f;
+            float x = 0f, total = count * 50f - 10f;
             x = -total / 2f;
             for (int i = 0; i < count; i++)
             {
-                float w = i == active ? 68f : 40f;
+                float w = 40f;
                 var seg = Rect(row, "Segment", new Vector2(x + w / 2f, 0f), new Vector2(w, 8f)); x += w + 10f;
                 var img = seg.gameObject.AddComponent<Image>(); img.sprite = Circle; img.raycastTarget = false;
-                img.color = i == active ? CatMeUIStyle.Sunset : i < active ? CatMeUIStyle.Pine : new Color(.153f, .137f, .129f, .16f);
+                img.color = i == active ? CatMeUIStyle.SageDeep : i < active ? CatMeUIStyle.Sage : new Color(.153f, .137f, .129f, .16f);
             }
         }
 

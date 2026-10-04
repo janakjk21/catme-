@@ -13,11 +13,11 @@ namespace CatMe.Garden
         public ConfirmDialog(Transform canvasRoot)
         {
             var screen = UiKit.Screen(canvasRoot, "Confirm dialog", new Color(.12f, .1f, .09f, .55f)); root = screen.root;
-            card = (RectTransform)CatMeUIStyle.Card(screen.safe, "Dialog card", new Vector2(760f, 420f), CatMeUIStyle.PaperGlass, CatMeUIStyle.Elevation.Floating).transform;
-            title = UiKit.Label(card, "", 46, CatMeUIStyle.Pine, new Vector2(0f, 120f), new Vector2(680f, 70f), FontStyle.Bold, TextAnchor.MiddleLeft, "Title");
+            card = (RectTransform)CatMeUIStyle.Card(screen.safe, "Dialog card", new Vector2(760f, 420f), CatMeUIStyle.Paper, CatMeUIStyle.Elevation.Floating).transform;
+            title = UiKit.Label(card, "", 46, CatMeUIStyle.Ink, new Vector2(0f, 120f), new Vector2(680f, 70f), FontStyle.Bold, TextAnchor.MiddleLeft, "Title");
             body = UiKit.Label(card, "", 30, CatMeUIStyle.BodyInk, new Vector2(0f, 20f), new Vector2(680f, 120f), FontStyle.Normal, TextAnchor.UpperLeft, "Body");
             safe = UiKit.Button(card, "Keep it", new Vector2(-170f, -140f), new Vector2(320f, 90f), CatMeUIStyle.Tile, false, () => { Hide(); onSafe?.Invoke(); }, 30, "Safe choice");
-            safe.GetComponentInChildren<Text>().color = CatMeUIStyle.Pine;
+            safe.GetComponentInChildren<Text>().color = CatMeUIStyle.SageDeep;
             act = UiKit.Button(card, "Delete", new Vector2(170f, -140f), new Vector2(320f, 90f), CatMeUIStyle.Danger, true, () => { if (hold != null && hold.enabled) return; Hide(); onAct?.Invoke(); }, 30, "Consequence");
             hold = act.gameObject.AddComponent<HoldToConfirm>(); hold.enabled = false;
             hold.Completed = () => { Hide(); onAct?.Invoke(); };
@@ -46,7 +46,7 @@ namespace CatMe.Garden
             card.sizeDelta = new Vector2(760f, 420f); cancel.gameObject.SetActive(false);
             hold.Seconds = holdSeconds; hold.enabled = holdSeconds > 0f;
             safe.GetComponentInChildren<Text>().text = safeLabel; act.GetComponentInChildren<Text>().text = actLabel;
-            CatMeUIStyle.StyleButton(act, destructive ? CatMeUIStyle.Danger : CatMeUIStyle.Pine, true);
+            CatMeUIStyle.StyleButton(act, destructive ? CatMeUIStyle.Danger : CatMeUIStyle.SageDeep, true);
             root.SetActive(true); root.transform.SetAsLastSibling();
         }
 
@@ -71,7 +71,7 @@ namespace CatMe.Garden
             card = (RectTransform)CatMeUIStyle.Card(transform, "Toast card", new Vector2(860f, 130f), CatMeUIStyle.PaperGlass, CatMeUIStyle.Elevation.Floating).transform;
             card.anchorMin = card.anchorMax = new Vector2(.5f, 1f); card.anchoredPosition = new Vector2(0f, Hidden);
             label = UiKit.Label(card, "", 28, CatMeUIStyle.Pine, new Vector2(-130f, 0f), new Vector2(520f, 110f), FontStyle.Bold, TextAnchor.MiddleLeft, "Message");
-            action = UiKit.Button(card, "Open", new Vector2(285f, 0f), new Vector2(240f, 72f), CatMeUIStyle.Pine, true, () => { Dismiss(); onAction?.Invoke(); }, 28, "Toast action");
+            action = UiKit.Button(card, "Open", new Vector2(285f, 0f), new Vector2(240f, 72f), CatMeUIStyle.SageDeep, true, () => { Dismiss(); onAction?.Invoke(); }, 28, "Toast action");
             gameObject.SetActive(false);
         }
 
@@ -126,14 +126,14 @@ namespace CatMe.Garden
         public void ShowOffline(Action retry, Action continueOffline)
         {
             Begin("No internet", "Your pet is saved on this phone. Try again when you're back online.");
-            UiKit.NestedButton(safe, "Try again", new Vector2(0f, -150f), 460f, CatMeUIStyle.Pine, () => { Hide(); retry?.Invoke(); }, 34, "Retry");
+            UiKit.NestedButton(safe, "Try again", new Vector2(0f, -150f), 460f, CatMeUIStyle.SageDeep, () => { Hide(); retry?.Invoke(); }, 34, "Retry");
             UiKit.Link(safe, "Continue offline", new Vector2(0f, -270f), new Vector2(360f, 70f), () => { Hide(); continueOffline?.Invoke(); }, 28, TextAnchor.MiddleCenter);
         }
 
         public void ShowFailed(string petName, Action retry, Action choosePhoto)
         {
             Begin("We couldn't make " + petName + " this time", "That was our side, not your photo. Nothing has been used from your free pets.");
-            UiKit.NestedButton(safe, "Try again", new Vector2(0f, -150f), 460f, CatMeUIStyle.Pine, () => { Hide(); retry?.Invoke(); }, 34, "Retry");
+            UiKit.NestedButton(safe, "Try again", new Vector2(0f, -150f), 460f, CatMeUIStyle.SageDeep, () => { Hide(); retry?.Invoke(); }, 34, "Retry");
             UiKit.Link(safe, "Choose another photo", new Vector2(0f, -270f), new Vector2(420f, 70f), () => { Hide(); choosePhoto?.Invoke(); }, 28, TextAnchor.MiddleCenter);
         }
 

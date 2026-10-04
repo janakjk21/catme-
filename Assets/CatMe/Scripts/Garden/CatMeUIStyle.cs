@@ -14,7 +14,7 @@ namespace CatMe.Garden
         internal static readonly Color MutedInk = new Color(118f/255, 110f/255, 104f/255, 1f);        // Muted Ink #766E68
         internal static readonly Color CreamGlass = new Color(255f/255, 252f/255, 247f/255, 1f);      // Paper White #FFFCF7
         internal static readonly Color CreamSoft = new Color(234f/255, 227f/255, 215f/255, 1f);
-        internal static readonly Color Olive = new Color(39f/255, 35f/255, 33f/255, 1f);
+        internal static readonly Color Olive = new Color(95f/255, 110f/255, 97f/255, 1f);           // = SageDeep (was near-black)
         internal static readonly Color OliveSoft = new Color(135f/255, 148f/255, 135f/255, 1f);       // Quiet Sage #879487
         internal static readonly Color Hairline = new Color(215f/255, 206f/255, 194f/255, 1f);        // Stone #D7CEC2
         // Onboarding palette (docs/production/07): sage mist ground, pine actions, sunset only for the current step and active choice.
@@ -28,6 +28,11 @@ namespace CatMe.Garden
         internal static readonly Color Sunset = new Color(197f/255, 162f/255, 97f/255, 1f);           // Old Brass #C5A261 (current step, active choice)
         internal static readonly Color BodyInk = new Color(79f/255, 72f/255, 67f/255, 1f);
         internal static readonly Color Peach = new Color(232f/255, 186f/255, 156f/255, 1f);
+        // Menus, account and settings (docs/MENUS_AND_ACCOUNT.md section 1): sage is the only accent; Danger only for destructive actions.
+        internal static readonly Color Stone = new Color(215f/255, 206f/255, 194f/255, 1f);           // #D7CEC2 dividers, toggle off
+        internal static readonly Color SageDeep = new Color(95f/255, 110f/255, 97f/255, 1f);          // #5F6E61 main buttons, active toggle
+        internal static readonly Color Sage = new Color(135f/255, 148f/255, 135f/255, 1f);            // #879487 secondary icons, progress
+        internal static readonly Color SageTint = new Color(228f/255, 233f/255, 225f/255, 1f);        // #E4E9E1 selected cards, chips
 
         /// <summary>0 = resting (flat), 1 = raised (buttons, cards), 2 = floating (sheets, popups).</summary>
         internal enum Elevation { Resting = 0, Raised = 1, Floating = 2 }

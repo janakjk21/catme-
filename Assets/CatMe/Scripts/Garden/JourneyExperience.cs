@@ -368,17 +368,17 @@ namespace CatMe.Garden
             gallery.GetComponent<Image>().color=new Color(.035f,.055f,.045f,.28f);
             var sheet=new GameObject("Photo album sheet",typeof(RectTransform),typeof(Image));sheet.transform.SetParent(gallery.transform,false);
             var sheetRect=sheet.GetComponent<RectTransform>();sheetRect.anchorMin=sheetRect.anchorMax=new Vector2(.5f,.5f);sheetRect.sizeDelta=new Vector2(1320,850);
-            CatMeUIStyle.ApplySurface(sheet.GetComponent<Image>(),CatMeUIStyle.PaperGlass);CatMeUIStyle.SetElevation(sheetRect,CatMeUIStyle.Elevation.Floating);
-            {var at=MakeLabel(sheet.transform,"Photo album title","Photo album",new Vector2(.5f,1f),new Vector2(780,70));at.rectTransform.anchoredPosition=new Vector2(0,-54);at.font=CatMeUIStyle.DisplayFont;at.fontSize=50;at.color=CatMeUIStyle.Pine;}
+            CatMeUIStyle.ApplySurface(sheet.GetComponent<Image>(),CatMeUIStyle.Paper);CatMeUIStyle.SetElevation(sheetRect,CatMeUIStyle.Elevation.Floating);
+            {var at=MakeLabel(sheet.transform,"Photo album title","Photo album",new Vector2(.5f,1f),new Vector2(780,70));at.rectTransform.anchoredPosition=new Vector2(0,-54);at.font=CatMeUIStyle.DisplayFont;at.fontSize=50;at.color=CatMeUIStyle.Ink;}
             var frame=new GameObject("Photo preview",typeof(RectTransform),typeof(Image));frame.transform.SetParent(sheet.transform,false);
             var f=frame.GetComponent<RectTransform>();f.anchorMin=f.anchorMax=new Vector2(.5f,.55f);f.sizeDelta=new Vector2(1120,620);
             galleryImage=frame.GetComponent<Image>();galleryImage.preserveAspect=true;galleryImage.color=Color.white;
-            galleryCaption=MakeLabel(sheet.transform,"Photo caption","Photos stay on this phone.",new Vector2(.5f,.5f),new Vector2(780,44));galleryCaption.rectTransform.anchoredPosition=new Vector2(0,-342);galleryCaption.color=CatMeUIStyle.MutedInk;
+            galleryCaption=MakeLabel(sheet.transform,"Photo caption","Photos stay on this phone.",new Vector2(.5f,.5f),new Vector2(780,44));galleryCaption.rectTransform.anchoredPosition=new Vector2(0,-297);galleryCaption.color=CatMeUIStyle.MutedInk;
             previousPhoto=Round(sheet.transform,"back","Previous photo",new Vector2(0f,.55f),new Vector2(-585,0),()=>MovePhoto(-1));
             nextPhoto=Round(sheet.transform,"arrow","Next photo",new Vector2(1f,.55f),new Vector2(585,0),()=>MovePhoto(1));
-            deletePhoto=MakeButton(sheet.transform,"Delete selected photo","Delete photo",new Vector2(.5f,0f),Vector2.zero,new Vector2(260,72),DeleteSelectedPhoto);deletePhoto.GetComponent<RectTransform>().anchoredPosition=new Vector2(-420,62);CatMeUIStyle.StyleButton(deletePhoto,CatMeUIStyle.Danger,true);
-            savePhoto=MakeButton(sheet.transform,"Save selected photo","Save to Photos",new Vector2(.5f,0f),Vector2.zero,new Vector2(280,72),SaveSelectedPhoto);savePhoto.GetComponent<RectTransform>().anchoredPosition=new Vector2(-110,62);CatMeUIStyle.StyleButton(savePhoto,CatMeUIStyle.Olive,true);
-            {var back=MakeButton(sheet.transform,"Close photo album","Back to garden",new Vector2(.5f,0f),Vector2.zero,new Vector2(320,72),CloseGallery);back.GetComponent<RectTransform>().anchoredPosition=new Vector2(230,62);CatMeUIStyle.StyleButton(back,CatMeUIStyle.Pine,true);}
+            deletePhoto=MakeButton(sheet.transform,"Delete selected photo","Delete photo",new Vector2(.5f,0f),Vector2.zero,new Vector2(260,72),DeleteSelectedPhoto);deletePhoto.GetComponent<RectTransform>().anchoredPosition=new Vector2(200,62);CatMeUIStyle.StyleButton(deletePhoto,CatMeUIStyle.Mist,false);{var dt=deletePhoto.GetComponentInChildren<Text>();if(dt!=null)dt.color=CatMeUIStyle.Danger;}
+            savePhoto=MakeButton(sheet.transform,"Save selected photo","Save to Photos",new Vector2(.5f,0f),Vector2.zero,new Vector2(280,72),SaveSelectedPhoto);savePhoto.GetComponent<RectTransform>().anchoredPosition=new Vector2(-120,62);CatMeUIStyle.StyleButton(savePhoto,CatMeUIStyle.SageDeep,true);
+            Round(sheet.transform,"back","Close photo album",new Vector2(0f,1f),new Vector2(70,-58),CloseGallery);
             gallery.SetActive(false);
         }
 
@@ -394,7 +394,9 @@ namespace CatMe.Garden
         }
 
         void ClosePhotoMode(){photoMode.SetActive(false);Time.timeScale=1f;garden.SetInputBlocked(false);garden.ClearMovement();}
-        void CloseGallery(){gallery.SetActive(false);Time.timeScale=1f;garden.SetInputBlocked(false);garden.ClearMovement();}
+        /// <summary>Runs once when the album closes (the menu sets it so Back returns to the menu).</summary>
+        internal Action AlbumClosed;
+        void CloseGallery(){gallery.SetActive(false);Time.timeScale=1f;garden.SetInputBlocked(false);garden.ClearMovement();var closed=AlbumClosed;AlbumClosed=null;closed?.Invoke();}
 
         void CapturePhoto() { if (!active && !SessionMode) { ShowNotice("Start an outing to save a photo."); return; } garden.SetInputBlocked(true);garden.ClearMovement();Time.timeScale=0f;photoMode.SetActive(true);photoMode.transform.SetAsLastSibling(); }
         internal void TakePhoto() => CapturePhoto();
@@ -433,16 +435,16 @@ namespace CatMe.Garden
         void MovePhoto(int direction){if(photos.Length==0)return;deleteArmed=false;photoIndex=(photoIndex+direction+photos.Length)%photos.Length;ShowPhoto();}
         void ShowPhoto()
         {
-            if(photos.Length==0){galleryImage.sprite=null;galleryImage.color=new Color(.2f,.22f,.2f,1);galleryCaption.text="No photos yet. Tap the camera to take one.";deletePhoto.interactable=false;if(savePhoto!=null)savePhoto.interactable=false;return;}
+            if(photos.Length==0){galleryImage.sprite=null;galleryImage.color=new Color(.2f,.22f,.2f,1);galleryCaption.text="No photos yet. Tap the camera on your walk.";deletePhoto.interactable=false;if(savePhoto!=null)savePhoto.interactable=false;return;}
             deletePhoto.interactable=true;if(savePhoto!=null)savePhoto.interactable=true;
             var bytes=File.ReadAllBytes(photos[photoIndex]);var texture=new Texture2D(2,2,TextureFormat.RGBA32,false);
             if(!texture.LoadImage(bytes)){Destroy(texture);galleryCaption.text="This photo could not be opened.";return;}
             var old=galleryImage.sprite;galleryImage.sprite=Sprite.Create(texture,new Rect(0,0,texture.width,texture.height),new Vector2(.5f,.5f));galleryImage.color=Color.white;if(old!=null){Destroy(old.texture);Destroy(old);}
             string json=photos[photoIndex]+".json";string detail="Photo "+(photoIndex+1)+" of "+photos.Length;
-            if(File.Exists(json)){try{var data=JsonUtility.FromJson<PhotoMetadata>(File.ReadAllText(json));detail=ZoneLabel(data.zone)+"  ·  "+DateTime.Parse(data.createdUtc).ToLocalTime().ToString("d MMM, HH:mm");}catch{}}
+            if(File.Exists(json)){try{var data=JsonUtility.FromJson<PhotoMetadata>(File.ReadAllText(json));detail=ZoneLabel(data.zone)+"  ·  "+DateTime.Parse(data.createdUtc).ToLocalTime().ToString("d MMM, HH:mm")+"  ·  "+(photoIndex+1)+" of "+photos.Length;}catch{}}
             galleryCaption.text=detail;
         }
-        void RefreshGalleryCaption(){if(gallery.activeSelf&&photos.Length==0)galleryCaption.text="No photos yet. Tap the camera to take one.";}
+        void RefreshGalleryCaption(){if(gallery.activeSelf&&photos.Length==0)galleryCaption.text="No photos yet. Tap the camera on your walk.";}
         void DeleteSelectedPhoto()
         {
             if(photos.Length==0)return;

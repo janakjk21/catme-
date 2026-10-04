@@ -153,23 +153,13 @@ namespace CatMe.Session
             return null;
         }
 
+        // One contextual card at a fixed place above the paw button, never over the player (audit 27g, MENUS_AND_ACCOUNT.md section 9).
+        // Inside a room the action dock sits at the bottom, so the card stays at the same corner there too.
         void PlaceButton(Vector3? world)
         {
             if (buttonRect == null) return;
-            var cam = Camera.main;
-            if (world.HasValue && cam != null)
-            {
-                Vector3 sp = cam.WorldToScreenPoint(world.Value);
-                if (sp.z > .3f)
-                {
-                    RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, sp, null, out Vector2 local);
-                    buttonRect.anchorMin = buttonRect.anchorMax = new Vector2(.5f, .5f); buttonRect.pivot = new Vector2(.5f, .5f);
-                    buttonRect.anchoredPosition = local; buttonRect.localScale = Vector3.one * .85f;
-                    return;
-                }
-            }
-            buttonRect.anchorMin = buttonRect.anchorMax = new Vector2(.5f, 0f); buttonRect.pivot = new Vector2(.5f, 0f);
-            buttonRect.anchoredPosition = new Vector2(0f, 120f); buttonRect.localScale = Vector3.one;
+            buttonRect.anchorMin = buttonRect.anchorMax = new Vector2(1f, 0f); buttonRect.pivot = new Vector2(1f, 0f);
+            buttonRect.anchoredPosition = new Vector2(-40f, state == State.InHouse ? 200f : 210f); buttonRect.localScale = Vector3.one;
         }
 
         Text debugText;
@@ -629,7 +619,7 @@ namespace CatMe.Session
             {
                 case "Sit": return "Sit down";
                 case "Get in": return "Step inside";
-                case "Get in the house": return "Go into the house";
+                case "Get in the house": return "Go inside";
                 default: return text;
             }
         }

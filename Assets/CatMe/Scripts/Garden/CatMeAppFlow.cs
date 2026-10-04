@@ -66,13 +66,13 @@ namespace CatMe.Garden
             welcome = Overlay("Welcome screen");
             welcome.GetComponent<Image>().color = CatMeUIStyle.Mist;
             // Only a holding screen while the garden loads: the first page is the login (OnboardingFlow.BeginLogin), not this one.
-            var dot = UiKit.Rect(welcome.transform, "Brand dot", new Vector2(-92f, 24f), new Vector2(22f, 22f)); var dimg = dot.gameObject.AddComponent<Image>(); dimg.sprite = UiKit.Circle; dimg.color = CatMeUIStyle.Sunset; dimg.raycastTarget = false;
-            UiKit.Label(welcome.transform, "WornTag", 48, CatMeUIStyle.Pine, new Vector2(20f, 24f), new Vector2(260f, 60f), FontStyle.Bold, TextAnchor.MiddleLeft, "Brand");
+            UiKit.Label(welcome.transform, "WornTag", 48, CatMeUIStyle.Ink, new Vector2(0f, 24f), new Vector2(260f, 60f), FontStyle.Bold, TextAnchor.MiddleCenter, "Brand");
             UiKit.Label(welcome.transform, "Getting your garden ready", 30, CatMeUIStyle.BodyInk, new Vector2(0f, -50f), new Vector2(700f, 60f), FontStyle.Normal, TextAnchor.MiddleCenter, "Loading line");
             if (!string.IsNullOrEmpty(profile.Notice)) Label(welcome.transform, "Save notice", profile.Notice, 22, CatMeUIStyle.Ink, new Vector2(0, -470f), new Vector2(1250, 60), FontStyle.Normal);
 
             pets = new PetsScreen(canvasRoot); store = new StoreScreen(canvasRoot); onboarding = new OnboardingFlow(canvasRoot, device);
             Confirm = new ConfirmDialog(canvasRoot); PetToast = Toast.Create(canvasRoot); State = new ScreenState(canvasRoot);
+            pets.Confirm = Confirm;
             pets.OnAddPet = () => { pets.Hide(); StartOnboarding(true); };
             pets.OnOpenStore = () => { pets.Hide(); store.Open(); };
             pets.OnPetChosen = pet => garden.SetActivePet(pet);
@@ -285,19 +285,57 @@ namespace CatMe.Garden
         private void StartOnboarding(bool addMode)
         {
             SetGameplayControlsVisible(false);
+            returnToMenu = false;
             onboardingFromWelcome = welcome.activeSelf;
             welcome.SetActive(false);
             onboarding.Begin(addMode);
         }
 
         private void OpenOverlayScreen(Action open) { SetGameplayControlsVisible(false); Time.timeScale = 0f; open(); }
-        private void CloseOverlayScreen() { Time.timeScale = 1f; SetGameplayControlsVisible(garden.IsReady && !welcome.activeSelf); }
+        private void CloseOverlayScreen() { Time.timeScale = 1f; SetGameplayControlsVisible(garden.IsReady && !welcome.activeSelf); BackToMenu(); }
+
+        // Screens opened from the menu go back to the menu when closed (MENUS_AND_ACCOUNT section 1).
+        private bool returnToMenu, returnToSettings;
+        private void BackToMenu()
+        {
+            if (!returnToMenu) return;
+            returnToMenu = false;
+            if (garden.IsReady && !welcome.activeSelf) garden.OpenMenu();
+        }
+
+        /// <summary>Opens a screen from the menu; its Back returns to the menu.</summary>
+        internal void OpenFromMenu(string which)
+        {
+            returnToMenu = true;
+            switch (which)
+            {
+                case "pets": OpenPets(); break;
+                case "album": garden.OpenPhotoAlbum(BackToMenu); break;
+                case "store": OpenStore(); break;
+                case "account": OpenAccount(); break;
+                case "settings": OpenSettings(); break;
+                default: returnToMenu = false; break;
+            }
+        }
+
+        /// <summary>The small line under Account in the menu.</summary>
+        internal string AccountRowNote()
+        {
+            if (identityForAccount == null || string.IsNullOrEmpty(identityForAccount.UserId)) return "Sign in";
+            if (identityForAccount.IsGuest) return "Guest · save your pets";
+            string provider = device.AccountService?.SignInProvider;
+            return provider == "google" ? "Signed in with Google" : provider == "apple" ? "Signed in with Apple" : "Signed in";
+        }
         internal void OpenPets() => OpenOverlayScreen(pets.Open);
         /// <summary>Account from the pause menu: sign-in options for a new player, or who you are and sign out.</summary>
         internal void OpenAccount()
         {
             SetGameplayControlsVisible(false); Time.timeScale = 0f;
-            onboarding.OnAccountDone = () => CloseOverlayScreen();
+            onboarding.OnAccountDone = () =>
+            {
+                if (returnToSettings) { returnToSettings = false; onboarding.Hide(); OpenSettings(); return; }
+                CloseOverlayScreen();
+            };
             if (identityForAccount == null || string.IsNullOrEmpty(identityForAccount.UserId)) { onboarding.BeginAccountOnly(); return; }
             onboarding.ShowAccount(BuildAccountView());
         }
@@ -464,33 +502,74 @@ namespace CatMe.Garden
             AccountStorage.Changed -= OnAccountChanged;
         }
 
+        // Settings (MENUS_AND_ACCOUNT section 5): a right-side sheet like the menu, in sections, scrolling when it doesn't fit.
         private void BuildSettings()
         {
             settings = Overlay("Garden settings screen");
-            settings.GetComponent<Image>().color = new Color(0.035f, 0.055f, 0.045f, 0.24f);
-            var card = Card(settings.transform, "Settings card", new Vector2(1480f, 920f), CatMeUIStyle.PaperGlass);
-            RectTransform settingsRect = card.GetComponent<RectTransform>();
-            settingsRect.anchorMin = settingsRect.anchorMax = new Vector2(0.5f, 0.5f);
-            settingsRect.pivot = new Vector2(0.5f, 0.5f);
-            settingsRect.anchoredPosition = Vector2.zero;
-            UiKit.IconButton(card.transform, "back", new Vector2(-650f, 380f), CloseSettings, "Back from settings");
-            Label(card.transform, "Settings title", "Settings", 48, CatMeUIStyle.Pine, new Vector2(-400f, 380f), new Vector2(430f, 66f), FontStyle.Bold, TextAnchor.MiddleLeft);
-            BuildSettingRow(card.transform, "Sound", "Hear the garden and your pet", "speaker", new Vector2(-340f, 260f), () => PlayerPrefs.GetInt(SoundKey, 1) == 1, ToggleSound);
-            BuildSettingRow(card.transform, "Guidance", "Show helpful prompts while you walk", "bulb", new Vector2(-340f, 164f), () => PlayerPrefs.GetInt(GuidanceKey, 1) == 1, ToggleGuidance);
-            BuildSettingRow(card.transform, "Story notes", "Show quiet story lines", "book", new Vector2(-340f, 68f), () => PlayerPrefs.GetInt(StoryKey, 0) == 1, ToggleStory);
-            BuildSettingRow(card.transform, "Story linger", "Give story lines more reading time", "clock", new Vector2(-340f, -28f), () => PlayerPrefs.GetFloat("CatMe.Journey.StoryHold", 4.2f) > 6f, ToggleStoryHold);
-            BuildSettingRow(card.transform, "Reduce motion", "Keep movement and transitions gentle", "motion", new Vector2(-340f, -124f), () => PlayerPrefs.GetInt("CatMe.ReduceMotion", 0) == 1, ToggleReducedMotion);
-            BuildSettingRow(card.transform, "Haptics", "Feel a light tap on actions", "vibrate", new Vector2(-340f, -220f), () => CatMe.World.Haptics.Enabled, ToggleHaptics);
-            MakeButton(card.transform, "Replay controls", "Replay controls guide", new Vector2(-340f, -330f), new Vector2(400f, 66f), CatMeUIStyle.CreamSoft, false, () => { CloseSettings(); tutorial.Replay(); });
-            UiKit.Button(card.transform, "Delete my photos", new Vector2(370f, 170f), new Vector2(570f, 84f), CatMeUIStyle.Tile, false, () => ConfirmDeletion(false), 30, "Delete my photos");
-            UiKit.Label(card.transform, "Remove your photos from our server. Your pets stay.", 26, CatMeUIStyle.BodyInk, new Vector2(370f, 70f), new Vector2(570f, 100f), FontStyle.Normal, TextAnchor.UpperLeft);
-            UiKit.Button(card.transform, "Delete account", new Vector2(370f, -80f), new Vector2(570f, 84f), CatMeUIStyle.Tile, false, () => ConfirmDeletion(true), 30, "Delete account");
-            UiKit.Label(card.transform, "Remove your account, pets and photos for good.", 26, CatMeUIStyle.BodyInk, new Vector2(370f, -180f), new Vector2(570f, 100f), FontStyle.Normal, TextAnchor.UpperLeft);
-            UiKit.Link(card.transform, "Privacy policy", new Vector2(235f, -345f), new Vector2(260f, 60f), () => Application.OpenURL(CreationClient.PrivacyUrl), 24);
-            UiKit.Link(card.transform, "Terms and AI policy", new Vector2(500f, -345f), new Vector2(300f, 60f), () => Application.OpenURL(CreationClient.TermsUrl), 24);
+            settings.GetComponent<Image>().color = new Color(CatMeUIStyle.Ink.r, CatMeUIStyle.Ink.g, CatMeUIStyle.Ink.b, .35f);
+            var scrim = settings.AddComponent<Button>(); scrim.transition = Selectable.Transition.None; scrim.onClick.AddListener(CloseSettings);
+            var sheet = CatMeUIStyle.Card(settings.transform, "Settings sheet", new Vector2(720f, 960f), CatMeUIStyle.Paper, CatMeUIStyle.Elevation.Floating);
+            var sr = (RectTransform)sheet.transform;
+            sr.anchorMin = new Vector2(1f, 0f); sr.anchorMax = new Vector2(1f, 1f); sr.pivot = new Vector2(1f, .5f);
+            sr.sizeDelta = new Vector2(720f, -48f); sr.anchoredPosition = new Vector2(-24f, 0f);
+            var back = UiKit.IconButton(sheet.transform, "back", Vector2.zero, CloseSettings, "Back from settings");
+            { var r = (RectTransform)back.transform; r.anchorMin = r.anchorMax = new Vector2(0f, 1f); r.anchoredPosition = new Vector2(76f, -70f); }
+            var title = UiKit.Label(sheet.transform, "Settings", 56, CatMeUIStyle.Ink, Vector2.zero, new Vector2(480f, 76f), FontStyle.Bold, TextAnchor.MiddleLeft, "Settings title");
+            title.rectTransform.anchorMin = title.rectTransform.anchorMax = new Vector2(0f, 1f); title.rectTransform.anchoredPosition = new Vector2(380f, -70f);
+
+            // Scrolling list under the title.
+            var view = UiKit.Rect(sheet.transform, "Settings scroll", Vector2.zero, Vector2.zero);
+            view.anchorMin = Vector2.zero; view.anchorMax = Vector2.one; view.offsetMin = new Vector2(0f, 24f); view.offsetMax = new Vector2(0f, -130f);
+            view.gameObject.AddComponent<RectMask2D>();
+            var vi = view.gameObject.AddComponent<Image>(); vi.color = new Color(1f, 1f, 1f, 0f);
+            var list = UiKit.Rect(view, "Settings list", Vector2.zero, Vector2.zero);
+            list.anchorMin = new Vector2(0f, 1f); list.anchorMax = new Vector2(1f, 1f); list.pivot = new Vector2(.5f, 1f); list.anchoredPosition = Vector2.zero;
+            var scroll = view.gameObject.AddComponent<ScrollRect>(); scroll.horizontal = false; scroll.vertical = true; scroll.viewport = view; scroll.content = list;
+            scroll.movementType = ScrollRect.MovementType.Elastic; scroll.scrollSensitivity = 30f;
+
+            float y = -10f;
+            void Section(string name) { var h = UiKit.Label(list, name, 26, CatMeUIStyle.MutedInk, Vector2.zero, new Vector2(624f, 40f), FontStyle.Bold, TextAnchor.MiddleLeft, "Section " + name); AtTop(h.rectTransform, y - 22f); y -= 56f; }
+            void Toggle(string label, string note, string icon, Func<bool> get, Action act) { BuildSettingRow(list, label, note, icon, new Vector2(0f, y - 50f), get, act); y -= 112f; }
+            void Chevron(string label, string icon, Action act)
+            {
+                var row = UiKit.Button(list, "", Vector2.zero, new Vector2(624f, 100f), CatMeUIStyle.Mist, false, act, 26, label + " row");
+                AtTop((RectTransform)row.transform, y - 50f); y -= 112f;
+                UiKit.Icon(row.transform, icon, new Vector2(-262f, 0f), 42f, CatMeUIStyle.SageDeep);
+                UiKit.Label(row.transform, label, 28, CatMeUIStyle.Ink, new Vector2(10f, 0f), new Vector2(440f, 44f), FontStyle.Normal, TextAnchor.MiddleLeft, "Label");
+                UiKit.Icon(row.transform, "arrow", new Vector2(270f, 0f), 34f, CatMeUIStyle.Sage);
+            }
+
+            Section("Sound and feel");
+            Toggle("Sound", "Hear the garden and your pet", "speaker", () => PlayerPrefs.GetInt(SoundKey, 1) == 1, ToggleSound);
+            Toggle("Haptics", "A light tap on actions", "vibrate", () => CatMe.World.Haptics.Enabled, ToggleHaptics);
+            Section("Help while you walk");
+            Toggle("Hints", "Short tips about what to try", "bulb", () => PlayerPrefs.GetInt(GuidanceKey, 1) == 1, ToggleGuidance);
+            Toggle("Pet's thoughts", "What your pet seems to be thinking", "book", () => PlayerPrefs.GetInt(StoryKey, 0) == 1, ToggleStory);
+            Toggle("Keep text on screen longer", "More time to read", "clock", () => PlayerPrefs.GetFloat("CatMe.Journey.StoryHold", 4.2f) > 6f, ToggleStoryHold);
+            Section("Comfort");
+            Toggle("Reduce motion", "Softer camera and transitions", "motion", () => PlayerPrefs.GetInt("CatMe.ReduceMotion", 0) == 1, ToggleReducedMotion);
+            Section("Controls");
+            Chevron("Replay the controls guide", "walk", () => { returnToMenu = false; CloseSettings(); tutorial.Replay(); });
+            Section("Account and data");
+            Chevron("Account", "account", () => { settings.SetActive(false); returnToSettings = true; OpenAccount(); });
+
+            // Footer: privacy, terms, version.
+            y -= 16f;
+            var privacy = UiKit.Link(list, "Privacy policy", Vector2.zero, new Vector2(260f, 56f), () => Application.OpenURL(CreationClient.PrivacyUrl), 24);
+            AtTop((RectTransform)privacy.transform, y - 28f).anchoredPosition = new Vector2(-170f, y - 28f);
+            var terms = UiKit.Link(list, "Terms", Vector2.zero, new Vector2(200f, 56f), () => Application.OpenURL(CreationClient.TermsUrl), 24);
+            AtTop((RectTransform)terms.transform, y - 28f).anchoredPosition = new Vector2(70f, y - 28f);
+            foreach (var link in new[] { privacy, terms }) link.GetComponentInChildren<Text>().color = CatMeUIStyle.SageDeep;
+            y -= 64f;
+            var version = UiKit.Label(list, "WornTag " + Application.version, 24, CatMeUIStyle.MutedInk, Vector2.zero, new Vector2(624f, 40f), FontStyle.Normal, TextAnchor.MiddleLeft, "Version");
+            AtTop(version.rectTransform, y - 20f); y -= 60f;
+            list.sizeDelta = new Vector2(0f, -y + 20f);
+
             RefreshSettingLabels();
             settings.SetActive(false);
         }
+
+        private static RectTransform AtTop(RectTransform r, float y) { r.anchorMin = r.anchorMax = new Vector2(.5f, 1f); r.anchoredPosition = new Vector2(r.anchoredPosition.x, y); return r; }
 
         private void ConfirmDeletion(bool account)
         {
@@ -551,31 +630,32 @@ namespace CatMe.Garden
             finally { deleting = false; }
         }
 
+        // A toggle row: the whole row is the tap target. Track Stone off, SageDeep on; knob Paper.
         private void BuildSettingRow(Transform root, string label, string reason, string icon, Vector2 position, Func<bool> getValue, Action action)
         {
             GameObject row = new GameObject(label + " row", typeof(RectTransform), typeof(Image), typeof(Button));
             row.transform.SetParent(root, false);
             RectTransform rect = row.GetComponent<RectTransform>();
-            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = new Vector2(680f, 84f);
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.sizeDelta = new Vector2(624f, 100f);
             rect.anchoredPosition = position;
-            CatMeUIStyle.ApplySurface(row.GetComponent<Image>(), CatMeUIStyle.CreamSoft);
+            CatMeUIStyle.ApplySurface(row.GetComponent<Image>(), CatMeUIStyle.Mist);
             Button button = row.GetComponent<Button>();
             button.targetGraphic = row.GetComponent<Image>();
             button.onClick.AddListener(() => action());
-            CatMeUIStyle.StyleButton(button, CatMeUIStyle.CreamSoft, false);
-            UiKit.Icon(row.transform, icon, new Vector2(-286f, 0f), 44f, CatMeUIStyle.Pine);
-            Label(row.transform, "Label", label, 25, CatMeUIStyle.Ink, new Vector2(-94f, 15f), new Vector2(330f, 36f), FontStyle.Bold, TextAnchor.MiddleLeft);
-            Label(row.transform, "Reason", reason, 20, CatMeUIStyle.MutedInk, new Vector2(-75f, -18f), new Vector2(370f, 32f), FontStyle.Normal, TextAnchor.MiddleLeft);
+            CatMeUIStyle.StyleButton(button, CatMeUIStyle.Mist, false);
+            UiKit.Icon(row.transform, icon, new Vector2(-262f, 0f), 42f, CatMeUIStyle.SageDeep);
+            Label(row.transform, "Label", label, 28, CatMeUIStyle.Ink, new Vector2(-20f, 17f), new Vector2(380f, 38f), FontStyle.Normal, TextAnchor.MiddleLeft);
+            Label(row.transform, "Reason", reason, 21, CatMeUIStyle.MutedInk, new Vector2(-20f, -19f), new Vector2(380f, 32f), FontStyle.Normal, TextAnchor.MiddleLeft);
 
             GameObject trackObject = new GameObject("Switch track", typeof(RectTransform), typeof(Image));
             trackObject.transform.SetParent(row.transform, false);
             RectTransform trackRect = trackObject.GetComponent<RectTransform>();
             trackRect.anchorMin = trackRect.anchorMax = new Vector2(1f, 0.5f);
             trackRect.pivot = new Vector2(1f, 0.5f);
-            trackRect.anchoredPosition = new Vector2(-18f, 0f);
+            trackRect.anchoredPosition = new Vector2(-22f, 0f);
             trackRect.sizeDelta = new Vector2(88f, 52f);
-            CatMeUIStyle.ApplySurface(trackObject.GetComponent<Image>(), CatMeUIStyle.Hairline);
+            CatMeUIStyle.ApplySurface(trackObject.GetComponent<Image>(), CatMeUIStyle.Stone);
             trackObject.GetComponent<Image>().raycastTarget = false;
 
             GameObject knobObject = new GameObject("Switch knob", typeof(RectTransform), typeof(Image));
@@ -585,7 +665,7 @@ namespace CatMe.Garden
             knobRect.pivot = new Vector2(0.5f, 0.5f);
             knobRect.sizeDelta = new Vector2(40f, 40f);
             Image knob = knobObject.GetComponent<Image>();
-            CatMeUIStyle.ApplySurface(knob, CatMeUIStyle.CreamGlass, false);
+            CatMeUIStyle.ApplySurface(knob, CatMeUIStyle.Paper, false);
             knob.raycastTarget = false;
             knobObject.AddComponent<CatMeSwitchThumb>();
             settingTracks.Add(trackObject.GetComponent<Image>());
@@ -665,6 +745,7 @@ namespace CatMe.Garden
             settings.SetActive(false);
             Time.timeScale = 1f;
             SetGameplayControlsVisible(garden.IsReady);
+            BackToMenu();
         }
 
         private void ToggleSound()
@@ -716,7 +797,7 @@ namespace CatMe.Garden
             for (int i = 0; i < settingValues.Count; i++)
             {
                 bool enabled = settingValues[i]();
-                settingTracks[i].color = enabled ? CatMeUIStyle.Olive : CatMeUIStyle.Hairline;
+                settingTracks[i].color = enabled ? CatMeUIStyle.SageDeep : CatMeUIStyle.Stone;
                 settingKnobs[i].GetComponent<CatMeSwitchThumb>().SetValue(enabled);
             }
         }

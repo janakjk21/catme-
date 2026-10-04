@@ -21,15 +21,15 @@ namespace CatMe.Garden
 
         void Build()
         {
-            var screen = UiKit.Screen(canvasRoot, "Store screen", new Color(.12f, .1f, .09f, .62f));
+            var screen = UiKit.Screen(canvasRoot, "Store screen", new Color(.153f, .137f, .129f, .35f));
             root = screen.root;
-            panel = ((RectTransform)CatMeUIStyle.Card(screen.safe, "Store panel", new Vector2(1560f, 860f), CatMeUIStyle.PaperGlass, CatMeUIStyle.Elevation.Floating).transform);
-            UiKit.Label(panel, "Pet store", 54, CatMeUIStyle.Ink, new Vector2(-280f, 360f), new Vector2(900f, 80f), FontStyle.Bold, TextAnchor.MiddleLeft, "Title");
-            shopper = UiKit.Label(panel, "", 26, CatMeUIStyle.MutedInk, new Vector2(-280f, 300f), new Vector2(900f, 40f), FontStyle.Normal, TextAnchor.MiddleLeft, "Shopping for");
-            UiKit.Button(panel, "Done", new Vector2(640f, 345f), new Vector2(190f, 70f), CatMeUIStyle.CreamSoft, false, Close, 26, "Close");
-            toysTab = UiKit.Button(panel, "Toys", new Vector2(-260f, 220f), new Vector2(210f, 66f), CatMeUIStyle.Pine, true, () => { tab = StoreCategory.Toy; bag = false; Refresh(); }, 26, "Toys tab");
-            foodTab = UiKit.Button(panel, "Food", new Vector2(-30f, 220f), new Vector2(210f, 66f), CatMeUIStyle.CreamSoft, false, () => { tab = StoreCategory.Food; bag = false; Refresh(); }, 26, "Food tab");
-            bagTab = UiKit.Button(panel, "Your bag", new Vector2(200f, 220f), new Vector2(210f, 66f), CatMeUIStyle.CreamSoft, false, () => { bag = true; Refresh(); }, 26, "Bag tab");
+            panel = ((RectTransform)CatMeUIStyle.Card(screen.safe, "Store panel", new Vector2(1560f, 860f), CatMeUIStyle.Paper, CatMeUIStyle.Elevation.Floating).transform);
+            UiKit.IconButton(panel, "back", new Vector2(-700f, 355f), Close, "Back from the store");
+            UiKit.Label(panel, "Store", 54, CatMeUIStyle.Ink, new Vector2(-170f, 365f), new Vector2(900f, 72f), FontStyle.Bold, TextAnchor.MiddleLeft, "Title");
+            shopper = UiKit.Label(panel, "", 26, CatMeUIStyle.MutedInk, new Vector2(-170f, 310f), new Vector2(900f, 40f), FontStyle.Normal, TextAnchor.MiddleLeft, "Shopping for");
+            toysTab = UiKit.Button(panel, "Toys", new Vector2(-260f, 220f), new Vector2(210f, 66f), CatMeUIStyle.SageDeep, true, () => { tab = StoreCategory.Toy; bag = false; Refresh(); }, 26, "Toys tab");
+            foodTab = UiKit.Button(panel, "Food", new Vector2(-30f, 220f), new Vector2(210f, 66f), CatMeUIStyle.Mist, false, () => { tab = StoreCategory.Food; bag = false; Refresh(); }, 26, "Food tab");
+            bagTab = UiKit.Button(panel, "Your bag", new Vector2(200f, 220f), new Vector2(210f, 66f), CatMeUIStyle.Mist, false, () => { bag = true; Refresh(); }, 26, "Bag tab");
             content = UiKit.HScroll(panel, new Vector2(0f, -40f), new Vector2(1480f, 500f), 26f, 24);
             note = UiKit.Label(panel, "Everything here is free while the shop is being built.", 20, CatMeUIStyle.MutedInk, new Vector2(0f, -378f), new Vector2(1300f, 36f));
             root.SetActive(false);
@@ -54,23 +54,25 @@ namespace CatMe.Garden
 
         static void Tint(Button b, bool on)
         {
-            CatMeUIStyle.StyleButton(b, on ? CatMeUIStyle.Pine : CatMeUIStyle.CreamSoft, on);
+            CatMeUIStyle.StyleButton(b, on ? CatMeUIStyle.SageDeep : CatMeUIStyle.Mist, on);
+            var t = b.GetComponentInChildren<Text>(); if (t != null) t.color = on ? CatMeUIStyle.Paper : CatMeUIStyle.SageDeep;
         }
 
         void BuildItem(StoreItem item)
         {
-            var card = UiKit.LayoutCard(content, "Item " + item.name, new Vector2(300f, 420f), Color.white);
+            var card = UiKit.LayoutCard(content, "Item " + item.name, new Vector2(300f, 420f), CatMeUIStyle.Paper);
+            { var o = card.AddComponent<Outline>(); o.effectColor = CatMeUIStyle.Stone; o.effectDistance = new Vector2(2f, -2f); }
             var tile = CatMeUIStyle.Card(card.transform, "Icon", new Vector2(150f, 150f), item.tint, CatMeUIStyle.Elevation.Raised);
             ((RectTransform)tile.transform).anchoredPosition = new Vector2(0f, 110f);
             UiKit.Label(tile.transform, item.glyph, 84, new Color(1f, 1f, 1f, .92f), Vector2.zero, new Vector2(150f, 150f), FontStyle.Bold);
             UiKit.Label(card.transform, item.name, 28, CatMeUIStyle.Ink, new Vector2(0f, -4f), new Vector2(270f, 40f), FontStyle.Bold);
             UiKit.Label(card.transform, item.blurb, 19, CatMeUIStyle.MutedInk, new Vector2(0f, -56f), new Vector2(260f, 56f));
             bool owned = StoreCatalog.Owns(item.id);
-            if (owned) UiKit.Chip(card.transform, "Owned", CatMeUIStyle.CreamSoft, CatMeUIStyle.Olive, new Vector2(0f, -150f), new Vector2(200f, 58f), 24);
+            if (owned) UiKit.Chip(card.transform, "Owned", CatMeUIStyle.SageTint, CatMeUIStyle.SageDeep, new Vector2(0f, -150f), new Vector2(200f, 58f), 24);
             else
             {
                 var id = item.id;
-                UiKit.Button(card.transform, "Get", new Vector2(0f, -150f), new Vector2(200f, 58f), CatMeUIStyle.Pine, true, () => StoreCatalog.Buy(id), 24, "Get");
+                UiKit.Button(card.transform, "Get", new Vector2(0f, -150f), new Vector2(200f, 58f), CatMeUIStyle.SageDeep, true, () => StoreCatalog.Buy(id), 24, "Get");
             }
         }
     }
