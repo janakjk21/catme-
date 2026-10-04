@@ -30,7 +30,7 @@ If making fails: the screen says "We could not make [Name]" with the reason, **T
 ## Rules
 
 - **Sign-in.** Try it free (Firebase anonymous) works everywhere. Google works on iPhone (not in the editor). Apple needs a paid Apple Developer team; without one it shows a clear message. A guest who signs in with Google or Apple is linked, so their pets are kept. There is no email login.
-- **Already signed in.** Skip the login: go to the garden if the player has a pet, otherwise to Cat or dog.
+- **Already signed in.** Open a server session, merge account pets missing from the local roster, and restore their models plus the owner model from fresh signed links. Then go to the garden if the player has a pet, otherwise to Cat or dog.
 - **Selfie only (iPhone).** The selfie comes from the front camera; there is no library option. It must show exactly one face; the phone keeps only the head and shoulders and uploads that crop. No face, several faces or a tiny face keeps the player on the selfie screen with a message from `COPY.md`. If camera access was refused, the screen says so and offers "Open Settings". The editor uses a file dialog without these checks.
 - **Pet photo check (iPhone).** Apple's on-device animal detector looks for a cat or a dog. The wrong animal ("This looks like a dog…") or more than one pet is refused with "Choose another" only. If it sees no animal at all the player may still "Use it anyway", because the server makes the final decision (`PHOTO_TO_3D.md`, Photo checks).
 - **Making.** The pet's server job starts as soon as the pet photo is chosen; the selfie joins the same job when taken, and the player waits on the Making screen until both are downloaded. The phone never calls Meshy or Tripo.

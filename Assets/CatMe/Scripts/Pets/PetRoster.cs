@@ -85,6 +85,26 @@ namespace CatMe.Pets
 
         public static PetProfile Get(string id) { Ensure(); return data.pets.Find(p => p.id == id); }
 
+        /// <summary>Adds a pet found in the signed-in account without duplicating one already restored on this phone.</summary>
+        public static PetProfile AddServerPet(string serverId, string name, string serverSpecies)
+        {
+            Ensure();
+            if (string.IsNullOrEmpty(serverId)) return null;
+            var existing = data.pets.Find(p => p.serverId == serverId);
+            if (existing != null) return existing;
+            data.pets.RemoveAll(p => !IsOwn(p));
+            Species kind = string.Equals(serverSpecies, "dog", StringComparison.OrdinalIgnoreCase) ? Species.Dog : Species.Cat;
+            var pet = new PetProfile
+            {
+                id = NewId(), serverId = serverId, name = string.IsNullOrWhiteSpace(name) ? (kind == Species.Dog ? "Your dog" : "Your cat") : name.Trim(),
+                species = (int)kind, createdUtc = DateTime.UtcNow.ToString("O")
+            };
+            data.pets.Add(pet);
+            if (string.IsNullOrEmpty(data.activeId) || !data.pets.Exists(p => p.id == data.activeId)) data.activeId = pet.id;
+            Write(); Changed?.Invoke();
+            return pet;
+        }
+
         /// <summary>Adds a pet (copying its photo into the pet's own folder) and makes it active.</summary>
         public static PetProfile Add(string name, Species species, string sourcePhotoPath)
         {

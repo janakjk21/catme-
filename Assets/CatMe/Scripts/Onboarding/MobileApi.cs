@@ -10,13 +10,19 @@ namespace CatMe.Onboarding
     [Serializable] public sealed class UploadTicket { public string photoPath; public string uploadUrl; public int expiresInSeconds; }
     [Serializable] public sealed class CreationStatus
     {
-        public string id; public string status; public string stage; public string rejectReason; public string modelUrl;
+        public string id; public string name; public string species; public string status; public string stage; public string rejectReason; public string errorCode; public string modelUrl;
         public long modelBytes; public string modelMd5; public bool isFixture; public string fixtureKey; public string petId; public bool duplicate;
+    }
+
+    [Serializable] public sealed class MobileSession
+    {
+        public CreationStatus[] pets;
+        public CreationStatus owner;
     }
 
     public interface IMobileApi
     {
-        Task<string> OpenSessionAsync();
+        Task<MobileSession> OpenSessionAsync();
         Task AcceptConsentAsync(string version);
         Task<UploadTicket> RequestUploadAsync(string kind, int bytes);
         Task UploadPhotoAsync(UploadTicket ticket, byte[] jpeg, Action<float> progress);
@@ -165,7 +171,8 @@ namespace CatMe.Onboarding
         public async Task DeletePhotosAsync() => await SendAsync("DELETE", "/v1/photos", null);
         public async Task DeleteAccountAsync() => await SendAsync("DELETE", "/v1/account", null);
 
-        public Task<string> OpenSessionAsync() => SendAsync("POST", "/v1/session", "{}");
+        public async Task<MobileSession> OpenSessionAsync() =>
+            JsonUtility.FromJson<MobileSession>(await SendAsync("POST", "/v1/session", "{}")) ?? new MobileSession();
         public async Task AcceptConsentAsync(string version) => await SendAsync("POST", "/v1/consent", JsonUtility.ToJson(new ConsentBody { version = version }));
         public async Task<UploadTicket> RequestUploadAsync(string kind, int bytes) =>
             JsonUtility.FromJson<UploadTicket>(await SendAsync("POST", "/v1/uploads", JsonUtility.ToJson(new UploadBody { kind = kind, bytes = bytes })));

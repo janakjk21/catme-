@@ -83,6 +83,7 @@ namespace CatMe.Garden
             var identity = new MobileIdentityService(device.AccountService); identityForAccount = identity;
             var apiConfig = Resources.Load<MobileApiConfig>("MobileApiConfig");
             IMobileApi api = apiConfig != null ? new MobileApi(apiConfig, identity) : null;
+            mobileApi = api;
             privacyApi = api as IPrivacyApi;
             onboarding.IsSignedIn = () => identityForAccount != null && !string.IsNullOrEmpty(identityForAccount.UserId);
             onboarding.OnAlreadySignedIn = RouteSignedIn;
@@ -90,7 +91,8 @@ namespace CatMe.Garden
             async System.Threading.Tasks.Task OpenSessionAsync()
             {
                 if (api == null) throw new InvalidOperationException("The account server is not configured.");
-                await api.OpenSessionAsync();
+                var session = await api.OpenSessionAsync();
+                await RestoreAccountAsync(api, session);
                 onboarding.AccountSucceeded();
             }
             onboarding.OnProvider = async provider =>
@@ -163,6 +165,34 @@ namespace CatMe.Garden
             else RouteSignedIn();
         }
 
+        private async System.Threading.Tasks.Task RestoreAccountAsync(IMobileApi api, MobileSession session)
+        {
+            if (session == null) return;
+            foreach (var serverPet in session.pets ?? new CreationStatus[0])
+            {
+                var local = PetRoster.AddServerPet(serverPet.id, serverPet.name, serverPet.species);
+                if (local == null || serverPet.status != "ready" || (!string.IsNullOrEmpty(local.modelPath) && System.IO.File.Exists(local.modelPath))) continue;
+                try
+                {
+                    var current = await api.GetPetAsync(serverPet.id);
+                    if (current?.status != "ready" || string.IsNullOrEmpty(current.modelUrl)) continue;
+                    string destination = System.IO.Path.Combine(PetRoster.PetFolder(local.id), "model.glb");
+                    await api.DownloadFileAsync(current.modelUrl, destination, null);
+                    local.modelPath = destination; local.isFixture = current.isFixture; PetRoster.SaveChanges();
+                }
+                catch (Exception e) { Debug.LogWarning("[WornTag][Restore] could not restore " + local.name + ": " + e.Message); }
+            }
+            if (session.owner?.status == "ready" && !System.IO.File.Exists(DeviceBridge.HumanModelPath))
+            {
+                try
+                {
+                    var owner = await api.GetOwnerAsync();
+                    if (owner?.status == "ready" && !string.IsNullOrEmpty(owner.modelUrl)) await api.DownloadFileAsync(owner.modelUrl, DeviceBridge.HumanModelPath, null);
+                }
+                catch (Exception e) { Debug.LogWarning("[WornTag][Restore] could not restore the owner: " + e.Message); }
+            }
+        }
+
         /// <summary>Shared moments the server flow will drive: delete confirmations, "pet is ready", loading/offline/failed screens.</summary>
         internal ConfirmDialog Confirm { get; private set; }
         internal Toast PetToast { get; private set; }
@@ -183,8 +213,17 @@ namespace CatMe.Garden
         private bool onboardingFromWelcome, enterWhenReady;
 
         /// <summary>After login: a person with a pet walks straight into the garden; a new person starts choosing a pet.</summary>
-        private void RouteSignedIn()
+        private async void RouteSignedIn()
         {
+            if (mobileApi != null)
+            {
+                try
+                {
+                    await EnsureAccountReadyAsync();
+                    await RestoreAccountAsync(mobileApi, await mobileApi.OpenSessionAsync());
+                }
+                catch (Exception e) { Debug.LogWarning("[WornTag][Restore] session restore failed: " + e.Message); }
+            }
             bool hasPet = PetRoster.HasOwnPet;
             if (hasPet) { welcome.SetActive(true); welcome.transform.SetAsLastSibling(); enterWhenReady = true; }   // opened from Tick, once everything is built and the garden is ready
             else StartOnboarding(false);
@@ -214,6 +253,7 @@ namespace CatMe.Garden
             else onboarding.ShowSignedIn(who, () => identityForAccount.SignOut(), () => ConfirmDeletion(true));
         }
         private IIdentityService identityForAccount;
+        private IMobileApi mobileApi;
         private IPrivacyApi privacyApi;
         private bool deleting;
         internal void OpenStore() => OpenOverlayScreen(store.Open);
