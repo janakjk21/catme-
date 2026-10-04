@@ -134,3 +134,9 @@ Short sound effects: Decompress On Load, ADPCM, mono. Ambience and music: Stream
 | Referenced by the game | 952 MB | |
 | iPhone build (`.ipa`) | not measured | |
 | Peak memory on iPhone | not measured | |
+
+### Execution log (2026-10-04)
+
+| Step | Assets before MB | Reachable before MB | Assets after MB | Reachable after MB | Notes |
+|---|---:|---:|---:|---:|---|
+| 1 | 2705.9 | 952.2 | 2135.1 | 952.2 | Unused packs and loose GLBs archived with `.meta` files. |
