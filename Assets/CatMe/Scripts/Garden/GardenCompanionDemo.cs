@@ -927,7 +927,7 @@ namespace CatMe.Garden
             var canvasObject = new GameObject("Garden HUD", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             Canvas canvas = canvasObject.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvasRoot = canvas.transform;
-            CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>(); scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; scaler.referenceResolution = new Vector2(1920, 1080); scaler.matchWidthOrHeight = 1f;
+            CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>(); scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; scaler.referenceResolution = new Vector2(1920, 1080); scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
             statusPanel = new GameObject("Quiet garden hint", typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
             statusPanel.transform.SetParent(canvas.transform, false);
             var statusRect = statusPanel.GetComponent<RectTransform>();

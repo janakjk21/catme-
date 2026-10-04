@@ -6,12 +6,13 @@ namespace CatMe.Garden
     /// <summary>Builds each new screen on a given canvas so editor tooling can render it (UiKit and the screens are internal).</summary>
     public static class UiPreview
     {
-        public static readonly string[] Names = { "pets", "store-toys", "store-food", "onb-login", "onb-species", "onb-photo", "onb-photofail", "onb-person", "onb-name", "onb-making", "onb-reveal", "icons", "pause", "settings", "account-only", "dialog", "toast", "loading", "offline", "failed" };
+        public static readonly string[] Names = { "pets", "store-toys", "store-food", "onb-login", "onb-species", "onb-consent", "onb-photo", "onb-photofail", "onb-person", "onb-name", "onb-making", "onb-reveal", "icons", "pause", "settings", "account-only", "dialog", "toast", "loading", "offline", "failed" };
 
         public static void Show(Transform canvasRoot, string name)
         {
             if (PetRoster.Pets.Count < 3) { PetRoster.Add("Biscuit", Species.Dog, null); PetRoster.Add("Miso", Species.Cat, null); }
             if (name == "pets") { var s = new PetsScreen(canvasRoot); s.Open(); }
+            else if (name == "onb-consent") new OnboardingFlow(canvasRoot, null).Preview("consent");
             else if (name == "settings") CatMeAppFlow.ShowSettingsPreview(canvasRoot);
             else if (name.StartsWith("store")) { PetRoster.SetActive(name == "store-food" ? PetRoster.Pets[1].id : PetRoster.Pets[0].id); var s = new StoreScreen(canvasRoot); s.Open(); if (name == "store-food") StoreCatalog.Buy("food.treats"); }
             else if (name == "icons")

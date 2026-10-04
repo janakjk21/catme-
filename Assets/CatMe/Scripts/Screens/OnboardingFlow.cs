@@ -70,6 +70,7 @@ namespace CatMe.Garden
             {
                 case "photo": Show("photo"); break;
                 case "photofail": failMessage = "It's too dark to see them. Try again near a window."; Show("photo"); break;
+                case "consent": Show("consent"); break;
                 case "login": BeginLogin(); break;
                 case "person": Show("person"); break;
                 case "making": signedInFlow = true; OnCreate = (n, sp, ph, ow, rep) => new System.Threading.Tasks.TaskCompletionSource<CatMe.Onboarding.CreationResult>().Task; petPhoto = null; BeginEarlyCreation(); ShowMaking(); break;
@@ -359,12 +360,12 @@ namespace CatMe.Garden
             Chrome("consent", false);
             ArtCard(Art.Load(species == Species.Dog ? "GoodDogExample" : "GoodCatExample"), .5f, true);
             Title(RightX, 285f, "Before we make your pet");
-            Tips(165f, "Your photos go to our 3D partners to build your pet and you",
+            Tips(190f, "Your photos go to our 3D partners to build your pet and you",
                        "They stay private to your account",
                        "Delete them any time in Settings",
                        "Only use photos of your own pet and yourself");
-            UiKit.Label(safe, "Tripo makes pets, Meshy makes people and OpenAI checks that photos are safe. The 3D characters are made by AI and may not look exactly like the photo. By agreeing you confirm you are 13 or older.",
-                22, CatMeUIStyle.BodyInk, new Vector2(RightX + 400f, -190f), new Vector2(800f, 92f), FontStyle.Normal, TextAnchor.UpperLeft, "Consent detail");
+            UiKit.Label(safe, "Your selfie goes to Meshy to make your 3D you. Meshy may keep it and use it to improve its AI. Your pet photo goes to Tripo, and OpenAI checks photos are safe. Details in our Privacy Policy.",
+                24, CatMeUIStyle.BodyInk, new Vector2(RightX + 400f, -165f), new Vector2(800f, 140f), FontStyle.Normal, TextAnchor.UpperLeft, "Consent detail");
             Primary(RightX, -285f, "I agree", () => { CatMe.Onboarding.CreationClient.RecordConsent(); Show("photo"); PickPetPhoto(); }, 520f);
             TextLink(RightX + 540f, -285f, "Not now", () => Show("photo"), 240f);
             TextLink(RightX, -385f, "Privacy policy", () => Application.OpenURL(CatMe.Onboarding.CreationClient.PrivacyUrl), 300f);

@@ -31,7 +31,8 @@ The selfie runs the same way through `/owner` and lands at `users/{uid}/avatar/v
 | Who | Steps | Result |
 |---|---|---|
 | Cat or dog (all on Tripo) | photo -> Tripo image step: one clean, standing, full-body image of the same pet (prompts in `mobile/petPrompts.js`; the cat prompt is condensed to 1,672 characters to fit Tripo's 1,800-character limit while keeping its identity, coat and pose constraints) -> Tripo image to model from that image -> rig check (must be riggable, four-legged) -> four-legged rig -> walk animation | walking GLB |
-| Person (Meshy) | photo -> clean full-body reference image (single image, not multi-view; the person prompt from the earlier web pipeline, kept word for word in `mobile/ownerPrompt.js`) -> image to 3D -> rig with a walking clip | walking GLB |
+| Person (Meshy, default) | selfie crop -> clean full-body reference image (single image, not multi-view; prompt in `mobile/ownerPrompt.js`) -> image to 3D -> rig with a walking clip | walking GLB |
+| Person (Tripo, `OWNER_PROVIDER=tripo`) | selfie crop -> Tripo `chat_image_2` with the condensed owner prompt -> image to model -> biped rig check -> biped rig -> `preset:walk` retarget | walking GLB at the same avatar path; fake-provider tests only |
 
 - After every step the provider task id and phase are saved on the job, so a server restart continues the same task and never pays twice.
 - The worker checks the provider every 6 seconds and gives up after 30 minutes.

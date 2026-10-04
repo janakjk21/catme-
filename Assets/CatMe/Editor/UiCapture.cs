@@ -18,18 +18,19 @@ namespace CatMe.Editor
             {
                 ShaderUtil.allowAsyncCompilation = false;
                 string outDir = Environment.GetEnvironmentVariable("CATME_RENDER_OUT") ?? "/private/tmp/catme-renders";
+                string only = Environment.GetEnvironmentVariable("CATME_RENDER_ONLY");
                 Directory.CreateDirectory(outDir);
                 var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
                 var camGo = new GameObject("UiCam", typeof(Camera)); var cam = camGo.GetComponent<Camera>();
                 cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = new Color(.36f, .52f, .32f); cam.orthographic = true; cam.orthographicSize = 5f; cam.transform.position = new Vector3(0, 0, -10);
-                foreach (var format in new[] { (label: "phone", width: 1920, height: 1080),
+                foreach (var format in new[] { (label: "iphone-6_9", width: 2868, height: 1320),
                                                (label: "ipad-13", width: 2732, height: 2048),
                                                (label: "ipad-11", width: 2388, height: 1668) })
-                foreach (string name in UiPreview.Names)
+                foreach (string name in (string.IsNullOrWhiteSpace(only) ? UiPreview.Names : new[] { only }))
                 {
                     var canvasGo = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
                     var canvas = canvasGo.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceCamera; canvas.worldCamera = cam; canvas.planeDistance = 5f;
-                    var scaler = canvasGo.GetComponent<CanvasScaler>(); scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; scaler.referenceResolution = new Vector2(1920, 1080); scaler.matchWidthOrHeight = 1f;
+                    var scaler = canvasGo.GetComponent<CanvasScaler>(); scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; scaler.referenceResolution = new Vector2(1920, 1080); scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
                     UiPreview.Show(canvasGo.transform, name);
                     Canvas.ForceUpdateCanvases();
                     var rt = new RenderTexture(format.width, format.height, 24); cam.targetTexture = rt; cam.Render();

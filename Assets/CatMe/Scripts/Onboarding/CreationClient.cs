@@ -25,7 +25,7 @@ namespace CatMe.Onboarding
     /// </summary>
     public sealed class CreationClient
     {
-        public const string ConsentVersion = "2026-10-04";   // raise when the consent screen, privacy policy or terms change
+        public const string ConsentVersion = "2026-10-04-meshy-plain";   // raise when the consent screen, privacy policy or terms change
         const string ConsentKey = "CatMe.Consent.Version";
         public const string PrivacyUrl = "https://worntag.com/privacy.html", TermsUrl = "https://worntag.com/terms.html";
 
