@@ -67,7 +67,12 @@ namespace CatMe.Editor
         }
 
         [MenuItem("CatMe/Build iOS Development Xcode Project")]
-        public static void Build()
+        public static void Build() => BuildProject(true);
+
+        [MenuItem("CatMe/Build iOS Release Xcode Project")]
+        public static void BuildRelease() => BuildProject(false);
+
+        static void BuildProject(bool development)
         {
             // The Apple button is compiled in only for paid-team builds, matching the capabilities added after export.
             {
@@ -78,7 +83,7 @@ namespace CatMe.Editor
                 PlayerSettings.SetScriptingDefineSymbols(target, list.ToArray());
             }
             string requestedOutput = System.Environment.GetEnvironmentVariable("CATME_IOS_EXPORT_PATH");
-            string outputPath = string.IsNullOrWhiteSpace(requestedOutput) ? OutputPath : requestedOutput;
+            string outputPath = string.IsNullOrWhiteSpace(requestedOutput) ? OutputPath + (development ? "" : "-Release") : requestedOutput;
             if (EditorApplication.isPlayingOrWillChangePlaymode)
             {
                 Debug.LogError("Stop Play Mode before building the iOS Xcode project.");
@@ -144,7 +149,7 @@ namespace CatMe.Editor
                 target = BuildTarget.iOS,
                 // Development keeps the in-app local generation panel available, while Release
                 // IL2CPP and no debugger attachment keep the test binary compact enough to build.
-                options = BuildOptions.Development,
+                options = development ? BuildOptions.Development : BuildOptions.None,
             };
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
@@ -154,7 +159,7 @@ namespace CatMe.Editor
                 return;
             }
 
-            Debug.Log($"[CatMe][iOS] Xcode development project exported | scenes=GardenCompanion,HomeGarden | build={PlayerSettings.iOS.buildNumber} | " +
+            Debug.Log($"[CatMe][iOS] Xcode {(development ? "development" : "release")} project exported | scenes=GardenCompanion,HomeGarden | build={PlayerSettings.iOS.buildNumber} | " +
                 $"bytes={summary.totalSize} | elapsed={summary.totalTime} | path={Path.GetFullPath(outputPath)}. " +
                 "Open this project in Xcode, select a signing team, and install with the iPhone connected.");
             if (!Application.isBatchMode) EditorUtility.RevealInFinder(Path.GetFullPath(outputPath));
@@ -168,7 +173,7 @@ namespace CatMe.Editor
 
         public void OnPostprocessBuild(BuildReport report)
         {
-            if (report.summary.platform != BuildTarget.iOS || (report.summary.options & BuildOptions.Development) == 0)
+            if (report.summary.platform != BuildTarget.iOS)
             {
                 return;
             }
@@ -181,10 +186,13 @@ namespace CatMe.Editor
             supportedOrientations.AddString("UIInterfaceOrientationLandscapeLeft");
             supportedOrientations.AddString("UIInterfaceOrientationLandscapeRight");
             root.SetString("CFBundleDisplayName", "WornTag");
+            root.SetBoolean("ITSAppUsesNonExemptEncryption", false);
             // The selfie screen opens the front camera (CatMePhotoPicker.mm).
             root.SetString("NSCameraUsageDescription", "Take a selfie so we can make a little 3D you to walk with your pet.");
+            root.SetString("NSPhotoLibraryUsageDescription", "Choose a photo of your pet so we can make their 3D companion.");
             // Album "Save to Photos" (CatMePhotoPicker_SaveToPhotos).
             root.SetString("NSPhotoLibraryAddUsageDescription", "Save photos of you and your pet to your Photos.");
+            root.SetString("NSUserNotificationsUsageDescription", "Let you know when your pet is ready to meet in the garden.");
             // Google sign-in: the client id, and the reversed client id as the URL scheme Google returns to (from GoogleService-Info.plist).
             string firebasePlistPath = Path.Combine(Application.dataPath, "GoogleService-Info.plist");
             if (File.Exists(firebasePlistPath))
@@ -209,7 +217,7 @@ namespace CatMe.Editor
                 else Debug.LogWarning("[WornTag][iOS] GoogleService-Info.plist has no CLIENT_ID: Google sign-in will not work. Download it again from Firebase after enabling Google.");
             }
             // The WornTag API is HTTPS, so plain-HTTP access is only allowed for builds that talk to a local prototype server.
-            if (System.Environment.GetEnvironmentVariable("WORNTAG_LOCAL_HTTP") == "1")
+            if ((report.summary.options & BuildOptions.Development) != 0 && System.Environment.GetEnvironmentVariable("WORNTAG_LOCAL_HTTP") == "1")
             {
                 PlistElementDict transport = root.CreateDict("NSAppTransportSecurity");
                 transport.SetBoolean("NSAllowsArbitraryLoads", true);
