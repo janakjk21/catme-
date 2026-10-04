@@ -69,7 +69,7 @@ namespace CatMe.World
         {
             Haptics.Tap();
             garden.CallCat();                         // it comes to the owner and answers
-            Pets.PetSounds.PlayAt(garden.CatPosition, Species, Pets.PetCue.Hello, .6f);
+            Pets.PetSounds.PlayAt(garden.CatPosition, Species, Pets.PetCue.Chirp, .6f);   // a tap gets a chirp, not a meow (PET_AUDIO section 5)
             SpawnHeart();
         }
 

@@ -10,6 +10,7 @@ Investigate in this order and fix what is wrong:
 3. `CatMe.SoundEnabled` defaults to 1 and the Settings toggle writes the same key; nothing sets `AudioListener.volume` or `AudioListener.pause` and forgets to undo it (menus pause time with `Time.timeScale = 0`; check that pausing doesn't also pause audio permanently).
 4. The new pet-audio code (`Pets/PetSounds.cs`, `Editor/PetAudioImport.cs`) finds the clips in `Resources/CatMeAudio/Cat` and `/Dog` on device (log the loaded set sizes once at startup in development builds).
 - Done when: with the phone on silent and on ring, the garden ambience, a tap meow and UI taps are audible.
+- **Done in code (2026-10-04, not compiled):** `Plugins/iOS/CatMeAudioSession.mm` + `World/AudioSession.cs` set Playback + MixWithOthers at startup and on every resume, keep exactly one enabled `AudioListener` on the main camera, and undo any `AudioListener.pause`/zero volume. Nothing else pauses audio (menus only set `Time.timeScale`, which does not stop sound). `CatMe.SoundEnabled` defaults to 1 everywhere and Settings writes the same key. `PetSounds` now loads the `Cat/` and `Dog/` sets (dev builds log the set sizes: `[WornTag][Audio] pet sound sets: ...`) through `PetVoicePicker` (shuffle bag, cooldowns, budget, pitch, PET_AUDIO.md); `Editor/PetAudioImport.cs` sets the import options. A tap now chirps; the reveal is forced. Tests: `PetVoiceTests` (4).
 
 ## F2. No haptics
 `World/Haptics.cs` calls `CatMeHapticImpact` in `Plugins/iOS/CatMeHaptics.mm` from 14 places, but the owner felt nothing.

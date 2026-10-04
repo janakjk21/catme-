@@ -4,22 +4,81 @@ using UnityEngine;
 namespace CatMe.Pets
 {
     /// <summary>What a pet sound is for. Each species answers with its own sound (a cat meows and purrs, a dog barks and pants).</summary>
-    public enum PetCue { Hello, Excited, Happy, Eat, Settle }
+    public enum PetCue { Hello, Excited, Happy, Eat, Settle, Chirp, Ask, Plead }
 
     /// <summary>
-    /// One place that picks the right sound for the active species. Recordings in Resources/CatMeAudio win; until a dog recording
-    /// is added, a soft generated stand-in plays so a dog is never silent or meowing. Respects the Sound setting.
-    ///
-    /// Files it looks for (first found wins):
-    ///   cat: Hello cat-meow, Excited cat-meow / cat_mewfood, Happy cat-purr, Eat cat-eat / cat_mewfood, Settle cat-purr
-    ///   dog: Hello dog-bark, Excited dog-bark-excited / dog-bark, Happy dog-pant, Eat dog-eat, Settle dog-sigh
+    /// The pet's voice (docs/PET_AUDIO.md). Recordings come in sets loaded from Resources/CatMeAudio/Cat and /Dog and grouped by
+    /// the name before the last '-' (cat-hello-1, cat-hello-2 ... make the set "cat-hello"). Every vocal play goes through a
+    /// <see cref="PetVoicePicker"/>: shuffle bag with no repeats, per-cue cooldowns, a per-pet budget, chance and pitch variation.
+    /// Loops (purr, panting, eating) are not budgeted and come from <see cref="Clip"/>. Until a dog recording exists for a cue, a
+    /// soft generated stand-in plays so a dog never meows. Respects the Sound setting.
     /// </summary>
     public static class PetSounds
     {
         static readonly Dictionary<string, AudioClip> cache = new Dictionary<string, AudioClip>();
+        static Dictionary<string, List<AudioClip>> sets;
+        static readonly PetVoicePicker catVoice = new PetVoicePicker(Species.Cat), dogVoice = new PetVoicePicker(Species.Dog);
+        static AudioSource worldVoice;
 
         public static bool Enabled => PlayerPrefs.GetInt("CatMe.SoundEnabled", 1) == 1;
+        /// <summary>True when a vocalisation should be quieter (inside a room, or in rain); set by the rooms and the weather.</summary>
+        public static bool Indoors { get; set; }
+        public static bool Raining { get; set; }
 
+        /// <summary>Clip sets by prefix, loaded once ("cat-hello" holds cat-hello-1..3).</summary>
+        public static IReadOnlyDictionary<string, List<AudioClip>> Sets
+        {
+            get
+            {
+                if (sets != null) return sets;
+                sets = new Dictionary<string, List<AudioClip>>();
+                foreach (string folder in new[] { "CatMeAudio/Cat", "CatMeAudio/Dog" })
+                    foreach (var clip in Resources.LoadAll<AudioClip>(folder))
+                    {
+                        string key = SetName(clip.name);
+                        if (!sets.TryGetValue(key, out var list)) sets[key] = list = new List<AudioClip>();
+                        list.Add(clip);
+                    }
+                if (Debug.isDebugBuild)
+                {
+                    var parts = new List<string>(); foreach (var kv in sets) parts.Add(kv.Key + "=" + kv.Value.Count);
+                    Debug.Log("[WornTag][Audio] pet sound sets: " + (parts.Count == 0 ? "none found in Resources/CatMeAudio/Cat or /Dog" : string.Join(", ", parts)));
+                }
+                return sets;
+            }
+        }
+
+        /// <summary>"cat-hello-2" becomes "cat-hello"; a name without a number stays as it is.</summary>
+        public static string SetName(string clipName)
+        {
+            if (string.IsNullOrEmpty(clipName)) return "";
+            int dash = clipName.LastIndexOf('-');
+            if (dash <= 0) return clipName;
+            string tail = clipName.Substring(dash + 1);
+            foreach (char c in tail) if (!char.IsDigit(c)) return clipName;
+            return tail.Length == 0 ? clipName : clipName.Substring(0, dash);
+        }
+
+        /// <summary>The set a vocal cue draws from, first non-empty wins.</summary>
+        public static string[] SetsFor(Species species, PetCue cue)
+        {
+            if (species == Species.Dog)
+                switch (cue)
+                {
+                    case PetCue.Excited: case PetCue.Ask: return new[] { "dog-barkdouble", "dog-bark" };
+                    case PetCue.Chirp: return new string[0];                 // a dog doesn't chirp; the tap gets hearts only
+                    default: return new[] { "dog-bark" };
+                }
+            switch (cue)
+            {
+                case PetCue.Chirp: return new[] { "cat-chirp", "cat-helloshort" };
+                case PetCue.Ask: case PetCue.Excited: return new[] { "cat-ask", "cat-hello" };
+                case PetCue.Plead: return new[] { "cat-plead", "cat-ask" };
+                default: return new[] { "cat-hello", "cat-helloshort" };
+            }
+        }
+
+        /// <summary>Loops and one-off non-vocal sounds (purr, panting, eating, sighs); also the fallback for a vocal cue with no set.</summary>
         public static AudioClip Clip(Species species, PetCue cue)
         {
             string key = species + "/" + cue;
@@ -29,20 +88,52 @@ namespace CatMe.Pets
             return clip;
         }
 
-        /// <summary>Plays once through the pet's own audio source (follows the pet).</summary>
-        public static void Play(AudioSource source, Species species, PetCue cue, float volume = .7f)
-        {
-            if (!Enabled || source == null || source.mute) return;
-            var clip = Clip(species, cue);
-            if (clip != null) source.PlayOneShot(clip, volume);
-        }
+        static bool IsVocal(PetCue cue) => cue == PetCue.Hello || cue == PetCue.Excited || cue == PetCue.Chirp || cue == PetCue.Ask || cue == PetCue.Plead;
 
-        /// <summary>Plays once at a world position (when there is no source to hand).</summary>
-        public static void PlayAt(Vector3 position, Species species, PetCue cue, float volume = .7f)
+        /// <summary>Plays through the pet's own audio source (follows the pet). Vocal cues may be skipped by the cooldown rules.</summary>
+        public static void Play(AudioSource source, Species species, PetCue cue, float volume = .7f) => Say(source, species, cue, volume, false);
+
+        /// <summary>Plays at a world position through one shared pet voice (moved there), never a new object per sound.</summary>
+        public static void PlayAt(Vector3 position, Species species, PetCue cue, float volume = .7f) => PlayAt(position, species, cue, volume, false);
+
+        /// <param name="force">High priority (the reveal, the call answered): ignores chance, cooldown and budget, never the Sound setting.</param>
+        public static void PlayAt(Vector3 position, Species species, PetCue cue, float volume, bool force)
         {
             if (!Enabled) return;
-            var clip = Clip(species, cue);
-            if (clip != null) AudioSource.PlayClipAtPoint(clip, position, volume);
+            if (worldVoice == null)
+            {
+                var go = new GameObject("Pet voice"); Object.DontDestroyOnLoad(go);
+                worldVoice = go.AddComponent<AudioSource>(); worldVoice.playOnAwake = false;
+                worldVoice.spatialBlend = 1f; worldVoice.minDistance = 1.5f; worldVoice.maxDistance = 20f; worldVoice.rolloffMode = AudioRolloffMode.Logarithmic;
+            }
+            worldVoice.transform.position = position;
+            Say(worldVoice, species, cue, volume, force);
+        }
+
+        static void Say(AudioSource source, Species species, PetCue cue, float volume, bool force)
+        {
+            if (!Enabled || source == null || source.mute) return;
+            if (!IsVocal(cue))
+            {
+                var loop = Clip(species, cue);
+                if (loop != null) source.PlayOneShot(loop, volume * (Indoors ? .85f : 1f));
+                return;
+            }
+            if (Raining && cue == PetCue.Chirp) return;
+            var picker = species == Species.Dog ? dogVoice : catVoice;
+            List<AudioClip> set = null;
+            foreach (string name in SetsFor(species, cue)) if (Sets.TryGetValue(name, out var found) && found.Count > 0) { set = found; break; }
+            int count = set != null ? set.Count : 1;
+            if (set == null && species == Species.Cat && cue == PetCue.Chirp) return;   // no chirp recorded: stay quiet rather than meow
+            if (set == null && species == Species.Dog && cue == PetCue.Chirp) return;
+            var shot = picker.Next(cue, Time.unscaledTime, count, force);
+            if (!shot.play) return;
+            AudioClip clip = set != null ? set[shot.index] : Clip(species, cue);
+            if (clip == null) return;
+            source.pitch = shot.pitch;
+            float v = volume * shot.volume * (Indoors ? .85f : 1f) * (Raining ? .8f : 1f);
+            if (shot.delay > 0f && source.gameObject.activeInHierarchy) { source.clip = clip; source.volume = Mathf.Clamp01(v); source.PlayDelayed(shot.delay); }
+            else source.PlayOneShot(clip, v);
         }
 
         static AudioClip Load(params string[] names)
@@ -57,8 +148,7 @@ namespace CatMe.Pets
             {
                 case PetCue.Happy: case PetCue.Settle: return Load("cat-purr");
                 case PetCue.Eat: return Load("cat-eat", "cat_mewfood", "cat-meow");
-                case PetCue.Excited: return Load("cat-meow", "cat_mewfood");
-                default: return Load("cat-meow", "cat_mewfood");
+                default: return Load("Cat/cat-hello-1", "cat-meow");
             }
         }
 
@@ -69,8 +159,8 @@ namespace CatMe.Pets
                 case PetCue.Happy: return Load("dog-pant") ?? Pant();
                 case PetCue.Settle: return Load("dog-sigh") ?? Sigh();
                 case PetCue.Eat: return Load("dog-eat") ?? Chomp();
-                case PetCue.Excited: return Load("dog-bark-excited", "dog-bark") ?? Woof(2);
-                default: return Load("dog-bark") ?? Woof(1);
+                case PetCue.Excited: case PetCue.Ask: return Load("Dog/dog-barkdouble-1", "dog-bark-excited", "dog-bark") ?? Woof(2);
+                default: return Load("Dog/dog-bark-1", "dog-bark") ?? Woof(1);
             }
         }
 

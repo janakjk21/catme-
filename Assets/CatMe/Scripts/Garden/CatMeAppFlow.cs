@@ -350,7 +350,7 @@ namespace CatMe.Garden
         {
             HideMakingBanner();
             UnityEngine.Object.FindAnyObjectByType<CatMe.World.CatPetInput>()?.PopHearts(6);
-            if (garden.CatTransform != null) CatMe.Pets.PetSounds.PlayAt(garden.CatTransform.position, pet.Kind, CatMe.Pets.PetCue.Hello, .8f);
+            if (garden.CatTransform != null) CatMe.Pets.PetSounds.PlayAt(garden.CatTransform.position, pet.Kind, pet.Kind == Species.Dog ? CatMe.Pets.PetCue.Excited : CatMe.Pets.PetCue.Hello, .8f, true);
             CatMe.World.Haptics.Tap();
             garden.SetAppStatus("Say hello to " + pet.name + ".");
         }
