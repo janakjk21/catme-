@@ -34,7 +34,6 @@ namespace CatMe.Session
         PlaceRoot current;
         Scene currentScene;
         SessionSaveData save;
-        readonly Dictionary<CameraZone, bool> insideZone = new Dictionary<CameraZone, bool>();
         bool busy;
         float ambienceTarget, ambienceFrom;
 
@@ -187,19 +186,28 @@ namespace CatMe.Session
         }
 #endif
 
+        // One zone at a time, by priority, with a 1 m margin (CameraZonePicker).
+        CameraZone activeZone;
+        readonly List<CameraZonePicker.Candidate> zoneCandidates = new List<CameraZonePicker.Candidate>();
         void UpdateZones(Vector3 owner)
         {
             var rig = garden.CameraRig;
             if (rig == null) return;
-            foreach (var zone in current.Zones)
+            var zones = current.Zones;
+            zoneCandidates.Clear();
+            int currentIndex = -1;
+            for (int i = 0; i < zones.Count; i++)
             {
-                if (zone == null) continue;
-                bool inside = zone.Contains(owner);
-                insideZone.TryGetValue(zone, out bool was);
-                if (inside && !was) rig.PushProfile(zone.Profile);
-                else if (!inside && was) rig.PopProfile(zone.Profile);
-                insideZone[zone] = inside;
+                var zone = zones[i];
+                zoneCandidates.Add(zone != null ? zone.CandidateFor(owner) : default);
+                if (zone != null && zone == activeZone) currentIndex = i;
             }
+            int pick = CameraZonePicker.Pick(zoneCandidates, currentIndex);
+            CameraZone next = pick >= 0 ? zones[pick] : null;
+            if (next == activeZone) return;
+            if (activeZone != null) rig.PopProfile(activeZone.Profile);
+            if (next != null) rig.PushProfile(next.Profile);
+            activeZone = next;
         }
 
         IEnumerator LoadFirst()
@@ -255,7 +263,7 @@ namespace CatMe.Session
             PlaceRoot root = null;
             foreach (var go in next.GetRootGameObjects()) { root = go.GetComponentInChildren<PlaceRoot>(true); if (root != null) break; }
             if (root == null) { Debug.LogError("[CatMe][Session] No PlaceRoot in " + path); busy = false; yield return FadeTo(0f, fadeTime); yield break; }
-            if (previous.IsValid() && previous != next) { insideZone.Clear(); rig?.PopAll(); yield return SceneManager.UnloadSceneAsync(previous); }
+            if (previous.IsValid() && previous != next) { activeZone = null; rig?.PopAll(); yield return SceneManager.UnloadSceneAsync(previous); }
             currentScene = next; current = root;
             interactions = root.GetComponentsInChildren<InteractionPoint>(true);
 
@@ -335,6 +343,7 @@ namespace CatMe.Session
             go.GetComponent<Image>().color = new Color(.969f, .965f, .949f, 1f); // warm white #F7F6F2
             go.GetComponent<Image>().raycastTarget = false;
             fade = go.GetComponent<CanvasGroup>(); fade.alpha = 0f; fade.blocksRaycasts = false; fade.interactable = false;
+            CompanionCamera.CoverAlpha = () => fade != null ? fade.alpha : 0f;   // a camera cut under this fade needs no fade of its own
             var label = new GameObject("Place name", typeof(RectTransform), typeof(Text));
             label.transform.SetParent(go.transform, false);
             var lr = label.GetComponent<RectTransform>(); lr.anchorMin = lr.anchorMax = new Vector2(.5f, .5f); lr.sizeDelta = new Vector2(900, 80);

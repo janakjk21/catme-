@@ -21,11 +21,11 @@ namespace CatMe.Garden
             switch (profile)
             {
                 case "GardenClose": return new CameraProfile { name = profile, distance = 2.6f, height = 1.55f, pitch = 9f, fov = 48f };
-                case "GateReveal": return new CameraProfile { name = profile, distance = 3.2f, height = 1.45f, pitch = 5f, fov = 52f };
-                case "Riverside": return new CameraProfile { name = profile, distance = 3.2f, height = 1.7f, pitch = 8f, fov = 52f, screenOffsetX = .2f };
+                case "GateReveal": return new CameraProfile { name = profile, distance = 3.1f, height = 1.5f, pitch = 6f, fov = 51f };
+                case "Riverside": return new CameraProfile { name = profile, distance = 3.1f, height = 1.65f, pitch = 8f, fov = 51f, screenOffsetX = .12f };
                 case "Woodland": return new CameraProfile { name = profile, distance = 2.8f, height = 1.6f, pitch = 7f, fov = 50f };
-                case "ShelterInside": return new CameraProfile { name = profile, distance = 3.4f, height = 1.6f, pitch = 4f, fov = 52f, screenOffsetX = -.24f };
-                case "Overlook": return new CameraProfile { name = profile, distance = 5.5f, height = 2.2f, pitch = 6f, fov = 56f, screenOffsetX = -.3f };
+                case "ShelterInside": return new CameraProfile { name = profile, distance = 3.2f, height = 1.6f, pitch = 5f, fov = 51f, screenOffsetX = .12f };
+                case "Overlook": return new CameraProfile { name = profile, distance = 3.8f, height = 1.9f, pitch = 6f, fov = 53f, screenOffsetX = .15f };
                 case "Homecoming": return new CameraProfile { name = profile, distance = 3.0f, height = 1.6f, pitch = 7f, fov = 50f };
                 case "CatEye": return new CameraProfile { name = profile, distance = 1.6f, height = .45f, pitch = 2f, fov = 58f };
                 default: return Default;
@@ -71,7 +71,13 @@ namespace CatMe.Garden
             lastOwnerPosition = owner != null ? owner.position : Vector3.zero; ownerVelocity = Vector3.zero;
             if (cam != null) cam.nearClipPlane = .05f;
         }
-        public void ExitFirstPerson() { fpAnchor = null; SetDof(0f); if (cam != null) cam.nearClipPlane = .1f; Snap(); }
+        public void ExitFirstPerson()
+        {
+            // No teleport here, so blend back to the trailing view instead of cutting (LateUpdate eases the position and rotation).
+            fpAnchor = null; SetDof(0f); if (cam != null) cam.nearClipPlane = .1f;
+            if (owner != null) { restYaw = owner.eulerAngles.y; lastOwnerPosition = owner.position; }
+            yawOffset = 0f; pitchOffset = 0f; ownerVelocity = Vector3.zero; lookAheadOffset = Vector3.zero; positionVelocity = Vector3.zero;
+        }
 
         public void Initialize(Transform ownerTransform, Transform catTransform)
         {
@@ -79,7 +85,7 @@ namespace CatMe.Garden
             restYaw = owner != null ? owner.eulerAngles.y : 0f;
             lastOwnerPosition = owner != null ? owner.position : Vector3.zero;
             initialised = true;
-            Snap();
+            SnapNow();
         }
 
         public void SetBaseProfile(CameraProfile profile) { baseProfile = profile ?? CameraProfile.Default; }
@@ -92,8 +98,54 @@ namespace CatMe.Garden
 
         CameraProfile Active => stack.Count > 0 ? stack[stack.Count - 1] : baseProfile;
 
-        /// <summary>Jump straight to the framing for the current owner pose (used after a place swap).</summary>
+        /// <summary>The session fade's opacity; a cut while it covers the screen needs no fade of its own.</summary>
+        public static System.Func<float> CoverAlpha;
+        public const float CutFadeSeconds = .25f;
+        static CanvasGroup cutFade;
+        bool cutFading;
+
+        /// <summary>
+        /// Moves to the framing for the current owner pose (after a teleport). Under the session fade, or with Reduce motion, it
+        /// cuts at once; otherwise the screen dips to warm white for 0.25 s around the cut.
+        /// </summary>
         public void Snap()
+        {
+            if (!initialised || owner == null) return;
+            bool covered = CoverAlpha != null && CoverAlpha() > .95f;
+            if (covered || cutFading || !isActiveAndEnabled || PlayerPrefs.GetInt("CatMe.ReduceMotion", 0) == 1) { SnapNow(); return; }
+            StartCoroutine(FadeCut());
+        }
+
+        System.Collections.IEnumerator FadeCut()
+        {
+            cutFading = true;
+            var group = CutFadeOverlay();
+            float half = CutFadeSeconds * .5f;
+            for (float t = 0f; t < half; t += Time.unscaledDeltaTime) { group.alpha = t / half; yield return null; }
+            group.alpha = 1f;
+            SnapNow();
+            yield return null;
+            for (float t = 0f; t < half; t += Time.unscaledDeltaTime) { group.alpha = 1f - t / half; yield return null; }
+            group.alpha = 0f;
+            cutFading = false;
+        }
+
+        static CanvasGroup CutFadeOverlay()
+        {
+            if (cutFade != null) return cutFade;
+            var go = new GameObject("Camera cut fade", typeof(Canvas), typeof(CanvasGroup));
+            DontDestroyOnLoad(go);
+            var canvas = go.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.sortingOrder = 900;
+            var image = new GameObject("Fill", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            image.transform.SetParent(go.transform, false);
+            var r = (RectTransform)image.transform; r.anchorMin = Vector2.zero; r.anchorMax = Vector2.one; r.offsetMin = r.offsetMax = Vector2.zero;
+            var img = image.GetComponent<UnityEngine.UI.Image>(); img.color = new Color(.969f, .965f, .949f, 1f); img.raycastTarget = false;   // the session fade's warm white
+            cutFade = go.GetComponent<CanvasGroup>(); cutFade.alpha = 0f; cutFade.blocksRaycasts = false; cutFade.interactable = false;
+            return cutFade;
+        }
+
+        /// <summary>Jump straight to the framing for the current owner pose, with no fade.</summary>
+        public void SnapNow()
         {
             if (!initialised || owner == null) return;
             restYaw = owner.eulerAngles.y; yawOffset = 0f; pitchOffset = 0f;
@@ -167,7 +219,7 @@ namespace CatMe.Garden
             float planar = new Vector3(ownerVelocity.x, 0f, ownerVelocity.z).magnitude;
             idleTime = planar < .12f ? idleTime + dt : 0f;
             bool catClose = cat != null && Vector3.Distance(cat.position, owner.position) < 1.8f;
-            idleBlend = Mathf.MoveTowards(idleBlend, !reduced && idleTime > 2.5f && catClose ? 1f : 0f, dt / 1.2f);
+            idleBlend = Mathf.MoveTowards(idleBlend, !reduced && idleTime > IdleOrbitDelay && catClose ? 1f : 0f, dt / 3f);
             ReadLookDrag(dt);
             FollowYaw(dt, reduced);
 
@@ -244,6 +296,8 @@ namespace CatMe.Garden
             dofVolume.weight = Mathf.MoveTowards(dofVolume.weight, PlayerPrefs.GetInt("CatMe.ReduceMotion", 0) == 1 ? 0f : target, Time.unscaledDeltaTime * 1.5f);
         }
 
+        public const float IdleOrbitDelay = 8f, IdleOrbitDegrees = 10f;
+
         void FollowYaw(float dt, bool reduced)
         {
             // Slowly swing the rest yaw toward the owner's facing while walking, so turns feel like walking behind someone.
@@ -252,15 +306,17 @@ namespace CatMe.Garden
             if (flat.magnitude > .25f && !dragging)
             {
                 float targetYaw = Mathf.Atan2(flat.x, flat.z) * Mathf.Rad2Deg;
-                float smooth = reduced ? 1.4f : .8f;
-                restYaw = Mathf.SmoothDampAngle(restYaw, targetYaw, ref yawVelocity, smooth, 360f, dt);
+                // About 2 s: slow enough that the view never seems to steer by itself. The stick's frame is latched while it is held
+                // (GardenCompanionDemo.CameraRelative), so this swing doesn't bend a held direction into a curve.
+                float smooth = reduced ? 2.6f : 2f;
+                restYaw = Mathf.SmoothDampAngle(restYaw, targetYaw, ref yawVelocity, smooth, 120f, dt);
             }
             if (!lookActive && Time.unscaledTime - lastLookInputAt > 1.5f)
             {
                 float recentre = 1f - Mathf.Exp(-2.6f * dt);
-                // Standing still for a moment: drift to a side angle that frames the owner and cat together.
-                float orbit = !reduced && fpAnchor == null && idleTime > 2.5f ? 26f : 0f;
-                yawOffset = Mathf.Lerp(yawOffset, orbit, recentre * (orbit != 0f ? .25f : 1f));
+                // Standing still for a long while: a small, very slow drift to a side angle that frames the owner and pet together.
+                float orbit = !reduced && fpAnchor == null && idleTime > IdleOrbitDelay ? IdleOrbitDegrees : 0f;
+                yawOffset = Mathf.Lerp(yawOffset, orbit, recentre * (orbit != 0f ? .05f : 1f));
                 pitchOffset = Mathf.Lerp(pitchOffset, 0f, recentre);
             }
         }

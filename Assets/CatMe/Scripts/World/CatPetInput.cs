@@ -39,7 +39,7 @@ namespace CatMe.World
             if (touch != null && touch.primaryTouch.press.wasReleasedThisFrame || mouse != null && mouse.leftButton.wasReleasedThisFrame) up = true;
             if (purr != null) purr.volume = Mathf.MoveTowards(purr.volume, petting && PlayerPrefs.GetInt("CatMe.SoundEnabled", 1) == 1 ? .5f : 0f, Time.unscaledDeltaTime * 1.5f);
 
-            if (down && !pressed && NearCat(pos) && !OverUi(touch != null && touch.primaryTouch.press.isPressed ? touch.primaryTouch.touchId.ReadValue() : -1)) { pressed = true; pressedAt = Time.unscaledTime; pressPos = pos; }
+            if (down && !pressed && NearCat(pos) && !CatMe.Garden.MobileGardenJoystick.OverUiExceptStick(pos)) { pressed = true; pressedAt = Time.unscaledTime; pressPos = pos; }   // the stick's invisible zone doesn't block the pet
             if (pressed && held && !petting && Time.unscaledTime - pressedAt >= HoldSeconds && (pos - pressPos).magnitude < MovePixels && CatNear()) StartPet();
             if (pressed && held && !petting && (pos - pressPos).magnitude > MovePixels) pressed = false; // it was a drag, not a pet
             if (petting && held && NearCat(pos, 1.6f)) { Pulse(); }

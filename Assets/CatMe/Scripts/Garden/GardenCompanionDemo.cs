@@ -66,6 +66,7 @@ namespace CatMe.Garden
         private float curiosityUntil;
         private float movementYaw;
         private bool movementLatched;
+        private float waitHintAt;
         private Vector3 scriptedWalk;
         private bool unboundedWorld;
         public bool DidCallGesturePlay { get; private set; }
@@ -179,7 +180,11 @@ namespace CatMe.Garden
                 if (scriptedWalk.sqrMagnitude > 0.01f) movement = scriptedWalk;
                 if (ownerFrozen) movement = Vector3.zero;
                 if (movement.sqrMagnitude > 1f) movement.Normalize();
-                float ownerWalkSpeed = follow && catRoot != null && Vector3.Distance(catRoot.position,humanRoot.position)>5f ? .55f : 1.1f;
+                // Walk slower while the pet is far behind, and say so once in a while, so it never feels like the stick broke.
+                bool petFarBehind = follow && catRoot != null && Vector3.Distance(catRoot.position, humanRoot.position) > 5f;
+                float ownerWalkSpeed = petFarBehind ? .7f : 1.1f;
+                if (petFarBehind && combinedInput.sqrMagnitude > .04f && Time.unscaledTime > waitHintAt)
+                { waitHintAt = Time.unscaledTime + 45f; SetStatus("Slowing down so " + CatMe.Pets.PetRoster.NameForText() + " can catch up."); }
                 Vector3 beforeMove = humanRoot.position;
                 MoveGrounded(humanRoot, movement * (ownerWalkSpeed * Time.deltaTime), 0.24f, CompanionScaleStandards.OwnerHeightMeters);
                 OwnerMoved?.Invoke(Vector3.Distance(beforeMove, humanRoot.position), scriptedWalk.sqrMagnitude < .01f && combinedInput.sqrMagnitude > .01f);
@@ -696,11 +701,11 @@ namespace CatMe.Garden
         // Movement is relative to the camera's rest yaw, latched while the stick is held so a steady push walks straight.
         private Vector3 CameraRelative(Vector2 input)
         {
-            if (input.sqrMagnitude < 0.0144f) { movementLatched = false; return Vector3.zero; }
+            // The touch stick shapes its own input (JoystickResponse: dead zone and easing); keys are full or nothing.
+            if (input.sqrMagnitude < 0.0001f) { movementLatched = false; return Vector3.zero; }
             if (!movementLatched) { movementYaw = companionCamera != null ? companionCamera.ReferenceYaw : 0f; movementLatched = true; }
             Quaternion yaw = Quaternion.Euler(0f, movementYaw, 0f);
-            float magnitude = Mathf.Pow(Mathf.Clamp01((input.magnitude - 0.12f) / 0.88f), 1.4f);
-            return yaw * new Vector3(input.x, 0f, input.y).normalized * magnitude;
+            return yaw * new Vector3(input.x, 0f, input.y).normalized * Mathf.Clamp01(input.magnitude);
         }
 
         /// <summary>Lets the session place pair anywhere and removes the legacy garden clamp.</summary>
@@ -981,45 +986,49 @@ namespace CatMe.Garden
         private void ResumePause() { if (pauseSheet != null) pauseSheet.SetActive(false); replayArmed=false;Time.timeScale=1f; SetInputBlocked(false); ClearMovement(); }
         private void ConfirmReplay() { if(!replayArmed){replayArmed=true;replayActionLabel.text="Tap again to restart outing";return;}ResumePause();BeginConnectedOuting(); }
 
+        // Floating stick (MENUS_AND_ACCOUNT section 9): the left 40% of the safe area is the touch zone; the stick appears where the
+        // thumb lands and rests, faint, at 22% from the bottom of the safe area. Base 220, travel 110, thumb 88.
         private void CreateMoveJoystick(Transform parent)
         {
-            GameObject baseObject = new GameObject("Movement joystick", typeof(RectTransform), typeof(Image));
-            baseObject.transform.SetParent(parent, false);
+            GameObject zone = new GameObject("Movement joystick", typeof(RectTransform), typeof(Image));
+            zone.transform.SetParent(parent, false);
+            RectTransform zoneRect = zone.GetComponent<RectTransform>();
+            zoneRect.pivot = Vector2.zero;
+            zone.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);   // invisible, but catches touches
+
+            GameObject baseObject = new GameObject("Joystick base", typeof(RectTransform), typeof(Image));
+            baseObject.transform.SetParent(zone.transform, false);
             RectTransform baseRect = baseObject.GetComponent<RectTransform>();
             baseRect.anchorMin = baseRect.anchorMax = Vector2.zero;
             baseRect.pivot = new Vector2(0.5f, 0.5f);
-            baseRect.anchoredPosition = new Vector2(172f, 170f);
-            baseRect.sizeDelta = new Vector2(244f, 244f);
+            baseRect.sizeDelta = new Vector2(220f, 220f);
             Image baseImage = baseObject.GetComponent<Image>();
             baseImage.sprite = GetJoystickSprite(false);
-            baseImage.color = new Color(0.10f, 0.18f, 0.15f, 0.50f);
-            baseImage.alphaHitTestMinimumThreshold = 0.04f;
+            baseImage.color = new Color(CatMeUIStyle.Paper.r, CatMeUIStyle.Paper.g, CatMeUIStyle.Paper.b, .35f);
+            baseImage.raycastTarget = false;
 
-            GameObject track = new GameObject("Joystick track", typeof(RectTransform), typeof(Image));
-            track.transform.SetParent(baseObject.transform, false);
-            RectTransform trackRect = track.GetComponent<RectTransform>();
-            trackRect.anchorMin = trackRect.anchorMax = new Vector2(0.5f, 0.5f);
-            trackRect.sizeDelta = new Vector2(222f, 222f);
-            Image trackImage = track.GetComponent<Image>(); trackImage.sprite = GetJoystickSprite(true);
-            trackImage.color = new Color(0.91f, 0.94f, 0.86f, 0.54f); trackImage.raycastTarget = false;
-
-            GameObject knobRim = new GameObject("Joystick thumb rim", typeof(RectTransform), typeof(Image));
-            knobRim.transform.SetParent(baseObject.transform, false);
-            RectTransform rimRect = knobRim.GetComponent<RectTransform>();
-            rimRect.anchorMin = rimRect.anchorMax = new Vector2(0.5f, 0.5f);
-            rimRect.sizeDelta = new Vector2(94f, 94f);
-            Image rimImage = knobRim.GetComponent<Image>(); rimImage.sprite = GetJoystickSprite(false);
-            rimImage.color = new Color(0.91f, 0.94f, 0.86f, 0.44f); rimImage.raycastTarget = false;
+            GameObject ring = new GameObject("Joystick ring", typeof(RectTransform), typeof(Image));
+            ring.transform.SetParent(baseObject.transform, false);
+            RectTransform ringRect = ring.GetComponent<RectTransform>();
+            ringRect.anchorMin = ringRect.anchorMax = new Vector2(0.5f, 0.5f);
+            ringRect.sizeDelta = new Vector2(220f, 220f);
+            Image ringImage = ring.GetComponent<Image>(); ringImage.sprite = GetJoystickSprite(true);
+            ringImage.color = CatMeUIStyle.Stone; ringImage.raycastTarget = false;
 
             GameObject knob = new GameObject("Joystick thumb", typeof(RectTransform), typeof(Image));
             knob.transform.SetParent(baseObject.transform, false);
             RectTransform knobRect = knob.GetComponent<RectTransform>();
             knobRect.anchorMin = knobRect.anchorMax = new Vector2(0.5f, 0.5f);
-            knobRect.sizeDelta = new Vector2(74f, 74f);
+            knobRect.sizeDelta = new Vector2(88f, 88f);
             Image knobImage = knob.GetComponent<Image>(); knobImage.sprite = GetJoystickSprite(false);
-            knobImage.color = new Color(0.94f, 0.96f, 0.90f, 0.90f); knobImage.raycastTarget = false;
+            knobImage.color = CatMeUIStyle.Paper; knobImage.raycastTarget = false;
 
-            baseObject.AddComponent<MobileGardenJoystick>().Initialize(this, baseRect, knobRect, 78f);
+            var group = baseObject.AddComponent<CanvasGroup>(); group.blocksRaycasts = false; group.interactable = false;
+            zone.AddComponent<MobileGardenJoystick>().Initialize(this, zoneRect, baseRect, knobRect, group);
+#if UNITY_IOS && !UNITY_EDITOR
+            // Swipes that start at the bottom edge go to the stick first; iOS asks for a second swipe to go home.
+            UnityEngine.iOS.Device.deferSystemGesturesMode = UnityEngine.iOS.SystemGestureDeferMode.BottomEdge;
+#endif
         }
 
         private static Sprite GetJoystickSprite(bool ring)
@@ -1158,36 +1167,112 @@ namespace CatMe.Garden
 
     }
 
+    /// <summary>The stick's response curve: a 0.15 dead zone, then an eased ramp to full speed. Pure, so it is tested.</summary>
+    internal static class JoystickResponse
+    {
+        public const float Travel = 110f, DeadZone = .15f, Ease = 1.4f;
+
+        /// <summary>Maps the thumb offset (canvas units from the stick centre) to a move input of length 0..1.</summary>
+        public static Vector2 FromOffset(Vector2 offset) => Shape(offset / Travel);
+
+        public static Vector2 Shape(Vector2 raw)
+        {
+            float m = Mathf.Clamp01(raw.magnitude);
+            if (m <= DeadZone) return Vector2.zero;
+            float shaped = Mathf.Pow((m - DeadZone) / (1f - DeadZone), Ease);
+            return raw.normalized * shaped;
+        }
+    }
+
     internal sealed class MobileGardenJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
     {
-        private GardenCompanionDemo owner;
-        private RectTransform baseRect;
-        private RectTransform thumb;
-        private float radius;
-
-        public void Initialize(GardenCompanionDemo demo, RectTransform joystickBase, RectTransform joystickThumb, float travelRadius)
+        static readonly System.Collections.Generic.List<RaycastResult> uiHits = new System.Collections.Generic.List<RaycastResult>();
+        /// <summary>
+        /// True when a screen point is over UI other than the stick's touch zone (the zone is invisible and covers part of the
+        /// garden, so tapping the pet there must still work).
+        /// </summary>
+        internal static bool OverUiExceptStick(Vector2 screenPosition)
         {
-            owner = demo; baseRect = joystickBase; thumb = joystickThumb; radius = travelRadius;
+            var es = EventSystem.current;
+            if (es == null) return false;
+            uiHits.Clear();
+            es.RaycastAll(new PointerEventData(es) { position = screenPosition }, uiHits);
+            foreach (var hit in uiHits)
+                if (hit.gameObject != null && hit.gameObject.GetComponent<MobileGardenJoystick>() == null) return true;
+            return false;
         }
 
-        public void OnPointerDown(PointerEventData eventData) => UpdateThumb(eventData);
-        public void OnDrag(PointerEventData eventData) => UpdateThumb(eventData);
-        public void OnPointerUp(PointerEventData eventData) => ResetThumb();
-        private void OnDisable() => ResetThumb();
+        /// <summary>Share of the safe area's width that starts the stick, and the resting spot's height in it.</summary>
+        public const float ZoneWidth = .4f, RestHeight = .22f;
+        private GardenCompanionDemo owner;
+        private RectTransform zone, baseRect, thumb;
+        private CanvasGroup look;
+        private Rect lastSafeArea;
+        private Vector2 lastScreen, lastZoneSize;
+        private int pointerId = int.MinValue;
+
+        public void Initialize(GardenCompanionDemo demo, RectTransform touchZone, RectTransform joystickBase, RectTransform joystickThumb, CanvasGroup baseGroup)
+        {
+            owner = demo; zone = touchZone; baseRect = joystickBase; thumb = joystickThumb; look = baseGroup;
+            FitSafeArea(); Rest();
+        }
+
+        private void Update()
+        {
+            if (Screen.safeArea != lastSafeArea || new Vector2(Screen.width, Screen.height) != lastScreen) FitSafeArea();
+            if (zone != null && zone.rect.size != lastZoneSize && pointerId == int.MinValue) { lastZoneSize = zone.rect.size; Rest(); }
+            if (look != null) look.alpha = Mathf.MoveTowards(look.alpha, pointerId != int.MinValue ? 1f : .55f, Time.unscaledDeltaTime * 4f);
+        }
+
+        // The zone covers the left 40% of the safe area, full height.
+        private void FitSafeArea()
+        {
+            lastSafeArea = Screen.safeArea; lastScreen = new Vector2(Screen.width, Screen.height);
+            if (zone == null || Screen.width <= 0 || Screen.height <= 0) return;
+            Rect safe = Screen.safeArea;
+            var min = new Vector2(safe.xMin / Screen.width, safe.yMin / Screen.height);
+            var max = new Vector2((safe.xMin + safe.width * ZoneWidth) / Screen.width, safe.yMax / Screen.height);
+            zone.anchorMin = min; zone.anchorMax = max; zone.offsetMin = zone.offsetMax = Vector2.zero;
+        }
+
+        private void Rest()
+        {
+            if (zone == null || baseRect == null) return;
+            Vector2 size = zone.rect.size;
+            float x = Mathf.Min(200f, size.x * .5f);
+            baseRect.anchoredPosition = new Vector2(Mathf.Max(x, JoystickResponse.Travel), Mathf.Max(size.y * RestHeight, JoystickResponse.Travel));
+            if (thumb != null) thumb.anchoredPosition = Vector2.zero;
+        }
+
+        public void OnPointerDown(PointerEventData eventData)
+        {
+            if (pointerId != int.MinValue || zone == null) return;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(zone, eventData.position, eventData.pressEventCamera, out Vector2 local)) return;
+            pointerId = eventData.pointerId;
+            // Centre the stick under the thumb, kept far enough from the edges that the full travel fits.
+            Vector2 size = zone.rect.size;
+            float m = JoystickResponse.Travel;
+            baseRect.anchoredPosition = new Vector2(Mathf.Clamp(local.x, m, Mathf.Max(m, size.x - m * .5f)), Mathf.Clamp(local.y, m, Mathf.Max(m, size.y - m)));
+            UpdateThumb(eventData);
+        }
+
+        public void OnDrag(PointerEventData eventData) { if (eventData.pointerId == pointerId) UpdateThumb(eventData); }
+        public void OnPointerUp(PointerEventData eventData) { if (eventData.pointerId == pointerId) Release(); }
+        private void OnDisable() => Release();
 
         private void UpdateThumb(PointerEventData eventData)
         {
             if (baseRect == null || thumb == null || owner == null) return;
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(baseRect, eventData.position, eventData.pressEventCamera, out Vector2 local)) return;
-            Vector2 offset = Vector2.ClampMagnitude(local, radius);
+            Vector2 offset = Vector2.ClampMagnitude(local, JoystickResponse.Travel);
             thumb.anchoredPosition = offset;
-            Vector2 input = offset / radius;
-            owner.SetMove(input.magnitude < 0.08f ? Vector2.zero : input);
+            owner.SetMove(JoystickResponse.FromOffset(offset));
         }
 
-        private void ResetThumb()
+        private void Release()
         {
-            if (thumb != null) thumb.anchoredPosition = Vector2.zero;
+            pointerId = int.MinValue;
+            Rest();
             owner?.SetMove(Vector2.zero);
         }
     }

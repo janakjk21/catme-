@@ -227,8 +227,8 @@ namespace CatMe.Editor
                 Recovery("C", new Vector3(p.pathX(G + 30f), 0, G + 30f)); Recovery("D", new Vector3(p.pathX(G + 70f), 0, G + 70f));
                 Zone("RiversideZone", "Riverside", new Vector3(p.pathX(G + L * .5f), 2, G + L * .5f), new Vector3(30, 8, L - 5f));
                 Curiosity("Fallen petal", new Vector3(3.5f, 0, 3.5f), "garden-petal", "Mochi found something.", PrimitiveType.Cube, new Vector3(.18f, .02f, .12f), new Color(.95f, .6f, .7f));
-                Zone("GardenCloseZone", "GardenClose", new Vector3(0, 2, 3.5f), new Vector3(14, 8, 16));
-                Zone("GateRevealZone", "GateReveal", new Vector3(0, 2, 8.7f), new Vector3(8, 8, 5));
+                Zone("GardenCloseZone", "GardenClose", new Vector3(0, 2, 3.5f), new Vector3(14, 8, 16), 1);
+                Zone("GateRevealZone", "GateReveal", new Vector3(0, 2, 8.7f), new Vector3(8, 8, 5), 2);
                 Zone("BeyondGateZone", "Default", new Vector3(0, 2, 22f), new Vector3(30, 8, 12));
                 MountainSilhouettes(G + L + 20f);
                 NightSky(G + L + 100f);
@@ -488,12 +488,12 @@ namespace CatMe.Editor
             var e = go.AddComponent<PlaceExit>(); e.targetPlace = target; e.targetEntry = entry; e.label = name;
         }
 
-        static void Zone(string name, string profile, Vector3 centre, Vector3 size)
+        static void Zone(string name, string profile, Vector3 centre, Vector3 size, int priority = 0)
         {
             var go = new GameObject(name); go.transform.SetParent(root, false);
             go.transform.position = new Vector3(centre.x, GroundAt(centre.x, centre.z) + centre.y, centre.z);
             var c = go.AddComponent<BoxCollider>(); c.isTrigger = true; c.size = size;
-            var z = go.AddComponent<CameraZone>(); z.profileName = profile;
+            var z = go.AddComponent<CameraZone>(); z.profileName = profile; z.priority = priority;
         }
 
         // Brick texture from the imported pack, tiled to the wall's real size so bricks keep a constant scale.
@@ -940,7 +940,7 @@ namespace CatMe.Editor
             for (int i = -2; i <= 2; i++)
                 Box("Lookout photo marker", structures, OnGround(photo + new Vector3(i * .32f, 0f, 0f)) + Vector3.up * .025f,
                     new Vector3(.25f, .05f, .42f), Mat("Lookout marker", new Color(.52f, .50f, .43f)), false, i * 5f);
-            Zone("LookoutPhotoZone", "Overlook", new Vector3(pathX, 2f, z + 1f), new Vector3(10f, 7f, 9f));
+            Zone("LookoutPhotoZone", "Overlook", new Vector3(pathX, 2f, z + 1f), new Vector3(10f, 7f, 9f), 3);
 
             Curiosity("Lookout keepsake", new Vector3(pathX + .8f, 0f, z + 1.1f), "lookout-keepsake",
                 "One last look. Then let's walk home.", PrimitiveType.Sphere, new Vector3(.18f, .09f, .18f), new Color(.68f, .76f, .72f));
