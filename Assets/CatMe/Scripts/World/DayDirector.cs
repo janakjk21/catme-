@@ -6,41 +6,41 @@ namespace CatMe.World
     public enum DayType { Clear, PartlyCloudy, MistyMorning, Showery, Rainy }
 
     /// <summary>
-    /// Picks a day type per session and moves the world through time and weather gradually: afternoon light slides to sunset and blue hour,
+    /// Picks a day type per session and moves the world through dawn, morning, midday, golden hour, sunset and night,
     /// clouds come and go, showers pass, wind rises before rain, lanterns and windows light at dusk. Saved so a relaunch resumes the same day.
     /// Needs the existing PlaceLighting (look) and PlaceWeather (rain). See docs/production/05_LIVING_WORLD_AND_PREMIUM_FEEL.md R-WX.
     /// </summary>
     public sealed class DayDirector : MonoBehaviour
     {
         const string TypeKey = "CatMe.World.DayType", TimeKey = "CatMe.World.Time", SavedAtKey = "CatMe.World.SavedAt";
-        const float CycleSeconds = 1080f; // afternoon -> blue hour over about 18 minutes of play
-        const float NightHoldSeconds = 150f;  // a short night, then a new day starts (it used to stay night for good)
+        const float CycleSeconds = 1080f;
         const double NewDayAfterHours = 3.0;  // coming back after a break starts a fresh day
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void DefaultWind() { Shader.SetGlobalFloat("_CatMeWindScale", 1f); }
 
         SessionDirector director; PlaceLighting lighting; PlaceWeather weather;
-        AudioSource windAudio; AudioClip windClip;
+        AudioSource windAudio, riverAudio; AudioClip windClip;
         public DayType Type { get; private set; }
-        public float TimeOfDay { get; private set; }        // 0 afternoon, .5 sunset, 1 blue hour
+        public float TimeOfDay { get; private set; }        // 0 dawn, .12 morning, .3 midday, .48 golden hour, .66 sunset, .8 night, 1 dawn
         public float Cloudiness { get; private set; }
-        public bool Night => TimeOfDay > .72f;
+        public bool Night => TimeOfDay >= .78f && TimeOfDay < .97f;
         public bool Suspended { get; set; }                  // true inside rooms, which set their own lighting
         float cloudTarget, showerAt, showerUntil, applyAt, saveAt, driftSeed;
-        bool nightApplied, dawning, announcePending;
-        float nightFor, announceAt;
+        bool nightApplied, announcePending;
+        float announceAt;
         ParticleSystem fireflies;
 
         public void Initialize(SessionDirector sessionDirector, PlaceLighting placeLighting, PlaceWeather placeWeather)
         {
             director = sessionDirector; lighting = placeLighting; weather = placeWeather;
             driftSeed = Random.value * 100f;
-            if (PlayerPrefs.HasKey(TypeKey) && PlayerPrefs.HasKey(TimeKey) && !SavedLongAgo() && PlayerPrefs.GetFloat(TimeKey) < .9f)
+            if (PlayerPrefs.HasKey(TypeKey) && PlayerPrefs.HasKey(TimeKey) && !SavedLongAgo() && PlayerPrefs.GetFloat(TimeKey) < .97f)
             { Type = (DayType)Mathf.Clamp(PlayerPrefs.GetInt(TypeKey), 0, 4); TimeOfDay = Mathf.Clamp01(PlayerPrefs.GetFloat(TimeKey)); }
             else NewDay();
             windClip = Resources.Load<AudioClip>("CatMeAudio/wind-low");
             if (windClip != null) { windAudio = gameObject.AddComponent<AudioSource>(); windAudio.clip = windClip; windAudio.loop = true; windAudio.spatialBlend = 0f; windAudio.volume = 0f; windAudio.Play(); }
+            riverAudio = GameObject.Find("River bank sound")?.GetComponent<AudioSource>();
             Cloudiness = cloudTarget = TargetCloud();
             ScheduleShower();
             BuildFireflies();
@@ -76,13 +76,13 @@ namespace CatMe.World
             bool hadDay = PlayerPrefs.HasKey(TypeKey);
             var previous = (DayType)PlayerPrefs.GetInt(TypeKey, -1);
             // Never the same weather two days running, so returning players notice the garden change.
-            for (int i = 0; i < 4; i++)
+            do
             {
                 float r = Random.value;
                 Type = r < .40f ? DayType.Clear : r < .65f ? DayType.PartlyCloudy : r < .75f ? DayType.MistyMorning : r < .90f ? DayType.Showery : DayType.Rainy;
-                if (!hadDay || Type != previous) break;
             }
-            TimeOfDay = Random.Range(0f, .4f);
+            while (hadDay && Type == previous);
+            TimeOfDay = Type == DayType.MistyMorning ? .12f : 0f;
             announcePending = true; announceAt = Time.time + 6f;
             Save();
             Debug.Log("[CatMe][World] New day: " + Type + ", starting at time " + TimeOfDay.ToString("F2"));
@@ -109,20 +109,6 @@ namespace CatMe.World
             }
         }
 
-        // After a short night the screen dims, a new day begins in the afternoon light, and the screen comes back.
-        System.Collections.IEnumerator Dawn()
-        {
-            dawning = true;
-            while (director.IsBusy || Suspended) yield return null;
-            yield return director.FadeTo(1f, 1.2f);
-            NewDay();
-            Cloudiness = cloudTarget = TargetCloud(); ScheduleShower();
-            lighting.ApplyPreset(Compose()); applyAt = Time.time + 1.5f;
-            nightApplied = Night; director.SetNightObjects(Night);
-            yield return director.FadeTo(0f, 1.2f);
-            nightFor = 0f; dawning = false; announceAt = Time.time + 1f;
-        }
-
         float TargetCloud()
         {
             switch (Type)
@@ -141,7 +127,15 @@ namespace CatMe.World
         {
             if (director == null || lighting == null) return;
             float dt = Time.deltaTime;
-            if (!Suspended) TimeOfDay = Mathf.Min(1f, TimeOfDay + dt / CycleSeconds);
+            if (!Suspended)
+            {
+                TimeOfDay += dt / CycleSeconds;
+                if (TimeOfDay >= 1f)
+                {
+                    NewDay(); Cloudiness = cloudTarget = TargetCloud(); ScheduleShower();
+                    announceAt = Time.time + 2f;
+                }
+            }
 
             // Cloud and rain targets
             if (Type == DayType.Showery && Time.time > showerUntil) ScheduleShower();
@@ -154,6 +148,8 @@ namespace CatMe.World
             // Wind rises before and during rain, calms afterwards
             Shader.SetGlobalFloat("_CatMeWindScale", 1f + 1.1f * Cloudiness + .8f * weatherIntensity);
             if (windAudio != null) windAudio.volume = Mathf.MoveTowards(windAudio.volume, PlayerPrefs.GetInt("CatMe.SoundEnabled", 1) == 0 ? 0f : .02f + .1f * Cloudiness, dt * .05f);
+            if (riverAudio == null) riverAudio = GameObject.Find("River bank sound")?.GetComponent<AudioSource>();
+            if (riverAudio != null) riverAudio.mute = PlayerPrefs.GetInt("CatMe.SoundEnabled", 1) == 0;
 
             if (fireflies != null && director.CameraRigTransform != null)
             {
@@ -167,9 +163,7 @@ namespace CatMe.World
                 lighting.ApplyPreset(Compose());
             }
             if (!Suspended && Night != nightApplied) { nightApplied = Night; director.SetNightObjects(Night); }
-            nightFor = !Suspended && TimeOfDay >= 1f ? nightFor + dt : 0f;
-            if (nightFor > NightHoldSeconds && !dawning) StartCoroutine(Dawn());
-            if (announcePending && !dawning && Time.time >= announceAt && !Suspended)
+            if (announcePending && Time.time >= announceAt && !Suspended)
             {
                 var garden = FindAnyObjectByType<CatMe.Garden.GardenCompanionDemo>();
                 if (garden != null && garden.IsReady) { announcePending = false; garden.SetAppStatus(DayLine(Type)); }
@@ -179,13 +173,42 @@ namespace CatMe.World
 
         PlaceLightingPreset Compose()
         {
-            var day = PlaceLightingPreset.Get("GoldenAfternoon"); var sunset = PlaceLightingPreset.Get("Sunset"); var blue = PlaceLightingPreset.Get("BlueHour");
-            PlaceLightingPreset basePreset = TimeOfDay < .5f
-                ? PlaceLightingPreset.Lerp(day, sunset, Mathf.SmoothStep(0f, 1f, TimeOfDay / .5f))
-                : PlaceLightingPreset.Lerp(sunset, blue, Mathf.SmoothStep(0f, 1f, (TimeOfDay - .5f) / .5f));
+            var morning = PlaceLightingPreset.Get("Morning"); var golden = PlaceLightingPreset.Get("GoldenAfternoon");
+            var sunset = PlaceLightingPreset.Get("Sunset"); var blue = PlaceLightingPreset.Get("BlueHour");
+            var midday = PlaceLightingPreset.Lerp(morning, golden, .45f); midday.name = "Midday";
+            var dawn = PlaceLightingPreset.Lerp(blue, morning, .55f); dawn.name = "Dawn";
+            var night = PlaceLightingPreset.Lerp(blue, blue, 0f); night.name = "Night";
+            night.ambientSky *= .42f; night.ambientEquator *= .42f; night.ambientGround *= .42f;
+            night.fogColor *= .5f; night.skyExposure = .14f; night.fillIntensity = .08f;
+            float t = TimeOfDay;
+            PlaceLightingPreset basePreset = t < .12f ? Blend(dawn, morning, t / .12f)
+                : t < .30f ? Blend(morning, midday, (t - .12f) / .18f)
+                : t < .48f ? Blend(midday, golden, (t - .30f) / .18f)
+                : t < .66f ? Blend(golden, sunset, (t - .48f) / .18f)
+                : t < .78f ? Blend(sunset, blue, (t - .66f) / .12f)
+                : t < .94f ? Blend(blue, night, (t - .78f) / .16f)
+                : Blend(night, dawn, (t - .94f) / .06f);
             var mixed = PlaceLightingPreset.Lerp(basePreset, PlaceLightingPreset.Get("Overcast"), Cloudiness * .75f);
-            if (Type == DayType.MistyMorning) { mixed.fogDensity += .012f * (1f - TimeOfDay); mixed.fogColor = Color.Lerp(mixed.fogColor, new Color(.82f, .85f, .86f), .5f * (1f - TimeOfDay)); }
+            if (Type == DayType.MistyMorning) { float mist = 1f - Mathf.InverseLerp(.12f, .4f, TimeOfDay); mixed.fogDensity += .012f * mist; mixed.fogColor = Color.Lerp(mixed.fogColor, new Color(.82f, .85f, .86f), .5f * mist); }
+            TintMountains(basePreset);
             return mixed;
+        }
+
+        static PlaceLightingPreset Blend(PlaceLightingPreset a, PlaceLightingPreset b, float t) => PlaceLightingPreset.Lerp(a, b, Mathf.SmoothStep(0f, 1f, t));
+
+        void TintMountains(PlaceLightingPreset light)
+        {
+            var root = FindAnyObjectByType<PlaceRoot>();
+            if (root == null) return;
+            var tint = Color.Lerp(light.fogColor, light.ambientSky, .55f);
+            var block = new MaterialPropertyBlock();
+            foreach (var renderer in root.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                if (!renderer.name.StartsWith("Mountain silhouette")) continue;
+                renderer.GetPropertyBlock(block);
+                block.SetColor("_BaseColor", tint);
+                renderer.SetPropertyBlock(block);
+            }
         }
     }
 }

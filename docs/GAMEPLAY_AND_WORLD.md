@@ -70,7 +70,7 @@ Three steps, each shown as one short hint (`Onboarding/TutorialController`, word
 
 | System | What it does |
 |---|---|
-| Day (`World/DayDirector`) | each day has a type (clear, partly cloudy, misty, showery, rainy; never the same twice running) and a line saying so ("A clear, sunny day."). Light moves from afternoon to sunset and blue hour over about 18 minutes; after about 2.5 minutes of night the screen dims and a new day begins. A relaunch resumes the same day unless it was night or more than 3 hours have passed. |
+| Day (`World/DayDirector`) | each day has a type (clear, partly cloudy, misty, showery, rainy; never the same twice running) and a line saying so ("A clear, sunny day."). Light moves through dawn, morning, midday, golden hour, sunset and night over about 18 minutes, then starts a new day without a screen fade. Misty days begin in morning light. Stars and a moon appear at night. A relaunch resumes the same day unless it was near dawn or more than 3 hours have passed. |
 | Weather (`Session/PlaceWeather`) | rain, with wind before it; the pet leads to the tent. Drops come from the Rain Particles pack (capped for phones) and leave a splash and ring where they hit; roofs stop them. Without the pack the place falls back to code-built rain. |
 | Butterflies (`World/Butterflies`) | eight species from the AI cartoon butterflies pack drift through flowers, flap while flying and fold their wings when they land, scatter when you walk close; gone at dusk and in rain |
 | Visiting dog (`World/DogVisitor`) | a neighbour's dog walks the riverside path, stops, wags, sits, walks on |

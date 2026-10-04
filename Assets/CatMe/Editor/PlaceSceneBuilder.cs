@@ -231,6 +231,7 @@ namespace CatMe.Editor
                 Zone("GateRevealZone", "GateReveal", new Vector3(0, 2, 8.7f), new Vector3(8, 8, 5));
                 Zone("BeyondGateZone", "Default", new Vector3(0, 2, 22f), new Vector3(30, 8, 12));
                 MountainSilhouettes(G + L + 20f);
+                NightSky(G + L + 100f);
             };
             return p;
         }
@@ -919,7 +920,7 @@ namespace CatMe.Editor
         static void Bench(Vector3 p, float yaw)
         {
             var src = benchSources.FirstOrDefault();
-            if (src == null) { Box("Bench", structures, OnGround(p) + Vector3.up * .25f, new Vector3(1.6f, .5f, .5f), Timber, true, yaw); return; }
+            if (src == null) { Box("Bench", structures, OnGround(p) + Vector3.up * .25f, new Vector3(1.6f, .5f, .5f), Timber, true, yaw); AddSitPoint(p); clearZones.Add(p); return; }
             var go = Object.Instantiate(src.gameObject, structures); go.name = "Bench"; PlaceOnGround(go, p, yaw);
             AddBoxCollider(go);
             AddSitPoint(p);
@@ -1424,8 +1425,8 @@ namespace CatMe.Editor
                     vertices[i * 2 + 1] = new Vector3(x, crest, depth);
                     if (i == samples - 1) continue;
                     int v = i * 2, t = i * 6;
-                    triangles[t] = v; triangles[t + 1] = v + 3; triangles[t + 2] = v + 1;
-                    triangles[t + 3] = v; triangles[t + 4] = v + 2; triangles[t + 5] = v + 3;
+                    triangles[t] = v; triangles[t + 1] = v + 1; triangles[t + 2] = v + 3;
+                    triangles[t + 3] = v; triangles[t + 4] = v + 3; triangles[t + 5] = v + 2;
                 }
                 var mesh = new Mesh { name = "Mountain silhouette " + layer };
                 mesh.vertices = vertices; mesh.triangles = triangles; mesh.RecalculateNormals(); mesh.RecalculateBounds();
@@ -1436,6 +1437,36 @@ namespace CatMe.Editor
                 go.GetComponent<MeshFilter>().sharedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(path);
                 go.GetComponent<MeshRenderer>().sharedMaterial = Mat("Mountain layer " + layer, Color.Lerp(new Color(.27f, .39f, .39f), new Color(.48f, .58f, .62f), layer / 2f));
             }
+        }
+
+        static void NightSky(float z)
+        {
+            var sky = new GameObject("Night_Starfield"); sky.transform.SetParent(dressing, false);
+            const int stars = 48;
+            var vertices = new Vector3[stars * 4]; var triangles = new int[stars * 6];
+            var colours = new Color[stars * 4];
+            var random = new System.Random(9157);
+            for (int i = 0; i < stars; i++)
+            {
+                float x = (float)(random.NextDouble() * 180f - 90f);
+                float y = (float)(random.NextDouble() * 28f + 23f);
+                float radius = i % 9 == 0 ? .28f : .14f;
+                int v = i * 4, t = i * 6;
+                vertices[v] = new Vector3(x - radius, y - radius, z); vertices[v + 1] = new Vector3(x + radius, y - radius, z);
+                vertices[v + 2] = new Vector3(x - radius, y + radius, z); vertices[v + 3] = new Vector3(x + radius, y + radius, z);
+                triangles[t] = v; triangles[t + 1] = v + 2; triangles[t + 2] = v + 1;
+                triangles[t + 3] = v + 1; triangles[t + 4] = v + 2; triangles[t + 5] = v + 3;
+                for (int c = 0; c < 4; c++) colours[v + c] = new Color(.85f, .9f, 1f);
+            }
+            var mesh = new Mesh { name = "Night stars" }; mesh.vertices = vertices; mesh.triangles = triangles; mesh.colors = colours; mesh.RecalculateBounds();
+            string path = ArtFolder + "/Terrain/" + spec.id + "_Stars.asset";
+            AssetDatabase.DeleteAsset(path); AssetDatabase.CreateAsset(mesh, path);
+            var filter = sky.AddComponent<MeshFilter>(); filter.sharedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            sky.AddComponent<MeshRenderer>().sharedMaterial = Mat("Night stars", new Color(.8f, .88f, 1f), 0f, new Color(1.4f, 1.55f, 1.8f));
+            var moon = GameObject.CreatePrimitive(PrimitiveType.Sphere); moon.name = "Night_Moon"; moon.transform.SetParent(dressing, false);
+            moon.transform.position = new Vector3(-29f, 37f, z + 2f); moon.transform.localScale = Vector3.one * 4f;
+            moon.GetComponent<Renderer>().sharedMaterial = Mat("Night moon", new Color(.92f, .94f, .84f), 0f, new Color(.8f, .9f, .8f));
+            Object.DestroyImmediate(moon.GetComponent<Collider>());
         }
 
         // ---- scattering from the legacy garden prefab (materials are already URP-converted there) -------------------
