@@ -31,7 +31,7 @@ namespace CatMe.Garden
             foodTab = UiKit.Button(panel, "Food", new Vector2(-30f, 220f), new Vector2(210f, 66f), CatMeUIStyle.Mist, false, () => { tab = StoreCategory.Food; bag = false; Refresh(); }, 26, "Food tab");
             bagTab = UiKit.Button(panel, "Your bag", new Vector2(200f, 220f), new Vector2(210f, 66f), CatMeUIStyle.Mist, false, () => { bag = true; Refresh(); }, 26, "Bag tab");
             content = UiKit.HScroll(panel, new Vector2(0f, -40f), new Vector2(1480f, 500f), 26f, 24);
-            note = UiKit.Label(panel, "Everything here is free while the shop is being built.", 20, CatMeUIStyle.MutedInk, new Vector2(0f, -378f), new Vector2(1300f, 36f));
+            note = UiKit.Label(panel, "", 20, CatMeUIStyle.MutedInk, new Vector2(0f, -378f), new Vector2(1300f, 36f));
             root.SetActive(false);
         }
 

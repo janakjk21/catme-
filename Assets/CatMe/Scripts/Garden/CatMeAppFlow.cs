@@ -381,7 +381,7 @@ namespace CatMe.Garden
             {
                 case "pets": OpenPets(); break;
                 case "album": garden.OpenPhotoAlbum(BackToMenu); break;
-                case "store": OpenStore(); break;
+                case "store": if (GardenCompanionDemo.StoreShipped) OpenStore(); break;
                 case "account": OpenAccount(); break;
                 case "settings": OpenSettings(); break;
                 default: returnToMenu = false; break;
@@ -513,7 +513,7 @@ namespace CatMe.Garden
         private IMobileApi mobileApi;
         private IPrivacyApi privacyApi;
         private bool deleting;
-        internal void OpenStore() => OpenOverlayScreen(store.Open);
+        internal void OpenStore() { if (GardenCompanionDemo.StoreShipped) OpenOverlayScreen(store.Open); }
 
         private void BuildSessionSheets()
         {
