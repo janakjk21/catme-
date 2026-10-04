@@ -230,7 +230,7 @@ namespace CatMe.Editor
                 Zone("GardenCloseZone", "GardenClose", new Vector3(0, 2, 3.5f), new Vector3(14, 8, 16));
                 Zone("GateRevealZone", "GateReveal", new Vector3(0, 2, 8.7f), new Vector3(8, 8, 5));
                 Zone("BeyondGateZone", "Default", new Vector3(0, 2, 22f), new Vector3(30, 8, 12));
-                Hills("Far hills", 0f, G + L + 20f);
+                MountainSilhouettes(G + L + 20f);
             };
             return p;
         }
@@ -1407,17 +1407,34 @@ namespace CatMe.Editor
             return new Vector3(spec.x1 - 3f, 0, Next(zFrom, zTo));
         }
 
-        static void Hills(string name, float x, float z, int layers = 2, bool bigger = false)
+        static void MountainSilhouettes(float z)
         {
-            var mat = Mat("Distant hill", new Color(.34f, .42f, .46f));
-            for (int i = 0; i < 7 * layers; i++)
+            const int samples = 33;
+            for (int layer = 0; layer < 3; layer++)
             {
-                float lx = -90 + i * (180f / (7 * layers)) + Next(-6, 6), lz = z + 25f + (i % layers) * 22f;
-                float h = (bigger ? 26f : 14f) + Next(0, 8);
-                var peak = GameObject.CreatePrimitive(PrimitiveType.Sphere); peak.name = name; peak.transform.SetParent(dressing, false);
-                peak.transform.position = new Vector3(lx, -2f, lz); peak.transform.localScale = new Vector3(Next(30, 50), h, 26);
-                peak.GetComponent<Renderer>().sharedMaterial = Mat("Distant hill L" + (i % layers), new Color(.30f, .46f, .40f) * (1f + (i % layers) * .2f));
-                Object.DestroyImmediate(peak.GetComponent<Collider>());
+                var vertices = new Vector3[samples * 2]; var triangles = new int[(samples - 1) * 6];
+                float depth = z + 14f + layer * 18f;
+                for (int i = 0; i < samples; i++)
+                {
+                    float x = Mathf.Lerp(-95f, 95f, i / (float)(samples - 1));
+                    float broad = Mathf.PerlinNoise(i * .16f + layer * 7.1f, layer * 3.7f);
+                    float detail = Mathf.PerlinNoise(i * .61f + layer * 11f, 3.2f);
+                    float crest = 8f + broad * (layer + 1) * 5f + detail * 3f;
+                    vertices[i * 2] = new Vector3(x, -8f, depth);
+                    vertices[i * 2 + 1] = new Vector3(x, crest, depth);
+                    if (i == samples - 1) continue;
+                    int v = i * 2, t = i * 6;
+                    triangles[t] = v; triangles[t + 1] = v + 3; triangles[t + 2] = v + 1;
+                    triangles[t + 3] = v; triangles[t + 4] = v + 2; triangles[t + 5] = v + 3;
+                }
+                var mesh = new Mesh { name = "Mountain silhouette " + layer };
+                mesh.vertices = vertices; mesh.triangles = triangles; mesh.RecalculateNormals(); mesh.RecalculateBounds();
+                string path = ArtFolder + "/Terrain/" + spec.id + "_Mountain" + layer + ".asset";
+                AssetDatabase.DeleteAsset(path); AssetDatabase.CreateAsset(mesh, path);
+                var go = new GameObject("Mountain silhouette " + layer, typeof(MeshFilter), typeof(MeshRenderer));
+                go.transform.SetParent(dressing, false);
+                go.GetComponent<MeshFilter>().sharedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+                go.GetComponent<MeshRenderer>().sharedMaterial = Mat("Mountain layer " + layer, Color.Lerp(new Color(.27f, .39f, .39f), new Color(.48f, .58f, .62f), layer / 2f));
             }
         }
 
