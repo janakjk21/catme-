@@ -201,19 +201,19 @@ namespace CatMe.Editor
 
                 // The riverside walk beyond the gate.
                 River(p, -8.5f, 6.5f, -.55f, fromZ: G + 6f, toZ: G + L + 8f);
-                for (float z = G + 7f; z < G + L; z += 8.7f)
+                // F7: one continuous fence along the whole river side, into the end clearing and across the end of the trail, with
+                // colliders, so nobody can walk toward the river for now. No gaps where the path meets the clearing.
+                float fenceEnd = G + L + 12f;
+                for (float z = G + 7f; z < fenceEnd - .01f; z += 8.7f)
                 {
-                    float zEnd = Mathf.Min(z + 8.7f, G + L);
-                    float gapZ = G + L * .3f;
-                    if (gapZ > z - 1f && gapZ < zEnd + 1f) { zEnd = Mathf.Max(z, gapZ - 1.6f); if (zEnd - z > .5f) { if (AssetDatabase.LoadAssetAtPath<GameObject>(Ghibli + "Fence_02.prefab") != null) PlaceLine(Ghibli + "Fence_02.prefab", new Vector3(p.pathX(z) - 3.4f, 0, z), new Vector3(p.pathX(zEnd) - 3.4f, 0, zEnd), 1.0f); else Fence(new Vector3(p.pathX(z) - 3.4f, 0, z), new Vector3(p.pathX(zEnd) - 3.4f, 0, zEnd)); } continue; }
-                    if (AssetDatabase.LoadAssetAtPath<GameObject>(Ghibli + "Fence_02.prefab") != null) PlaceLine(Ghibli + "Fence_02.prefab", new Vector3(p.pathX(z) - 3.4f, 0, z), new Vector3(p.pathX(zEnd) - 3.4f, 0, zEnd), 1.0f);
-                    else for (float zz = z; zz < zEnd; zz += 3f) Fence(new Vector3(p.pathX(zz) - 3.4f, 0, zz), new Vector3(p.pathX(zz + 3f) - 3.4f, 0, zz + 3f));
+                    float zEnd = Mathf.Min(z + 8.7f, fenceEnd);
+                    FenceRun(new Vector3(p.pathX(z) - 3.4f, 0, z), new Vector3(p.pathX(zEnd) - 3.4f, 0, zEnd));
                 }
-                // One place where the pet can reach the water (audit 16): a short jetty through a gap in the fence.
-                float accessZ = G + L * .3f;
-                BankBlocker(p, -3.5f, G + 1f, accessZ - 1.5f);
-                BankBlocker(p, -3.5f, accessZ + 1.5f, G + L + 5f); // exactly on the fence line: nobody can step past the fence toward the water
-                RiverAccess(p, accessZ);
+                {
+                    float cx = p.pathX(fenceEnd);
+                    FenceRun(new Vector3(cx - 3.4f, 0, fenceEnd), new Vector3(cx + 7.5f, 0, fenceEnd));
+                }
+                BankBlocker(p, -3.5f, G + 1f, fenceEnd + 1f); // exactly on the fence line: nobody can step past the fence toward the water
                 PathDetail(p, G + 2f, G + L);
                 Bench(new Vector3(p.pathX(G + 14f) + 3.2f, 0, G + 14f), 90f);
                 Bench(new Vector3(p.pathX(G + L * .22f) + 3.2f, 0, G + L * .22f), 90f);
@@ -1092,6 +1092,7 @@ namespace CatMe.Editor
             pet.transform.rotation = Quaternion.LookRotation(new Vector3(fire.x - pet.transform.position.x, 0f, fire.z - pet.transform.position.z));
         }
 
+        // Not built for now (F7 fences the river off); kept for when the river opens again.
         // A short timber jetty from the path edge to the water, with rails on its sides and a stop at the end, so the pet can
         // look into the river and the player can stand over it. A curiosity at the end draws the pet there.
         static void RiverAccess(PlaceSpec s, float z)
@@ -1205,6 +1206,20 @@ namespace CatMe.Editor
         }
 
         static string PathOf(Transform t) { string path = t.name; while (t.parent != null) { t = t.parent; path = t.name + "/" + path; } return path; }
+
+        // A fence from a to b in the bank style (Ghibli Fence_02 with box colliders, or timber rails), F7.
+        static void FenceRun(Vector3 a, Vector3 b)
+        {
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(Ghibli + "Fence_02.prefab") != null) { PlaceLine(Ghibli + "Fence_02.prefab", a, b, 1.0f, Blocker.Box); return; }
+            Vector3 d = b - a; float length = d.magnitude;
+            for (float t = 0f; t < length - .01f; t += 3f)
+            {
+                Vector3 p0 = a + d * (t / length), p1 = a + d * (Mathf.Min(t + 3f, length) / length);
+                Fence(p0, p1);
+                Vector3 mid = OnGround((p0 + p1) * .5f) + Vector3.up * .6f; float yaw = Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg;
+                Box("Fence blocker", blockers, mid, new Vector3(.3f, 1.2f, (p1 - p0).magnitude + .2f), Stone, true, yaw).GetComponent<Renderer>().enabled = false;
+            }
+        }
 
         static void Lantern(string name, Vector3 p)
         {

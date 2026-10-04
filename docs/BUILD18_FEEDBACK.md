@@ -48,6 +48,7 @@ The paw (pet actions) button is too small. Make it **much bigger** (about the jo
 
 ## F7. Fence off the river end
 Build a continuous fence (the same fence style already used along the bank) along the whole river side and across the end of the trail, with colliders, so the player can't walk toward the river at all for now. No gaps where the path meets the end clearing. In `PlaceSceneBuilder`; owner runs Rebuild With Last Seed.
+- **Done in code (2026-10-04, not built):** `FenceRun` (Ghibli `Fence_02` with box colliders, or timber rails with invisible blockers) runs along the river side from the gate approach to the end of the trail and turns across the end, joined with no gaps; the invisible bank blocker covers the same line. The L6 jetty and its fence gap are removed (`RiverAccess` kept, not called).
 
 ## F8. The house room
 Keep the existing contextual buttons as they are. Changes:
