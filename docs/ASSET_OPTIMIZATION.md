@@ -140,3 +140,4 @@ Short sound effects: Decompress On Load, ADPCM, mono. Ambience and music: Stream
 | Step | Assets before MB | Reachable before MB | Assets after MB | Reachable after MB | Notes |
 |---|---:|---:|---:|---:|---|
 | 1 | 2705.9 | 952.2 | 2135.1 | 952.2 | Unused packs and loose GLBs archived with `.meta` files. |
+| 2 | 2135.1 | 1031.5 | 1375.7 | 985.2 | Path-loaded seeds added; 155 unreachable files archived, 12 used PSDs flattened to PNG with GUIDs retained. Reachable MB fell because the flattened PNGs are smaller. |

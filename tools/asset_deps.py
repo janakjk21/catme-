@@ -17,6 +17,28 @@ for d,_,fs in os.walk(root):
 textext=('.unity','.prefab','.mat','.asset','.controller','.anim','.overrideController','.playable','.shadergraph','.shadersubgraph','.mixer','.lighting','.terrainlayer','.spriteatlas','.physicMaterial','.renderTexture','.cubemap','.flare','.brush','.signal','.preset','.vfx')
 gre=re.compile(r'guid: ([0-9a-f]{32})')
 seeds=['Assets/CatMe/Scenes/GardenCompanion.unity','Assets/CatMe/Scenes/Places/Place_HomeGarden_r2.unity']
+# The generated map also loads these assets by path. They will not appear in an
+# older scene's GUID graph until the owner rebuilds with the last seed.
+path_seeds = [
+    'Assets/JTS_Shrine_Torii_Gates/Prefabs/Torii_Kuroki_Med1_LOD.prefab',
+    'Assets/PolyOne/Water URP/Materials/M_Shader Water.mat',
+    'Assets/TileableBricksWall/Materials/Bricks_01_mat.mat',
+    'Assets/Rain Particles/Prefabs/Rain Particles.prefab',
+]
+path_seed_dirs = [
+    'Assets/3D set of stylized nature - GHIBLI style/Art/Prefabs',
+    'Assets/AI cartoon butterflies/AI cartoon butterflies/Models/Butterflies/Prefabs',
+    'Assets/LowPolyLivingRoomPack/Prefabs',
+    'Assets/Free/Stones',
+]
+path_seeds += [f'Assets/ithappy/Animals_FREE/Prefabs/{name}.prefab'
+               for name in ('Deer_001', 'Horse_001', 'Chicken_001')]
+for directory in path_seed_dirs:
+    for d, _, fs in os.walk(directory):
+        for f in fs:
+            if not f.endswith('.meta') and (f.endswith('.prefab') or directory.endswith('/Stones')):
+                path_seeds.append(os.path.join(d, f))
+seeds += path_seeds
 for d,_,fs in os.walk(root):
     if '/Resources' in d or d.endswith('Resources') or d.startswith('Assets/StreamingAssets'):
         for f in fs:
