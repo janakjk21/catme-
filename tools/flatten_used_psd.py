@@ -6,6 +6,8 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 ARCHIVE = ROOT.parent / "catme-asset-archive" / "2026-10-04"
+if (ARCHIVE / "STEP2_CONVERTED.txt").exists():
+    raise SystemExit("PSD archive already exists; refusing to overwrite its manifest")
 used = (ROOT / "tools/asset_used.txt").read_text().splitlines()
 paths = [Path(path) for path in used if path.lower().endswith(".psd")
          and ("JTS_Shrine_Torii_Gates" in path or "AI cartoon butterflies" in path)]

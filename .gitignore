@@ -54,4 +54,5 @@ LocalFixtures/
 
 # Firebase project config (keep local; this repo is public)
 GoogleService-Info.plist
-google-services.jsontools/asset_used.txt
+google-services.json
+/tools/asset_used.txt

@@ -118,7 +118,7 @@ Short sound effects: Decompress On Load, ADPCM, mono. Ambience and music: Stream
 - After a build, read the **Build Report** in `Editor.log` (search "Build Report") and list the top 20 assets in the build.
 
 ### 8. Stop the repo growing
-- Add Git LFS for `*.psd *.png *.jpg *.tga *.exr *.fbx *.glb *.wav *.mp3 *.ogg` (`git lfs track`, commit `.gitattributes`). Applies to new commits only.
+- Plan Git LFS for `*.psd *.png *.jpg *.tga *.exr *.fbx *.glb *.wav *.mp3 *.ogg`. Blanket `git lfs track` also makes already-tracked files appear modified; agree a staged migration strategy before committing `.gitattributes`.
 - Shrinking the existing 2.86 GB history needs a history rewrite (`git filter-repo`). **That is an owner decision; do not do it.**
 - Remove the leftover `tmp_pack_*` and `tmp_obj_*` garbage with `git gc --prune=now` (local only, safe).
 
@@ -130,8 +130,8 @@ Short sound effects: Decompress On Load, ADPCM, mono. Ambience and music: Stream
 
 | Measure | Before | After |
 |---|---:|---:|
-| `Assets/` total | 2.7 GB | |
-| Referenced by the game | 952 MB | |
+| `Assets/` total | 2.7 GB | 1.376 GB |
+| Referenced by the game | 952 MB | 985 MB (expanded path-loaded seeds; not directly comparable) |
 | iPhone build (`.ipa`) | not measured | |
 | Peak memory on iPhone | not measured | |
 
@@ -146,3 +146,10 @@ Short sound effects: Decompress On Load, ADPCM, mono. Ambience and music: Stream
 | 5 | 1375.7 | 985.2 | 1375.7 | 985.2 | Deferred: meshopt/KTX2 decoders absent, and compressed GLB loading cannot be confirmed without Unity. No bundled model changed. |
 | 6 | 1375.7 | 985.2 | 1375.7 | 985.2 | Audio budget editor menu added; import settings await Unity. |
 | 7 | 1375.7 | 985.2 | 1375.7 | 985.2 | IL2CPP and engine stripping already enabled; High managed stripping editor menu added. No package removed or Build Report available without a Unity build. |
+| 8 | 1375.7 | 985.2 | 1375.7 | 985.2 | Git LFS installed locally; blanket tracking made 440+ existing files appear modified, so rules were removed rather than risk mass migration. `git gc --prune=now` completed; one pack, no garbage. History unchanged. |
+
+## Owner validation gate
+
+The archive is at `../catme-asset-archive/2026-10-04/`; its manifest and path lists cover every moved file. Before merging or deleting it, open Unity, run **CatMe > Optimise > Apply Texture Budget**, **Apply Model Budget**, **Apply Audio Budget**, then **Apply iPhone Build Budget**. Run **CatMe > Places > Rebuild With Last Seed (same layout)**, open `GardenCompanion.unity` in Play Mode, and check the house, torii, river, rain, bench, ball, butterflies, wildlife animations and all materials for missing/pink assets. Check Console errors and the iPhone build size and peak memory. High stripping needs a full onboarding and restore-flow test.
+
+Step 5 remains gated: install the Unity meshopt and KTX2 decoder packages, merge and compress the GLBs, then verify the compressed cat and person actually load and animate in Unity before replacing the originals. Run an iPhone build and capture the Build Report's top 20 assets. The LFS rollout needs an explicit migration strategy for already-tracked binaries; no `.gitattributes` was left behind.

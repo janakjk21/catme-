@@ -23,6 +23,8 @@ EXTENSIONS = {
 
 
 def main():
+    if (ARCHIVE / "STEP2_PATHS.txt").exists():
+        raise SystemExit("Step 2 archive already exists; refusing to overwrite its manifest")
     used = set((ROOT / "tools/asset_used.txt").read_text().splitlines())
     moved = []
     for pack in PACKS:
