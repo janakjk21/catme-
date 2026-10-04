@@ -62,7 +62,9 @@ namespace CatMe.Garden
         // chosen distance (pinch, remembered). Nothing else turns or moves it, except collision pull-in.
         const string ZoomKey = "CatMe.Camera.Zoom";
         float orbitPitch = 18f, zoom = 3.2f, pinchLast;
-        bool pinching;
+        bool pinching, closeUp;
+        /// <summary>F11: pinched in past the normal range to frame the player's face and the pet.</summary>
+        public bool InCloseUp => closeUp;
 
         /// <summary>Eye-level view from a fixed anchor; drag to look around a little. The owner model is hidden by the caller.</summary>
         bool fpWalkable;
@@ -214,7 +216,9 @@ namespace CatMe.Garden
             CameraProfile p = Active;
             ReadLookDrag(dt);
             // The chosen zoom, clamped to what this zone allows; easing only so a zone clamp or pinch isn't a jump.
-            float wantDistance = Mathf.Clamp(zoom, p.zoomMin, p.zoomMax);
+            float wantDistance = closeUp ? CameraMath.CloseUp : Mathf.Clamp(zoom, p.zoomMin, p.zoomMax);
+            if (closeUp) orbitPitch = Mathf.Min(orbitPitch, CameraMath.CloseUpPitchMax);
+            SetDof(closeUp && !reduced ? 1f : 0f, closeUp);
             distance = Mathf.SmoothDamp(distance, wantDistance, ref distanceVelocity, .18f, 100f, dt);
             extraHeight = Mathf.SmoothDamp(extraHeight, extraHeightTarget, ref extraHeightVelocity, .6f, 100f, dt);
             Vector3 velocity = (owner.position - lastOwnerPosition) / dt;
@@ -232,6 +236,13 @@ namespace CatMe.Garden
             if (Physics.SphereCast(focus, .25f, dir, out RaycastHit hit, wanted, ~0, QueryTriggerInteraction.Ignore))
                 allowed = Mathf.Max(CameraMath.CollisionMin, hit.distance - .2f);
             Vector3 target = focus + dir * allowed;
+            if (cat != null)
+            {
+                // Never inside the pet: keep the camera at least 0.45 m from its middle by lifting it over.
+                Vector3 petMiddle = cat.position + Vector3.up * .25f;
+                float gap = Vector3.Distance(target, petMiddle);
+                if (gap < .45f) target += Vector3.up * (.45f - gap + .05f);
+            }
             float smooth = reduced ? .25f : .12f;
             if (Vector3.Distance(transform.position, focus) > allowed + .05f) smooth = .06f; // pull in fast
             transform.position = Vector3.SmoothDamp(transform.position, target, ref positionVelocity, smooth, 100f, dt);
@@ -241,12 +252,17 @@ namespace CatMe.Garden
         // The camera orbits the player at the player's yaw, pitch and zoom.
         Pose Desired(float widen, out Vector3 focus)
         {
-            focus = owner.position + Vector3.up * (1.2f + extraHeight);
+            float k = closeUp ? CameraMath.CloseUpBlend(distance, Active.zoomMin) : 0f;
+            focus = owner.position + Vector3.up * (Mathf.Lerp(CameraMath.BodyHeight, CameraMath.HeadHeight, k) + extraHeight);
+            if (k > 0f && cat != null) { Vector3 toPet = cat.position - owner.position; toPet.y = 0f; focus += Vector3.ClampMagnitude(toPet * .35f, .6f) * k; }   // face and pet together
             Vector3 position = CameraMath.Orbit(focus, restYaw, orbitPitch, distance + widen);
             return new Pose(position, Quaternion.LookRotation(focus - position));
         }
 
-        void SetDof(float target)
+        void SetDof(float target) => SetDof(target, false);
+
+        // Seated: background softens from 2.2 m. Close-up (F11): from 1.4 m, so the face and pet stay sharp.
+        void SetDof(float target, bool closeUpFocus)
         {
             if (target <= 0f && dofVolume == null) return;
             if (dofVolume == null)
@@ -259,6 +275,7 @@ namespace CatMe.Garden
                 dof.gaussianStart.Override(2.2f); dof.gaussianEnd.Override(9f); dof.gaussianMaxRadius.Override(1f); dof.highQualitySampling.Override(false);
                 dofVolume.profile = profile;
             }
+            if (dof != null) { dof.gaussianStart.Override(closeUpFocus ? 1.4f : 2.2f); dof.gaussianEnd.Override(closeUpFocus ? 6f : 9f); }
             dofVolume.weight = Mathf.MoveTowards(dofVolume.weight, PlayerPrefs.GetInt("CatMe.ReduceMotion", 0) == 1 ? 0f : target, Time.unscaledDeltaTime * 1.5f);
         }
 
@@ -348,8 +365,11 @@ namespace CatMe.Garden
             float span = Vector2.Distance(a, b);
             if (!pinching) { pinching = true; pinchLast = span; lookTouchId = -1; lookActive = false; return true; }
             CameraProfile p = Active;
-            zoom = CameraMath.Pinch(zoom, pinchLast, span, p.zoomMin, p.zoomMax);
-            pinchLast = span;
+            float before = pinchLast;
+            zoom = CameraMath.PinchStep(zoom, closeUp, before, span, p.zoomMin, p.zoomMax, out bool nowCloseUp);
+            // A step in or out restarts the measure, so one long pinch doesn't bounce between the two.
+            if (nowCloseUp != closeUp) { closeUp = nowCloseUp; pinchLast = span; return true; }
+            pinchLast = closeUp ? Mathf.Max(pinchLast, span) : span;   // in close-up, pinching out is measured from the widest spread
             return true;
         }
 
@@ -382,6 +402,30 @@ namespace CatMe.Garden
     public static class CameraMath
     {
         public const float ZoomMin = 1.8f, ZoomMax = 6f, PitchMin = 5f, PitchMax = 55f, CollisionMin = .6f;
+        /// <summary>F11: the close-up step past the normal minimum, and how high the look target rises there.</summary>
+        public const float CloseUp = .9f, BodyHeight = 1.2f, HeadHeight = 1.55f, CloseUpPitchMax = 25f;
+
+        /// <summary>
+        /// Pinch with the close-up step: pinching in at the normal minimum moves to the close-up; pinching out of the close-up by
+        /// 15% returns to the normal minimum. Otherwise the normal pinch.
+        /// </summary>
+        public static float PinchStep(float zoom, bool closeUp, float previousSpan, float span, float min, float max, out bool nowCloseUp)
+        {
+            nowCloseUp = closeUp;
+            if (previousSpan < 1f || span < 1f) return closeUp ? CloseUp : Mathf.Clamp(zoom, min, max);
+            float ratio = previousSpan / span;   // < 1 when the fingers spread (zoom in)
+            if (closeUp)
+            {
+                if (ratio > 1.15f) { nowCloseUp = false; return min; }
+                return CloseUp;
+            }
+            float next = zoom * ratio;
+            if (next < min && zoom <= min + .05f && ratio < .97f) { nowCloseUp = true; return CloseUp; }
+            return Mathf.Clamp(next, min, max);
+        }
+
+        /// <summary>0 at the normal minimum or further, 1 at the close-up: how far the look target has risen to the head.</summary>
+        public static float CloseUpBlend(float distance, float min) => Mathf.Clamp01(Mathf.InverseLerp(min, CloseUp, distance));
 
         public static float ClampPitch(float pitch) => Mathf.Clamp(pitch, PitchMin, PitchMax);
 

@@ -77,6 +77,7 @@ A **Sprint** button near the joystick (above it, smaller than the joystick, insi
 
 ## F11. Pinch in to a close-up
 Extend F5's pinch zoom: pinching in past the normal minimum moves to a **close-up** (about 0.9 m) that frames the player's face and the pet together; at the closest step the camera eases its look target from the body to head height. Pinch out returns to the normal range. Turn depth of field on only in close-up (off with Reduce motion). Clamp so the camera never enters the player or the pet; collision still wins.
+- **Done in code (2026-10-04, not compiled):** `CameraMath.PinchStep`: pinching in at the normal minimum steps to a 0.9 m close-up; pinching out by 15% (from the widest spread) returns to the minimum. In close-up the look target eases from body height (1.2 m) to head height (1.55 m) and leans toward the pet so face and pet share the frame; pitch is capped at 25 degrees; depth of field (focus from 1.4 m) only in close-up and never with Reduce motion. The camera keeps 0.45 m from the pet's middle and collision still wins (0.6 m minimum). Tests: `CloseUpTests` (3).
 
 ## Owner actions for this list
 - Check the iPhone's ring/silent switch while testing sound, and report whether ambience plays with it on ring.
