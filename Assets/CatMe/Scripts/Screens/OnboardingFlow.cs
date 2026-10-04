@@ -462,6 +462,8 @@ namespace CatMe.Garden
             ProviderButton("google", "Continue with Google", new Vector2(x, -230f), w, CatMeUIStyle.Paper, CatMeUIStyle.Pine, () => Provider("google"), "Google");
             UiKit.Link(safe, "Try it free, no sign-in", new Vector2(RightX + 200f, -335f), new Vector2(400f, 70f), () => Provider("guest"));
             UiKit.Label(safe, "Signing in saves your pet if you get a new phone.", 24, CatMeUIStyle.BodyInk, new Vector2(x, -395f), new Vector2(w, 44f), FontStyle.Normal, TextAnchor.MiddleLeft, "Login note");
+            TextLink(LeftX, -445f, "Privacy policy", () => Application.OpenURL(CatMe.Onboarding.CreationClient.PrivacyUrl), 300f);
+            TextLink(LeftX + 320f, -445f, "Terms and AI policy", () => Application.OpenURL(CatMe.Onboarding.CreationClient.TermsUrl), 400f);
             if (!string.IsNullOrEmpty(emailError)) UiKit.Label(safe, emailError, 24, CatMeUIStyle.Danger, new Vector2(x, -450f), new Vector2(w, 56f), FontStyle.Bold, TextAnchor.MiddleLeft, "Account error");
         }
 

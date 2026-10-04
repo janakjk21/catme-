@@ -383,6 +383,8 @@ namespace CatMe.Garden
             UiKit.Label(card.transform, "Remove your photos from our server. Your pets stay.", 26, CatMeUIStyle.BodyInk, new Vector2(370f, 70f), new Vector2(570f, 100f), FontStyle.Normal, TextAnchor.UpperLeft);
             UiKit.Button(card.transform, "Delete account", new Vector2(370f, -80f), new Vector2(570f, 84f), CatMeUIStyle.Tile, false, () => ConfirmDeletion(true), 30, "Delete account");
             UiKit.Label(card.transform, "Remove your account, pets and photos for good.", 26, CatMeUIStyle.BodyInk, new Vector2(370f, -180f), new Vector2(570f, 100f), FontStyle.Normal, TextAnchor.UpperLeft);
+            UiKit.Link(card.transform, "Privacy policy", new Vector2(235f, -345f), new Vector2(260f, 60f), () => Application.OpenURL(CreationClient.PrivacyUrl), 24);
+            UiKit.Link(card.transform, "Terms and AI policy", new Vector2(500f, -345f), new Vector2(300f, 60f), () => Application.OpenURL(CreationClient.TermsUrl), 24);
             RefreshSettingLabels();
             settings.SetActive(false);
         }

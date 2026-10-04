@@ -27,7 +27,7 @@ namespace CatMe.Onboarding
     {
         public const string ConsentVersion = "2026-10-04";   // raise when the consent screen, privacy policy or terms change
         const string ConsentKey = "CatMe.Consent.Version";
-        public const string PrivacyUrl = "https://worntag.com/privacy", TermsUrl = "https://worntag.com/terms";
+        public const string PrivacyUrl = "https://worntag.com/privacy.html", TermsUrl = "https://worntag.com/terms.html";
 
         /// <summary>True once the player has tapped "I agree" on the consent screen for the current version.</summary>
         public static bool ConsentGiven => PlayerPrefs.GetString(ConsentKey, "") == ConsentVersion;
