@@ -243,6 +243,19 @@ namespace CatMe.Garden
     }
 
     /// <summary>One shared size for every generated character, so a provider's model units never change the pair's proportions.</summary>
+    /// <summary>Which model walks beside the owner (launch task L7). Pure, so it is tested.</summary>
+    internal static class PetModelChoice
+    {
+        /// <summary>
+        /// The pet's own downloaded model when it exists (cats and dogs alike); otherwise null, meaning the bundled stand-in:
+        /// the bundled cat for a cat, the corgi for a dog.
+        /// </summary>
+        public static string OwnModel(string modelPath, bool modelExists) => !string.IsNullOrEmpty(modelPath) && modelExists ? modelPath : null;
+
+        /// <summary>True when a dog has no model of its own yet, so the corgi stands in.</summary>
+        public static bool UsesCorgi(CatMe.Pets.Species kind, string modelPath, bool modelExists) => kind == CatMe.Pets.Species.Dog && OwnModel(modelPath, modelExists) == null;
+    }
+
     internal static class CompanionScaleStandards
     {
         public const float OwnerHeightMeters = 1.70f;
@@ -251,6 +264,9 @@ namespace CatMe.Garden
         /// <summary>The cat size the walk speed, clip rate and collision radius were tuned at; scale those by CatScale.</summary>
         public const float TunedCatHeightMeters = 0.46f;
         public static float CatScale => CatHeightMeters / TunedCatHeightMeters;
+        /// <summary>A dog's own model is shown a little taller than the cat, like real dogs; the corgi stand-in keeps its own size.</summary>
+        public const float DogHeightMeters = 0.72f;
+        public static float PetHeightFor(CatMe.Pets.Species kind) => kind == CatMe.Pets.Species.Dog ? DogHeightMeters : CatHeightMeters;
 
         public static float ScaleForMeasuredHeight(float measuredHeight, float targetHeight)
         {

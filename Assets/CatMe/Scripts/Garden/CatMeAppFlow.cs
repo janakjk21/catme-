@@ -131,7 +131,7 @@ namespace CatMe.Garden
                 return new CreationClient(api).RunAsync(new CreationRequest
                 {
                     petName = name, species = species == Species.Dog ? "dog" : "cat", petPhotoPath = photo, ownerPhotoTask = ownerTask,
-                    petModelDestination = species == Species.Dog ? null : System.IO.Path.Combine(cache, "pet-" + System.Guid.NewGuid().ToString("N") + ".glb"),
+                    petModelDestination = System.IO.Path.Combine(cache, "pet-" + System.Guid.NewGuid().ToString("N") + ".glb"),   // dogs too (L7)
                     ownerModelDestination = AccountStorage.PersonDownloadPath,
                 }, report);
             };
@@ -142,11 +142,11 @@ namespace CatMe.Garden
                     string cache = AccountStorage.Downloads;
                     var newest = System.IO.Directory.Exists(cache) ? new System.IO.DirectoryInfo(cache).GetFiles("pet-*.glb") : new System.IO.FileInfo[0];
                     System.Array.Sort(newest, (x, y) => y.LastWriteTimeUtc.CompareTo(x.LastWriteTimeUtc));
-                    if (result.petModelSaved && newest.Length > 0 && pet.Kind == Species.Cat)
+                    if (result.petModelSaved && newest.Length > 0)
                     {
                         string own = System.IO.Path.Combine(PetRoster.PetFolder(pet.id), "model.glb");
                         System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(own));
-                        System.IO.File.Copy(newest[0].FullName, own, true);          // every cat keeps its own model
+                        System.IO.File.Copy(newest[0].FullName, own, true);          // every pet, cat or dog, keeps its own model
                         pet.modelPath = own; PetRoster.SaveChanges();
                     }
                     if (result.ownerModelSaved) AccountStorage.InstallPersonModel(result.isFixture);

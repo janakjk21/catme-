@@ -77,24 +77,28 @@ namespace CatMe.Garden
         private GameObject dogModel;
         private Vector3 leadTarget; private bool leadActive, leadHold, curiosityPlay;
 
-        /// <summary>Applies the chosen pet: its species behaviour and model. Local fixtures only; the cat uses the known-good cat, the dog uses the Dogs Kit corgi.</summary>
+        /// <summary>Applies the chosen pet: its species behaviour and model. A pet's own model when it has one; otherwise the bundled cat, or the Dogs Kit corgi for a dog.</summary>
         private string loadedCatModel;
+        private bool loadedOwnModel;   // the walking pet is the active pet's own downloaded model (cat or dog)
         public void SetActivePet(CatMe.Pets.PetProfile pet)
         {
             if (pet == null) return;
             // A different cat with its own model: reload the characters so the right one walks beside the owner.
-            if (IsReady && pet.Kind == CatMe.Pets.Species.Cat && !string.IsNullOrEmpty(pet.modelPath) && System.IO.File.Exists(pet.modelPath) && pet.modelPath != loadedCatModel)
-                StartCoroutine(ReloadCharactersFromPhoneStorage());
+            // Cats and dogs alike (launch task L7): a pet with its own model reloads it; a pet without one returns to the stand-in.
+            string own = PetModelChoice.OwnModel(pet.modelPath, !string.IsNullOrEmpty(pet.modelPath) && System.IO.File.Exists(pet.modelPath));
+            bool wrongModel = own != null ? own != loadedCatModel : loadedOwnModel;
+            if (IsReady && wrongModel) { behavior = CatMe.Pets.CompanionBehavior.For(pet.Kind); StartCoroutine(ReloadCharactersFromPhoneStorage()); return; }
             var next = CatMe.Pets.CompanionBehavior.For(pet.Kind);
             bool speciesChanged = behavior.Species != next.Species;
             behavior = next;
-            if (speciesChanged || (pet.Kind == CatMe.Pets.Species.Dog && dogModel == null)) ApplyCompanionModel();
+            if (speciesChanged || (pet.Kind == CatMe.Pets.Species.Dog && dogModel == null && !loadedOwnModel)) ApplyCompanionModel();
         }
 
         private void ApplyCompanionModel()
         {
             if (catRoot == null) return;
-            bool dog = behavior.Species == CatMe.Pets.Species.Dog;
+            // The corgi stands in only for a dog without its own model; a dog's own model walks like the cat's (one walk clip).
+            bool dog = behavior.Species == CatMe.Pets.Species.Dog && !loadedOwnModel;
             if (catAnimation != null) catAnimation.gameObject.SetActive(!dog);
             if (dog)
             {
@@ -262,15 +266,17 @@ namespace CatMe.Garden
             string savedHuman = DeviceBridge.HumanModelPath;
             string bundledCat = Path.Combine(folder, "cat-walking.glb"), bundledHuman = Path.Combine(folder, "human-walking.glb");
             string catPath = File.Exists(savedCat) ? savedCat : bundledCat;
-            // Each cat keeps its own downloaded model; the active cat's model wins over the single legacy file.
+            // Each pet keeps its own downloaded model; the active pet's model wins over the single legacy file. A dog without one gets the corgi.
             var activePet = CatMe.Pets.PetRoster.Active;
-            if (activePet != null && activePet.Kind == CatMe.Pets.Species.Cat && !string.IsNullOrEmpty(activePet.modelPath) && File.Exists(activePet.modelPath)) catPath = activePet.modelPath;
+            string ownModel = activePet == null ? null : PetModelChoice.OwnModel(activePet.modelPath, !string.IsNullOrEmpty(activePet.modelPath) && File.Exists(activePet.modelPath));
+            if (ownModel != null) catPath = ownModel;
+            float petHeight = ownModel != null && activePet != null ? CompanionScaleStandards.PetHeightFor(activePet.Kind) : CompanionScaleStandards.CatHeightMeters;
             string humanPath = File.Exists(savedHuman) ? savedHuman : bundledHuman;
             // A generated person has only a walk clip, so the call gesture exists only for the bundled person.
             // Loading the same large person model a second time would only double its memory.
             string callPath = File.Exists(savedHuman) ? null : Path.Combine(folder, "human-call.glb");
             // Provider pixel framing and authored GLB units vary, so enforce one shared pair scale after import.
-            try { catAnimation = await LoadCharacter(catPath, catRoot, CompanionScaleStandards.CatHeightMeters, true); }
+            try { catAnimation = await LoadCharacter(catPath, catRoot, petHeight, true); }
             catch (Exception error) when (catPath != bundledCat)
             {
                 Debug.LogWarning("[WornTag][Garden] downloaded pet model failed: " + error.Message);
@@ -281,6 +287,8 @@ namespace CatMe.Garden
                 appFlow?.ShowModelLoadFailure(activePet?.name ?? "your pet", () => appFlow.RetryPetModel(activePet));
             }
             loadedCatModel = catPath;
+            loadedOwnModel = ownModel != null && catPath == ownModel;
+            if (dogModel != null && loadedOwnModel) dogModel.SetActive(false);
             catWalkState = FirstState(catAnimation);
             walkingHuman = new GameObject("WalkingHuman");
             walkingHuman.transform.SetParent(humanRoot, false);

@@ -78,6 +78,8 @@ Owner: run CatMe > Rebuild With Last Seed, read the Console's ground check, and 
 
 ### L7. Dogs get their own model (audit 6; task 3 below)
 
+**Code done 2026-10-04 (cloud, not compiled):** dogs download a model like cats (`OnCreate` destination, `OnCreated` copies it to the pet's folder; restore and retry already handled every species); the garden loads the active pet's own GLB for cats and dogs (`PetModelChoice`), scaled to 0.72 m for dogs, driven by its one walk clip like the cat; the corgi appears only for a dog without a model, and switching pets reloads when the model changes. The server stays dog-off (`GENERATION_DOGS` unset): the owner tests with a stand-in dog GLB in Storage `fixtures/` and a local server. Tests: `DogModelTests` (4).
+
 ### L8. Photo tips and crash reports (audit 28, 23)
 - Pet photo tips: "Their whole body, nose to tail", "Lots of light", "Only your pet".
 - Add Firebase Crashlytics and a few funnel events (onboarding step reached, creation result and reason, time to ready, first walk finished); update the privacy policy draft.
