@@ -27,6 +27,7 @@ Dogs still don't come out right. Trace one dog creation through every hop and ma
 
 ## F4. Double person (known bug)
 Two person models render on top of each other. Cause: `ReloadCharactersFromPhoneStorage` (`Garden/GardenCompanionDemo.cs`) can run several times in parallel (called from `CatMeAppFlow.cs` lines ~156, ~219, ~232, ~553 and `GardenCompanionDemo.cs:90`); each finishes and adds a `WalkingHuman`. Fix: one reload at a time with a single queued follow-up; `LoadCharacters` clears existing person and pet children before adding. EditMode test with a fake loader.
+- **Done in code (2026-10-04, not compiled):** `ReloadGate` lets one reload run at a time (the first load counts) and folds any requests during it into one follow-up; `LoadCharacters` starts by detaching and destroying the old person and pet. Callers are unchanged. Tests: `ReloadGateTests` (2).
 
 ## F5. Camera: user controls it, the game stops moving it
 The camera "moves so much" and feels random. Replace the automatic behaviour with player control, like a third-person game:

@@ -155,7 +155,9 @@ namespace CatMe.Garden
                 ball = Instantiate(ballPrefab).transform;
                 ball.name = "FetchBall";
                 ball.gameObject.SetActive(false);
-                await LoadCharacters();
+                reloadGate.Request();   // the first load counts as a reload, so nothing else loads characters at the same time
+                try { await LoadCharacters(); }
+                finally { if (reloadGate.Finished()) StartCoroutine(ReloadLoop()); }
                 journey = gameObject.AddComponent<JourneyExperience>();
                 journey.SessionMode = CatMe.Session.SessionDirector.PlacesAvailable;
                 journey.Initialize(this, humanRoot, catRoot, gardenCamera.GetComponent<Camera>(), canvasRoot, status);
@@ -261,6 +263,7 @@ namespace CatMe.Garden
 
         private async Task LoadCharacters()
         {
+            ClearCharacters();   // never add a second person or pet next to the old ones
             string folder = Path.Combine(Application.streamingAssetsPath, GardenAssets);
             string savedCat = DeviceBridge.CatModelPath;
             string savedHuman = DeviceBridge.HumanModelPath;
@@ -318,22 +321,48 @@ namespace CatMe.Garden
             Debug.Log($"[CatMe][Garden] Active local companions loaded | cat={Path.GetFileName(catPath)} | human={Path.GetFileName(humanPath)}.");
         }
 
+        // F4 (double person): reloads used to run in parallel, each adding a WalkingHuman. Now one runs at a time, and any number
+        // of requests while it runs become one follow-up reload.
+        private readonly ReloadGate reloadGate = new ReloadGate();
+
+        /// <summary>Reload the pet and person from the phone. Safe to call any number of times; StartCoroutine on it as before.</summary>
         public IEnumerator ReloadCharactersFromPhoneStorage()
         {
-            if (catRoot != null) DestroyChildren(catRoot);
-            if (humanRoot != null) DestroyChildren(humanRoot);
+            if (reloadGate.Request()) StartCoroutine(ReloadLoop());
+            yield break;
+        }
+
+        private IEnumerator ReloadLoop()
+        {
+            do
+            {
+                ClearCharacters();
+                yield return null;
+                Task load = LoadCharacters();
+                while (!load.IsCompleted) yield return null;
+                if (load.IsFaulted)
+                {
+                    Debug.LogException(load.Exception, this);
+                    SetStatus("Your new character was saved, but the garden could not reload it yet.");
+                }
+            }
+            while (reloadGate.Finished());
+        }
+
+        // Removes the pet and person models at once (detached first, so nothing counts them before Destroy runs).
+        private void ClearCharacters()
+        {
+            if (catRoot != null) DetachAndDestroyChildren(catRoot);
+            if (humanRoot != null) DetachAndDestroyChildren(humanRoot);
             catAnimation = null; humanWalkAnimation = null; humanCallAnimation = null;
             catWalkState = null; humanWalkState = null; sitState = null; beckonState = null;
             walkingHuman = null; callingHuman = null; humanHand = null;
             follow = false; calling = false; fetching = false;
-            yield return null;
-            Task load = LoadCharacters();
-            while (!load.IsCompleted) yield return null;
-            if (load.IsFaulted)
-            {
-                Debug.LogException(load.Exception, this);
-                SetStatus("Your new character was saved, but the garden could not reload it yet.");
-            }
+        }
+
+        private static void DetachAndDestroyChildren(Transform root)
+        {
+            for (int i = root.childCount - 1; i >= 0; i--) { var child = root.GetChild(i); child.SetParent(null, false); child.gameObject.SetActive(false); Destroy(child.gameObject); }
         }
 
         private static void DestroyChildren(Transform root)
@@ -1290,6 +1319,27 @@ namespace CatMe.Garden
             pointerId = int.MinValue;
             Rest();
             owner?.SetMove(Vector2.zero);
+        }
+    }
+
+    /// <summary>One reload at a time, with at most one queued follow-up (F4). Pure, so it is tested.</summary>
+    internal sealed class ReloadGate
+    {
+        public bool Running { get; private set; }
+        public bool Queued { get; private set; }
+
+        /// <summary>Returns true when the caller should start a reload now; otherwise one follow-up is queued.</summary>
+        public bool Request()
+        {
+            if (Running) { Queued = true; return false; }
+            Running = true; return true;
+        }
+
+        /// <summary>Call when a reload ends. Returns true when the queued follow-up should run now (still Running).</summary>
+        public bool Finished()
+        {
+            if (Queued) { Queued = false; return true; }
+            Running = false; return false;
         }
     }
 }
