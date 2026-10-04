@@ -73,6 +73,7 @@ Add a **Go home** action to the paw menu next to Ball, Roam and Call (same size 
 
 ## F10. Sprint button
 A **Sprint** button near the joystick (above it, smaller than the joystick, inside the safe area). Hold to walk about 1.8× faster (or tap to toggle; pick hold and document it). The pet speeds up to keep pace; footstep pace and walk-clip speed follow so feet don't slide. Hidden inside rooms and the tent. Haptic tap on start.
+- **Done in code (2026-10-04, not compiled):** **hold** to sprint (letting go always walks again): `SprintButton`, 120 round on Paper with a walk icon and "Sprint", 230 above the stick's resting spot inside the safe area. The person moves 1.8x and their walk clip plays 1.8x; a following pet's speed and catch-up speeds scale by the same factor, with its walk clip allowed to speed up to match. Hidden (and released) in the house and the tent, hidden with the other controls outside the garden; a light tap when it starts. Tests: `SprintTests` (2).
 
 ## F11. Pinch in to a close-up
 Extend F5's pinch zoom: pinching in past the normal minimum moves to a **close-up** (about 0.9 m) that frames the player's face and the pet together; at the closest step the camera eases its look target from the body to head height. Pinch out returns to the normal range. Turn depth of field on only in close-up (off with Reduce motion). Clamp so the camera never enters the player or the pet; collision still wins.

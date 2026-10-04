@@ -66,6 +66,10 @@ namespace CatMe.Garden
         private float curiosityUntil;
         private float movementYaw;
         private bool movementLatched;
+        /// <summary>F10: held Sprint button (hold, not toggle: let go and you walk again).</summary>
+        public bool Sprinting { get; private set; }
+        public float SprintFactor => Sprinting ? SprintButton.Factor : 1f;
+        internal void SetSprinting(bool on) { if (on && !Sprinting) CatMe.World.Haptics.Tap(); Sprinting = on; }
         private float waitHintAt;
         private Vector3 scriptedWalk;
         private bool unboundedWorld;
@@ -189,7 +193,7 @@ namespace CatMe.Garden
                 if (movement.sqrMagnitude > 1f) movement.Normalize();
                 // Walk slower while the pet is far behind, and say so once in a while, so it never feels like the stick broke.
                 bool petFarBehind = follow && catRoot != null && Vector3.Distance(catRoot.position, humanRoot.position) > 5f;
-                float ownerWalkSpeed = petFarBehind ? .7f : 1.1f;
+                float ownerWalkSpeed = (petFarBehind ? .7f : 1.1f) * SprintFactor;
                 if (petFarBehind && combinedInput.sqrMagnitude > .04f && Time.unscaledTime > waitHintAt)
                 { waitHintAt = Time.unscaledTime + 45f; SetStatus("Slowing down so " + CatMe.Pets.PetRoster.NameForText() + " can catch up."); }
                 Vector3 beforeMove = humanRoot.position;
@@ -206,7 +210,7 @@ namespace CatMe.Garden
                         if (humanWalkState != null) humanWalkAnimation.Play(humanWalkState.name);
                     }
                     humanRoot.rotation = Quaternion.Slerp(humanRoot.rotation, Quaternion.LookRotation(movement), 10f * Time.deltaTime);
-                    if (humanWalkState != null) humanWalkState.speed = Mathf.Clamp(movement.magnitude, 0.5f, 1.2f);
+                    if (humanWalkState != null) humanWalkState.speed = Mathf.Clamp(movement.magnitude, 0.5f, 1.2f) * SprintFactor;   // feet keep pace when sprinting
                 }
                 if (humanWalkState != null) humanWalkState.enabled = !calling && movement.sqrMagnitude > 0.01f;
             }
@@ -505,7 +509,7 @@ namespace CatMe.Garden
             if (catWalkState != null) catWalkState.speed = fetching ? 1.15f : follow || calling ? 1f : .75f;
             if (delta.magnitude > 0.06f)
             {
-                float catSpeed = fetching ? 1.2f : follow || calling ? 1.18f : 0.48f;
+                float catSpeed = (fetching ? 1.2f : follow || calling ? 1.18f : 0.48f) * (follow ? SprintFactor : 1f);   // keeps pace with a sprint
                 if (!fetching && !calling)
                 {
                     // Always stay near the owner and mostly ahead: if the cat is behind or level it hurries past, and the further away
@@ -513,13 +517,13 @@ namespace CatMe.Garden
                     Vector3 offset = catRoot.position - humanRoot.position; offset.y = 0f;
                     float lead = Vector3.Dot(offset, humanRoot.forward), distance = offset.magnitude;
                     float leash = behavior.Leash;
-                    if (lead < .4f) catSpeed = Mathf.Max(catSpeed, 1.9f * behavior.Pace);
-                    if (distance > leash) catSpeed = Mathf.Max(catSpeed, 2.2f * behavior.Pace);
-                    else if (distance > leash * .67f) catSpeed = Mathf.Max(catSpeed, 1.6f * behavior.Pace);
+                    if (lead < .4f) catSpeed = Mathf.Max(catSpeed, 1.9f * behavior.Pace * SprintFactor);
+                    if (distance > leash) catSpeed = Mathf.Max(catSpeed, 2.2f * behavior.Pace * SprintFactor);
+                    else if (distance > leash * .67f) catSpeed = Mathf.Max(catSpeed, 1.6f * behavior.Pace * SprintFactor);
                     if (curiosityPlay && Time.time < curiosityUntil) catSpeed = Mathf.Max(catSpeed, 1.5f + .35f * Mathf.Sin(Time.time * 5f)); // bouncy, walk clip only
                 }
                 // Longer strides on a bigger cat: play the walk clip slower per metre so the paws do not skate.
-                if (catWalkState != null) catWalkState.speed = Mathf.Clamp(catSpeed / (1.18f * CompanionScaleStandards.CatScale), .55f, 1.7f);
+                if (catWalkState != null) catWalkState.speed = Mathf.Clamp(catSpeed / (1.18f * CompanionScaleStandards.CatScale), .55f, 1.7f * SprintFactor);
                 MoveGrounded(catRoot, delta.normalized * catSpeed * Time.deltaTime, 0.16f * CompanionScaleStandards.CatScale, CompanionScaleStandards.CatHeightMeters);
                 catRoot.rotation = Quaternion.Slerp(catRoot.rotation, Quaternion.LookRotation(delta), 8f * Time.deltaTime);
                 if (catWalkState != null) catWalkState.enabled = true;
@@ -923,6 +927,7 @@ namespace CatMe.Garden
             status = MakeLabel(statusPanel.transform, "GardenStatus", "", Vector2.zero, Vector2.one, Vector2.zero, new Vector2(-32f, -12f), 20);
             status.color = CatMeUIStyle.Ink;
             CreateMoveJoystick(canvas.transform);
+            SprintButton.Create(canvas.transform, this);
             // Cat button (opens the fan), Pause and Camera: round glass controls in the thumbs' reach.
             var catBtn = UiKit.IconButton(canvas.transform, "", Vector2.zero, ToggleCatTray, "Cat action entry");
             var catRect = (RectTransform)catBtn.transform; catRect.anchorMin = catRect.anchorMax = new Vector2(1f, 0f); catRect.sizeDelta = new Vector2(PawLayout.Size, PawLayout.Size);
@@ -1420,5 +1425,56 @@ namespace CatMe.Garden
             rect.anchorMin = rect.anchorMax = new Vector2(1f, 0f);
             rect.anchoredPosition = PawLayout.Centre(lastSafe, lastScreen, canvas.rect.size);
         }
+    }
+
+    /// <summary>
+    /// F10: hold to sprint (about 1.8x). Sits above the joystick's resting spot inside the safe area, smaller than the stick, and
+    /// hides inside rooms and the tent. Hold rather than toggle, so letting go always returns to walking.
+    /// </summary>
+    internal sealed class SprintButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
+    {
+        public const float Factor = 1.8f, Size = 120f;
+        GardenCompanionDemo owner; Image disc; Rect lastSafe; Vector2 lastScreen; CatMe.Session.Interactions rooms; float nextLookup;
+
+        public static void Create(Transform canvas, GardenCompanionDemo demo)
+        {
+            var go = new GameObject("Sprint action", typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(canvas, false);
+            var rect = (RectTransform)go.transform; rect.sizeDelta = new Vector2(Size, Size); rect.anchorMin = rect.anchorMax = Vector2.zero;
+            var img = go.GetComponent<Image>(); img.sprite = UiKit.Circle; img.color = new Color(CatMeUIStyle.Paper.r, CatMeUIStyle.Paper.g, CatMeUIStyle.Paper.b, .85f);
+            UiKit.Icon(go.transform, "walk", new Vector2(0f, 10f), 52f, CatMeUIStyle.SageDeep);
+            UiKit.Label(go.transform, "Sprint", 22, CatMeUIStyle.Ink, new Vector2(0f, -36f), new Vector2(110f, 30f), FontStyle.Bold, TextAnchor.MiddleCenter, "Caption");
+            var button = go.AddComponent<SprintButton>(); button.owner = demo; button.disc = img;
+        }
+
+        /// <summary>Centre above the stick's resting spot: the same x, 230 higher, inside the safe area.</summary>
+        public static Vector2 Position(Rect safe, Vector2 screen, Vector2 canvas)
+        {
+            if (screen.x <= 0f || screen.y <= 0f) return new Vector2(200f, 450f);
+            float sx = canvas.x / screen.x, sy = canvas.y / screen.y;
+            float left = safe.xMin * sx, bottom = safe.yMin * sy, height = safe.height * sy;
+            float stickY = bottom + Mathf.Max(height * MobileGardenJoystick.RestHeight, JoystickResponse.Travel);
+            return new Vector2(left + 200f, stickY + 230f);
+        }
+
+        void Update()
+        {
+            if (Screen.safeArea != lastSafe || new Vector2(Screen.width, Screen.height) != lastScreen)
+            {
+                lastSafe = Screen.safeArea; lastScreen = new Vector2(Screen.width, Screen.height);
+                var canvas = transform.parent as RectTransform;
+                if (canvas != null) ((RectTransform)transform).anchoredPosition = Position(lastSafe, lastScreen, canvas.rect.size);
+            }
+            if (Time.unscaledTime >= nextLookup) { nextLookup = Time.unscaledTime + .5f; if (rooms == null) rooms = FindAnyObjectByType<CatMe.Session.Interactions>(); }
+            bool indoors = rooms != null && rooms.Indoors;
+            if (disc != null) disc.enabled = !indoors;
+            foreach (Transform child in transform) child.gameObject.SetActive(!indoors);
+            if (indoors && owner != null && owner.Sprinting) owner.SetSprinting(false);
+        }
+
+        public void OnPointerDown(PointerEventData e) { if (disc != null && disc.enabled) { owner?.SetSprinting(true); transform.localScale = Vector3.one * .94f; } }
+        public void OnPointerUp(PointerEventData e) { owner?.SetSprinting(false); transform.localScale = Vector3.one; }
+        public void OnPointerExit(PointerEventData e) { }
+        void OnDisable() { owner?.SetSprinting(false); transform.localScale = Vector3.one; }
     }
 }

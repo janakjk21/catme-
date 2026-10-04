@@ -323,6 +323,8 @@ namespace CatMe.Session
         // ---- F9: "Go home" / "Go outside" from the paw menu ------------------------------------------------------
 
         public bool InHouse => state == State.InHouse;
+        /// <summary>In the house or the tent (sprint is hidden there).</summary>
+        public bool Indoors => state == State.InHouse || state == State.InRoom;
         /// <summary>The paw menu's label for the home action.</summary>
         public string HomeActionLabel => state == State.InHouse ? "Go outside" : "Go home";
         public const float WalkHomeMax = 14f, WalkHomeSeconds = 18f;

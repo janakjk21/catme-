@@ -762,7 +762,7 @@ namespace CatMe.Garden
         {
             garden.SetGameplayHudVisible(visible);
             garden.SetInputBlocked(!visible);
-            string[] controlNames = { "Movement joystick", "Cat action entry", "Pause action", "Camera action", "Quiet garden hint" };
+            string[] controlNames = { "Movement joystick", "Sprint action", "Cat action entry", "Pause action", "Camera action", "Quiet garden hint" };
             foreach (string name in controlNames)
             {
                 Transform item = canvasRoot.Find(name);
