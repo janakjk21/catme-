@@ -8,6 +8,8 @@
 4. **Phone.** Anything touching input, camera, photos, sign-in, performance or layout is checked on a physical iPhone before the milestone is called done.
 5. **Server.** `npx vitest run` in `worntag-api` passes after any server change.
 
+EditMode tests in `Assets/CatMe/Tests` cover server-pet roster merging, mobile API error messages, generated-character scale calculations, and resuming an existing creation without another create request. Run them from Test Runner before the Play Mode checklist.
+
 ## Editor checklist (onboarding)
 
 - [ ] Login shows; Try it free goes to Cat or dog.

@@ -36,7 +36,13 @@ namespace CatMe.Onboarding
         const int MaxSide = 1536;
 
         readonly IMobileApi api;
-        public CreationClient(IMobileApi api) { this.api = api ?? throw new ArgumentNullException(nameof(api)); }
+        readonly Func<int, Task> wait;
+        public CreationClient(IMobileApi api) : this(api, Task.Delay) { }
+        public CreationClient(IMobileApi api, Func<int, Task> wait)
+        {
+            this.api = api ?? throw new ArgumentNullException(nameof(api));
+            this.wait = wait ?? throw new ArgumentNullException(nameof(wait));
+        }
 
         [Serializable] sealed class Pending { public string photo, petKey, ownerKey, petId; }
         public static string PendingPetId
@@ -61,7 +67,7 @@ namespace CatMe.Onboarding
                 CreationStatus owner = await SafeOwnerAsync();
                 if (owner != null && owner.status != "failed" && owner.status != "rejected")
                 {
-                    for (int i = 0; i < 900 && owner.status != "ready"; i++) { await Task.Delay(2000); owner = await SafeOwnerAsync(); }
+                    for (int i = 0; i < 900 && owner.status != "ready"; i++) { await wait(2000); owner = await SafeOwnerAsync(); }
                     if (owner?.status == "ready" && !string.IsNullOrEmpty(owner.modelUrl) && !string.IsNullOrEmpty(ownerModelDestination))
                     { await api.DownloadFileAsync(owner.modelUrl, ownerModelDestination, null); result.ownerModelSaved = true; }
                 }
@@ -118,7 +124,7 @@ namespace CatMe.Onboarding
                     {
                         owner = await SafeOwnerAsync();
                         if (owner != null && (owner.status == "ready" || owner.status == "failed" || owner.status == "rejected")) break;
-                        await Task.Delay(2000);
+                        await wait(2000);
                     }
                     if (owner != null && owner.status == "ready" && !string.IsNullOrEmpty(owner.modelUrl) && !string.IsNullOrEmpty(request.ownerModelDestination))
                     {
@@ -153,7 +159,7 @@ namespace CatMe.Onboarding
                 pet = await api.GetPetAsync(petId);
                 if (pet != null && !string.IsNullOrEmpty(pet.stage)) report?.Invoke(pet.stage, null);
                 if (pet != null && (pet.status == "ready" || pet.status == "failed" || pet.status == "rejected")) break;
-                await Task.Delay(2000);
+                await wait(2000);
             }
             return pet;
         }

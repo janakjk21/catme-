@@ -32,7 +32,15 @@ namespace CatMe.Pets
         static Save data;
         public static event Action Changed;
 
-        static string Folder => Path.Combine(Application.persistentDataPath, "Profiles", "local-guest");
+        static string Folder => Path.Combine(StorageRoot, "Profiles", "local-guest");
+        static string StorageRoot =>
+#if UNITY_EDITOR
+            string.IsNullOrEmpty(editorStorageRoot) ? Application.persistentDataPath : editorStorageRoot;
+        static string editorStorageRoot;
+        public static void SetStorageRootForTests(string path) { editorStorageRoot = path; Reload(); }
+#else
+            Application.persistentDataPath;
+#endif
         static string FilePath => Path.Combine(Folder, "pets-v1.json");
         public static string PetFolder(string id) => Path.Combine(Folder, "pets", id);
 
