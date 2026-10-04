@@ -44,7 +44,36 @@ Do not try to break, overload or reverse-engineer the app or our server, get aro
 
 ## 5. Purchases
 
-In-app purchases are not offered at present. We will update these terms before offering paid features.
+WornTag is a paid app. Making pets needs an active **monthly subscription**, which **renews automatically** until you cancel it.
+
+**Plans** (prices in your App Store currency, including any VAT; they may differ by country):
+
+| Plan | Price | Each month you can make |
+|---|---|---|
+| Solo | $4.99 / £4.99 a month | your first pet and your 3D self in the first month, then 1 new pet or 1 re-make of an existing pet |
+| Plus | $7.99 / £7.99 a month | 3 new pets and 1 re-make |
+| Family | $12.99 / £12.99 a month | 6 new pets and 3 re-makes |
+
+A first-month introductory price may be offered; the App Store shows it, and the regular price that follows, before you confirm.
+
+**Extra pet** ($2.99 / £2.99, one-time): makes one more pet on any plan. It is used up when the pet is made and is not a subscription.
+
+**How billing works**
+- Payment is taken by **Apple** to your Apple Account when you confirm the purchase. We never see or store your card details.
+- **Your subscription renews automatically** each month at the then-current price, unless you turn off auto-renew **at least 24 hours before** the end of the current period. Your account is charged for renewal within the 24 hours before the period ends.
+- **To cancel**, go to **Settings > [your name] > Subscriptions** on your iPhone or iPad, or tap **Manage subscription** in WornTag. Cancelling stops the next renewal; you keep access until the end of the period you've paid for.
+- **Monthly allowances** (new pets and re-makes) reset at each renewal and do not roll over. Pets you've already made stay yours while you're subscribed.
+- **Price changes:** if we raise a price, Apple tells you in advance and, where the law requires, asks you to agree before it applies.
+- **Refunds** are handled by Apple under its terms; request one at reportaproblem.apple.com. This does not affect your legal rights.
+- **Restore purchases:** if you reinstall or move to a new phone, sign in to the same account and tap **Restore purchases**.
+
+**When a subscription ends**
+- Your pets **fall asleep**: the garden, room and walks are locked, and you can't make new pets.
+- **Nothing is deleted straight away.** If you subscribe again within **90 days**, everything comes back exactly as it was.
+- After 90 days without a subscription, we delete your photos, 3D models and pet details. We email or notify you about **7 days before**, where we can. You can delete your data sooner yourself at any time (Settings > Account > Your data).
+- Extra pets you've bought but not used stay available on your account.
+
+**Your right to cancel.** Because making a pet starts straight away after purchase, you agree when you buy that the digital content is supplied immediately, which ends the 14-day cancellation right for that content under UK consumer law. Your other legal rights (for example if the service is faulty) are not affected.
 
 ## 6. The service may change
 
@@ -56,7 +85,7 @@ Nothing in these terms limits liability that cannot be limited by law, including
 
 ## 8. Ending
 
-You can stop at any time by deleting your account. We may suspend or close an account that breaks these terms, and will tell you why where we can.
+You can stop at any time by cancelling your subscription (section 5) or deleting your account. **Deleting your account does not cancel your Apple subscription**; cancel it in Settings > Subscriptions as well. We may suspend or close an account that breaks these terms, and will tell you why where we can.
 
 ## 9. Law
 
