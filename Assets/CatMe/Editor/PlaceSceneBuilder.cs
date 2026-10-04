@@ -163,13 +163,23 @@ namespace CatMe.Editor
                     PlaceFrom(shrubSources, new Vector3(side * Next(5.6f, 6.5f), 0, Next(-3.5f, 10f)), Next(0, 360), Next(.7f, 1.0f), dressing);
                     PlaceFrom(fernSources, new Vector3(side * Next(4.4f, 6.4f), 0, Next(-3.5f, 10f)), Next(0, 360), Next(.8f, 1.2f), dressing);
                 }
-                for (int i = 0; i < 190; i++) PlaceProp(Ghibli + Pick(GhibliFlowers) + ".prefab", dressing, new Vector3((i % 2 == 0 ? -1f : 1f) * Next(1.9f, 6.5f), 0, Next(-3.5f, 10.2f)), Next(0, 360), -Next(.35f, .7f), Blocker.None);
-                for (int i = 0; i < 36; i++) PlaceFrom(flowerSources, new Vector3((i % 2 == 0 ? -1f : 1f) * Next(2.2f, 6.4f), 0, Next(-3.5f, 10f)), Next(0, 360), 1f, dressing);
+                // Fewer, more varied flowers (audit 29): none in the strip in front of the house (where the white wedges were seen,
+                // audit 27a), none on the path edge, and tall ones only along the walls, away from the camera's side of the path.
+                for (int i = 0; i < 110; i++)
+                {
+                    Vector3 at = new Vector3((i % 2 == 0 ? -1f : 1f) * Next(2.6f, 6.5f), 0, Next(-3.5f, 10.2f));
+                    if (at.z < 1f && Mathf.Abs(at.x) < 4.5f) continue;
+                    string flower = Pick(GhibliFlowers); if (rng.Next(3) == 0) flower = flower.Replace("_1", "_2");
+                    if (AssetDatabase.LoadAssetAtPath<GameObject>(Ghibli + flower + ".prefab") == null) flower = Pick(GhibliFlowers);
+                    PlaceProp(Ghibli + flower + ".prefab", dressing, at, Next(0, 360), -Next(.3f, .8f), Blocker.None);
+                }
+                for (int i = 0; i < 24; i++) PlaceFrom(flowerSources, new Vector3((i % 2 == 0 ? -1f : 1f) * Next(4.6f, 6.4f), 0, Next(2f, 10f)), Next(0, 360), Next(.8f, 1.1f), dressing);
                 for (int i = 0; i < 8; i++) PlaceFrom(stepSources, new Vector3(Mathf.Sin(i) * .3f, 0, -2 + i * 1.5f), Next(-20, 20), 1f, dressing);
                 PlaceTree(new Vector3(-5.2f, 0, 0f), 1.15f); PlaceTree(new Vector3(5.4f, 0, 8.2f), 1.05f);
                 DressProps(rocks: 0, shrubs: 3, flowers: 70, grass: 24, trees: 0, xRange: 6f, zFrom: -3.5f, zTo: 10f, avoidHalf: 1.7f);   // no loose boulders on the lawn
                 EdgeDressing(p, -3f, 10f, 1.4f, 1.25f);
                 ClearAround(OnGround(new Vector3(-4f, 0, 6.5f)), 2.4f, null);   // planting scattered after the pond must not land in it
+                ReportSuspiciousGround(new Vector3(0f, 0f, -2.5f), new Vector3(9f, 3f, 6f));   // audit 27a: list anything untextured in front of the house
 
                 // Surrounding woodland: a thick ring of cherry, pine and round trees outside the walls and beside the path beyond the gate.
                 for (int side = -1; side <= 1; side += 2)
@@ -194,10 +204,17 @@ namespace CatMe.Editor
                 for (float z = G + 7f; z < G + L; z += 8.7f)
                 {
                     float zEnd = Mathf.Min(z + 8.7f, G + L);
+                    float gapZ = G + L * .3f;
+                    if (gapZ > z - 1f && gapZ < zEnd + 1f) { zEnd = Mathf.Max(z, gapZ - 1.6f); if (zEnd - z > .5f) { if (AssetDatabase.LoadAssetAtPath<GameObject>(Ghibli + "Fence_02.prefab") != null) PlaceLine(Ghibli + "Fence_02.prefab", new Vector3(p.pathX(z) - 3.4f, 0, z), new Vector3(p.pathX(zEnd) - 3.4f, 0, zEnd), 1.0f); else Fence(new Vector3(p.pathX(z) - 3.4f, 0, z), new Vector3(p.pathX(zEnd) - 3.4f, 0, zEnd)); } continue; }
                     if (AssetDatabase.LoadAssetAtPath<GameObject>(Ghibli + "Fence_02.prefab") != null) PlaceLine(Ghibli + "Fence_02.prefab", new Vector3(p.pathX(z) - 3.4f, 0, z), new Vector3(p.pathX(zEnd) - 3.4f, 0, zEnd), 1.0f);
                     else for (float zz = z; zz < zEnd; zz += 3f) Fence(new Vector3(p.pathX(zz) - 3.4f, 0, zz), new Vector3(p.pathX(zz + 3f) - 3.4f, 0, zz + 3f));
                 }
-                BankBlocker(p, -3.5f, G + 1f, G + L + 5f); // exactly on the fence line: nobody can step past the fence toward the water
+                // One place where the pet can reach the water (audit 16): a short jetty through a gap in the fence.
+                float accessZ = G + L * .3f;
+                BankBlocker(p, -3.5f, G + 1f, accessZ - 1.5f);
+                BankBlocker(p, -3.5f, accessZ + 1.5f, G + L + 5f); // exactly on the fence line: nobody can step past the fence toward the water
+                RiverAccess(p, accessZ);
+                PathDetail(p, G + 2f, G + L);
                 Bench(new Vector3(p.pathX(G + 14f) + 3.2f, 0, G + 14f), 90f);
                 Bench(new Vector3(p.pathX(G + L * .22f) + 3.2f, 0, G + L * .22f), 90f);
                 Lookout(p, G + L + 4f);
@@ -396,7 +413,7 @@ namespace CatMe.Editor
             var mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
             if (mat == null) { mat = new Material(Shader.Find("Universal Render Pipeline/Lit")); AssetDatabase.CreateAsset(mat, matPath); }
             mat.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(ArtFolder + "/Terrain/Path.png"));
-            mat.SetColor("_BaseColor", new Color(1.3f, 1.14f, .96f)); mat.SetFloat("_Smoothness", 0f); mat.SetFloat("_Metallic", 0f);
+            mat.SetColor("_BaseColor", new Color(1f, .92f, .8f)); mat.SetFloat("_Smoothness", 0f); mat.SetFloat("_Metallic", 0f);   // above 1 it washed out to white in sun
             mat.EnableKeyword("_SPECULARHIGHLIGHTS_OFF"); mat.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
             EditorUtility.SetDirty(mat);
             var go = new GameObject("Gravel path", typeof(MeshFilter), typeof(MeshRenderer)); go.transform.SetParent(root, false);
@@ -500,7 +517,7 @@ namespace CatMe.Editor
         static Material BrickWall(float length, float height)
         {
             // The imported brick material rendered as flat cream; use weathered grey-brown stone with a mossy tint instead.
-            if (true) return Mat("Mossy stone wall", new Color(.42f, .43f, .36f));
+            if (true) return StoneWallTextured(length, height);
             var source = AssetDatabase.LoadAssetAtPath<Material>(BricksMaterialPath);
             if (source == null) return Mat("Stone wall", new Color(.62f, .58f, .50f));
             string key = "Bricks " + Mathf.RoundToInt(length) + "x" + Mathf.RoundToInt(height * 10);
@@ -642,7 +659,7 @@ namespace CatMe.Editor
             House(houseCentre);
             var o = new GameObject("Interact_House"); o.transform.SetParent(structures, false);
             o.transform.position = OnGround(new Vector3(0, 0, -3.2f)); o.transform.rotation = Quaternion.identity;
-            var ip = o.AddComponent<InteractionPoint>(); ip.kind = InteractionKind.EnterHouse; ip.label = "Get in the house"; ip.radius = 2.8f;
+            var ip = o.AddComponent<InteractionPoint>(); ip.kind = InteractionKind.EnterHouse; ip.label = "Go inside"; ip.radius = 2.8f;
             // The room is its own prefab (Resources/Rooms/HouseRoom_r2), loaded by the game when you get in, so it never depends on the big place scene.
             var roomRoot = new GameObject("HouseRoom").transform;
             var savedStructures = structures; var savedBlockers = blockers; structures = roomRoot; blockers = roomRoot;
@@ -816,7 +833,8 @@ namespace CatMe.Editor
 
         static void House(Vector3 centre)
         {
-            if (CountryHouse("House_Prefab.prefab", centre, 13f, 0f)) return;
+            // The green cottage reads as lived-in; the older weathered house is the fallback (audit 29).
+            if (CountryHouse("House_Green_Prefab.prefab", centre, 13f, 0f) || CountryHouse("House_Prefab.prefab", centre, 13f, 0f)) { HouseFrontDressing(centre); return; }
             var g = new GameObject("TEMP_Replaceable_House").transform; g.SetParent(structures, false);
             Vector3 b = OnGround(centre);
             Box("House front", g, b + new Vector3(0, 2.2f, 0), new Vector3(14, 4.4f, .5f), Plaster, true);
@@ -1074,20 +1092,139 @@ namespace CatMe.Editor
             pet.transform.rotation = Quaternion.LookRotation(new Vector3(fire.x - pet.transform.position.x, 0f, fire.z - pet.transform.position.z));
         }
 
+        // A short timber jetty from the path edge to the water, with rails on its sides and a stop at the end, so the pet can
+        // look into the river and the player can stand over it. A curiosity at the end draws the pet there.
+        static void RiverAccess(PlaceSpec s, float z)
+        {
+            float edgeX = s.pathX(z) - 3.2f, endX = s.pathX(z) - 6.4f;
+            float top = Mathf.Max(GroundAt(edgeX, z), -.35f) + .12f;
+            var g = new GameObject("River access").transform; g.SetParent(structures, false);
+            var deck = Box("Jetty deck", g, new Vector3((edgeX + endX) * .5f, top - .06f, z), new Vector3(Mathf.Abs(edgeX - endX), .12f, 1.4f), Timber, true);
+            deck.layer = LayerMask.NameToLayer(GroundProbe.WalkableLayerName);
+            for (float x = endX + .3f; x < edgeX; x += 1f)
+                for (int side = -1; side <= 1; side += 2)
+                    Box("Jetty post", g, new Vector3(x, top - .5f, z + side * .62f), new Vector3(.12f, 1.1f, .12f), Timber, false);
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Box("Jetty rail", g, new Vector3((edgeX + endX) * .5f, top + .55f, z + side * .66f), new Vector3(Mathf.Abs(edgeX - endX), .06f, .06f), Timber, false);
+                Box("Jetty side blocker", blockers, new Vector3((edgeX + endX) * .5f, top + .6f, z + side * .75f), new Vector3(Mathf.Abs(edgeX - endX), 1.2f, .12f), Stone, true).GetComponent<Renderer>().enabled = false;
+            }
+            Box("Jetty end blocker", blockers, new Vector3(endX - .1f, top + .6f, z), new Vector3(.15f, 1.2f, 1.5f), Stone, true).GetComponent<Renderer>().enabled = false;
+            var spot = new GameObject("River_Access"); spot.transform.SetParent(structures, false); spot.transform.position = new Vector3(endX + .5f, top, z);
+            Curiosity("River ripples", new Vector3(endX + .5f, 0, z), "river-ripples", "Watching the water go by.", PrimitiveType.Sphere, new Vector3(.12f, .02f, .12f), new Color(.5f, .7f, .78f));
+        }
+
+        // Path detail (audit 29): sunk stone slabs now and then, and small stones along both edges, so the walk isn't one flat strip.
+        static void PathDetail(PlaceSpec s, float zFrom, float zTo)
+        {
+            string slab = Ghibli + "Stone_Slab.prefab";
+            bool hasSlab = AssetDatabase.LoadAssetAtPath<GameObject>(slab) != null;
+            for (float z = zFrom + 4f; z < zTo; z += Next(7f, 11f))
+                if (hasSlab) PlaceProp(slab, dressing, new Vector3(s.pathX(z) + Next(-.4f, .4f), 0, z), Next(0, 360), -Next(.7f, 1f), Blocker.None);
+            for (float z = zFrom; z < zTo; z += Next(1.2f, 2.4f))
+                for (int side = -1; side <= 1; side += 2)
+                    if (rng.Next(3) != 0) PlaceProp(Ghibli + Pick(GhibliRocks) + ".prefab", dressing, new Vector3(s.pathX(z) + side * Next(1.15f, 1.45f), 0, z), Next(0, 360), Next(.1f, .22f), Blocker.None);
+        }
+
+        // Flower boxes under the windows and two planters by the door, so the cottage looks cared for.
+        static void HouseFrontDressing(Vector3 centre)
+        {
+            var house = structures.Find("Country house");
+            Bounds b = house != null ? Bounds(house.gameObject) : new Bounds(OnGround(centre), new Vector3(13f, 5f, 8f));
+            float front = b.max.z + .25f;
+            foreach (float x in new[] { -3.6f, 3.6f })
+            {
+                Vector3 at = new Vector3(centre.x + x, 0, front);
+                Vector3 g = OnGround(at);
+                Box("Flower box", structures, g + Vector3.up * .25f, new Vector3(1.6f, .4f, .45f), Mat("Painted planter", new Color(.32f, .45f, .52f)), false);
+                for (int i = 0; i < 4; i++) PlaceProp(Ghibli + Pick(GhibliFlowers) + ".prefab", dressing, at + new Vector3(-.6f + i * .4f, 0f, 0f), Next(0, 360), -.4f, Blocker.None);
+            }
+            foreach (float x in new[] { -1.4f, 1.4f })
+            {
+                Vector3 g = OnGround(new Vector3(centre.x + x, 0, front + .5f));
+                var pot = GameObject.CreatePrimitive(PrimitiveType.Cylinder); pot.name = "Door planter"; pot.transform.SetParent(structures, false);
+                pot.transform.position = g + Vector3.up * .25f; pot.transform.localScale = new Vector3(.55f, .25f, .55f);
+                pot.GetComponent<Renderer>().sharedMaterial = Mat("Terracotta", new Color(.66f, .38f, .26f)); Object.DestroyImmediate(pot.GetComponent<Collider>());
+                PlaceFrom(shrubSources, g + Vector3.up * .45f, Next(0, 360), .45f, structures);
+            }
+        }
+
+        // Grey-brown stone with mortar lines and moss, made once as a texture and tiled to the wall's size (audit 29: the wall was flat grey).
+        static Material StoneWallTextured(float length, float height)
+        {
+            string texPath = ArtFolder + "/Terrain/StoneWall.png";
+            if (!File.Exists(texPath))
+            {
+                const int n = 256; var t = new Texture2D(n, n, TextureFormat.RGB24, true);
+                var stone = new Color(.47f, .46f, .40f); var mortar = new Color(.30f, .30f, .27f); var moss = new Color(.33f, .42f, .24f);
+                for (int y = 0; y < n; y++) for (int x = 0; x < n; x++)
+                {
+                    int row = y / 32; float off = row % 2 == 0 ? 0f : 24f;
+                    float bx = Mathf.Repeat(x + off, 48f), by = y % 32;
+                    bool joint = bx < 2.5f || by < 2.5f;
+                    float noise = Mathf.PerlinNoise(x * .08f + row * 3.1f, y * .08f) * .5f + Mathf.PerlinNoise(x * .3f, y * .3f) * .5f;
+                    Color c = joint ? mortar : stone * (.82f + noise * .36f);
+                    float m = Mathf.PerlinNoise(x * .025f + 7f, y * .025f + 3f);
+                    if (y < 80) c = Color.Lerp(c, moss, Mathf.Clamp01((m - .45f) * 2.2f) * (1f - y / 80f));
+                    t.SetPixel(x, y, c);
+                }
+                t.Apply(); File.WriteAllBytes(texPath, t.EncodeToPNG()); Object.DestroyImmediate(t);
+                AssetDatabase.ImportAsset(texPath);
+            }
+            string key = "Stone wall " + Mathf.RoundToInt(length) + "x" + Mathf.RoundToInt(height * 10);
+            string path = ArtFolder + "/Materials/" + key + ".mat";
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (mat == null) { mat = new Material(Shader.Find("Universal Render Pipeline/Lit")); AssetDatabase.CreateAsset(mat, path); }
+            mat.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(texPath));
+            mat.SetTextureScale("_BaseMap", new Vector2(length / 1.6f, height / 1.6f));
+            mat.SetColor("_BaseColor", Color.white); mat.SetFloat("_Smoothness", .05f);
+            EditorUtility.SetDirty(mat);
+            return mat;
+        }
+
+        // Audit 27a: logs every renderer inside the box whose material has no texture and is near white, so the owner can see
+        // exactly which object makes the white wedges after a rebuild (Console: "[CatMe][Places] Suspicious").
+        static void ReportSuspiciousGround(Vector3 centre, Vector3 size)
+        {
+            var box = new Bounds(OnGround(centre), size);
+            int found = 0;
+            foreach (var r in root.GetComponentsInChildren<Renderer>(true))
+            {
+                if (!r.bounds.Intersects(box)) continue;
+                foreach (var m in r.sharedMaterials)
+                {
+                    if (m == null) { Debug.LogWarning("[CatMe][Places] Suspicious: " + PathOf(r.transform) + " has a missing material."); found++; continue; }
+                    bool textured = (m.HasProperty("_BaseMap") && m.GetTexture("_BaseMap") != null) || (m.HasProperty("_MainTex") && m.GetTexture("_MainTex") != null);
+                    Color c = m.HasProperty("_BaseColor") ? m.GetColor("_BaseColor") : m.HasProperty("_Color") ? m.GetColor("_Color") : Color.white;
+                    bool shaderBroken = m.shader == null || m.shader.name == "Hidden/InternalErrorShader";
+                    if (shaderBroken || (!textured && c.r > .85f && c.g > .85f && c.b > .85f))
+                    { Debug.LogWarning("[CatMe][Places] Suspicious: " + PathOf(r.transform) + " uses " + m.name + " (" + (m.shader != null ? m.shader.name : "no shader") + ")."); found++; }
+                }
+            }
+            Debug.Log("[CatMe][Places] Ground check in front of the house: " + found + " suspicious renderer(s).");
+        }
+
+        static string PathOf(Transform t) { string path = t.name; while (t.parent != null) { t = t.parent; path = t.name + "/" + path; } return path; }
+
         static void Lantern(string name, Vector3 p)
         {
+            // A hanging lantern on a timber post with an arm (audit 29: the old one read as a beige cube on a grey post).
             Vector3 b = OnGround(p);
-            var lamp = PlaceProp(Ghibli + "Street_Lamp.prefab", structures, p, 0f, 2.3f, Blocker.Capsule);
-            if (lamp != null)
-            {
-                var light = new GameObject(name + " light"); light.transform.SetParent(structures, false); light.transform.position = b + Vector3.up * 2.0f;
-                var lampLight = light.AddComponent<Light>(); lampLight.type = LightType.Point; lampLight.range = 6f; lampLight.intensity = .8f; lampLight.color = new Color(1f, .72f, .42f); lampLight.shadows = LightShadows.None;
-                return;
-            }
-            Box(name + " post", structures, b + Vector3.up * .6f, new Vector3(.2f, 1.2f, .2f), Stone, true);
-            Box(name + " lamp", structures, b + Vector3.up * 1.35f, new Vector3(.35f, .4f, .35f), Mat("Lantern glow", new Color(1f, .8f, .5f), 0f, new Color(1.6f, 1f, .5f)), false);
-            var lg = new GameObject(name + " light"); lg.transform.SetParent(structures, false); lg.transform.position = b + Vector3.up * 1.5f;
-            var l = lg.AddComponent<Light>(); l.type = LightType.Point; l.range = 6f; l.intensity = .8f; l.color = new Color(1f, .72f, .42f); l.shadows = LightShadows.None;
+            var g = new GameObject(name); g.transform.SetParent(structures, false); g.transform.position = b;
+            var iron = Mat("Lantern iron", new Color(.16f, .15f, .14f), .35f);
+            Box(name + " post", g.transform, b + Vector3.up * 1.05f, new Vector3(.14f, 2.1f, .14f), Timber, true);
+            Box(name + " foot", g.transform, b + Vector3.up * .08f, new Vector3(.32f, .16f, .32f), Stone, false);
+            Box(name + " arm", g.transform, b + new Vector3(0f, 2.0f, .22f), new Vector3(.06f, .06f, .5f), Timber, false);
+            Vector3 hang = b + new Vector3(0f, 1.66f, .42f);
+            Box(name + " hook", g.transform, hang + Vector3.up * .27f, new Vector3(.02f, .12f, .02f), iron, false);
+            Box(name + " cap", g.transform, hang + Vector3.up * .19f, new Vector3(.26f, .05f, .26f), iron, false);
+            Box(name + " cap top", g.transform, hang + Vector3.up * .23f, new Vector3(.14f, .04f, .14f), iron, false);
+            Box(name + " base", g.transform, hang - Vector3.up * .17f, new Vector3(.22f, .04f, .22f), iron, false);
+            for (int sx = -1; sx <= 1; sx += 2) for (int sz = -1; sz <= 1; sz += 2)
+                Box(name + " frame", g.transform, hang + new Vector3(sx * .1f, 0f, sz * .1f), new Vector3(.025f, .34f, .025f), iron, false);
+            Box(name + " glass", g.transform, hang, new Vector3(.18f, .3f, .18f), Mat("Lantern glass", new Color(1f, .86f, .6f), .2f, new Color(1.5f, 1.0f, .45f)), false);
+            var lg = new GameObject("Night_" + name + " light"); lg.transform.SetParent(g.transform, false); lg.transform.position = hang;
+            var l = lg.AddComponent<Light>(); l.type = LightType.Point; l.range = 6.5f; l.intensity = .9f; l.color = new Color(1f, .72f, .42f); l.shadows = LightShadows.None;
         }
 
         static void Tent(Vector3 centre)

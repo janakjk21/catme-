@@ -44,3 +44,21 @@ Before release, check each pack's licence allows use in a paid mobile app, and r
 | `dog-eat` | eating |
 | `cat-eat` | eating (falls back to `cat_mewfood`) |
 
+
+## World sounds to add (Assets/CatMe/Audio/Resources/CatMeAudio)
+
+Launch task L6. The owner supplies these (licensed for a paid app, mono unless noted, OGG or WAV). Names are what the code loads or will load; files already in the folder are not listed.
+
+| File | Length | Used for | Status |
+|---|---|---|---|
+| `river-loop` | 20-40 s, seamless loop | the river along the walk; the builder already places a source by the bank (`PlaceSceneBuilder.River`) and `DayDirector` fades it | code ready, clip missing |
+| `footstep-grass-1..4` | under 0.4 s each | owner footsteps on the lawn and verges | needs clips, then a footstep player |
+| `footstep-gravel-1..4` | under 0.4 s each | owner footsteps on the path | needs clips |
+| `footstep-wood-1..4` | under 0.4 s each | the jetty, the house and the tent floor | needs clips |
+| `birds-morning` | 30-60 s loop | dawn to late morning (time 0 to 0.3) | needs clips |
+| `birds-day` | 30-60 s loop | midday to golden hour (0.3 to 0.6) | needs clips |
+| `insects-night` | 30-60 s loop | crickets after sunset (0.7 to 0.95) | needs clips |
+| `music-day` | 2-3 min loop, stereo | calm music by day; the Sound setting mutes it | needs clips |
+| `music-night` | 2-3 min loop, stereo | calm music at night | needs clips |
+| `rain-on-canvas` | 20-40 s loop | rain heard from inside the tent | needs clips |
+| `dog-bark`, `dog-bark-excited`, `dog-pant`, `dog-sigh`, `dog-eat` | see above | real dog recordings (the dog plays generated stand-ins today) | needs clips |

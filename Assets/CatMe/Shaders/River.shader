@@ -28,6 +28,8 @@ Shader "CatMe/River"
                 half4 _Deep, _Shallow, _Foam;
                 float _Speed, _RippleScale, _Sparkle;
             CBUFFER_END
+            // Set by DayDirector from the time of day, so the unlit water darkens at dusk and night. Unset (alpha 0) means no tint.
+            half4 _CatMeWaterTint;
 
             struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; };
             struct Varyings
@@ -82,6 +84,7 @@ Shader "CatMe/River"
                 float foam = smoothstep(0.86, 0.99, edge) * (0.55 + 0.45 * ripple);
                 colour = lerp(colour, _Foam.rgb, saturate(foam));
 
+                if (_CatMeWaterTint.a > 0.5) colour *= _CatMeWaterTint.rgb;
                 colour = MixFog(colour, input.fogFactor);
                 return half4(colour, 1);
             }

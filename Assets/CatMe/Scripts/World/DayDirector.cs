@@ -15,6 +15,7 @@ namespace CatMe.World
         const string TypeKey = "CatMe.World.DayType", TimeKey = "CatMe.World.Time", SavedAtKey = "CatMe.World.SavedAt";
         const float CycleSeconds = 1080f;
         const double NewDayAfterHours = 3.0;  // coming back after a break starts a fresh day
+        public const float NewDayStart = .12f;   // a new session starts in the morning
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void DefaultWind() { Shader.SetGlobalFloat("_CatMeWindScale", 1f); }
@@ -89,7 +90,10 @@ namespace CatMe.World
             return true;
         }
 
-        public void NewDay()
+        public void NewDay() => NewDay(NewDayStart);
+
+        /// <summary>Starts a new day at <paramref name="start"/>: morning for a new session, dawn when the night simply runs on.</summary>
+        void NewDay(float start)
         {
             bool hadDay = PlayerPrefs.HasKey(TypeKey);
             var previous = (DayType)PlayerPrefs.GetInt(TypeKey, -1);
@@ -100,7 +104,7 @@ namespace CatMe.World
                 Type = r < .40f ? DayType.Clear : r < .65f ? DayType.PartlyCloudy : r < .75f ? DayType.MistyMorning : r < .90f ? DayType.Showery : DayType.Rainy;
             }
             while (hadDay && Type == previous);
-            TimeOfDay = Type == DayType.MistyMorning ? .12f : 0f;
+            TimeOfDay = start;   // a new session starts in the morning, never at dawn (launch task L6)
             announcePending = true; announceAt = Time.time + 6f;
             Save();
             Debug.Log("[CatMe][World] New day: " + Type + ", starting at time " + TimeOfDay.ToString("F2"));
@@ -150,7 +154,7 @@ namespace CatMe.World
                 TimeOfDay += dt / CycleSeconds;
                 if (TimeOfDay >= 1f)
                 {
-                    NewDay(); Cloudiness = cloudTarget = TargetCloud(); ScheduleShower();
+                    NewDay(TimeOfDay - 1f); Cloudiness = cloudTarget = TargetCloud(); ScheduleShower();   // played through the night: dawn follows
                     announceAt = Time.time + 2f;
                 }
             }
@@ -209,7 +213,24 @@ namespace CatMe.World
             var mixed = PlaceLightingPreset.Lerp(basePreset, PlaceLightingPreset.Get("Overcast"), Cloudiness * .75f);
             if (Type == DayType.MistyMorning) { float mist = 1f - Mathf.InverseLerp(.12f, .4f, TimeOfDay); mixed.fogDensity += .012f * mist; mixed.fogColor = Color.Lerp(mixed.fogColor, new Color(.82f, .85f, .86f), .5f * mist); }
             TintMountains(basePreset);
+            Shader.SetGlobalColor("_CatMeWaterTint", WaterTint(TimeOfDay));
             return mixed;
+        }
+
+        /// <summary>
+        /// Multiplier for the unlit river and pond (River.shader): full colour by day, warmer and dimmer at sunset, dark blue at
+        /// night, so the water never glows neon after dark (audit 29).
+        /// </summary>
+        public static Color WaterTint(float t)
+        {
+            Color day = Color.white, sunset = new Color(.86f, .74f, .66f), night = new Color(.22f, .26f, .36f);
+            Color c = t < .12f ? Color.Lerp(night, day, t / .12f)
+                : t < .52f ? day
+                : t < .68f ? Color.Lerp(day, sunset, (t - .52f) / .16f)
+                : t < .80f ? Color.Lerp(sunset, night, (t - .68f) / .12f)
+                : night;
+            c.a = 1f;
+            return c;
         }
 
         static PlaceLightingPreset Blend(PlaceLightingPreset a, PlaceLightingPreset b, float t) => PlaceLightingPreset.Lerp(a, b, Mathf.SmoothStep(0f, 1f, t));

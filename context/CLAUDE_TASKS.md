@@ -66,6 +66,9 @@ Not done in L2: real icon family (owner supplies sprites, see `MENUS_AND_ACCOUNT
 - Done when: a new player reaches the garden within a minute of the selfie.
 
 ### L6. World fixes (audit 27a, 27b, 29, 16, 18)
+
+**Code done 2026-10-04 (cloud, not compiled, places not rebuilt):** 27a: the exact object can't be seen from here, so the builder now keeps flat flowers out of the strip in front of the house, stops the path material washing out to white (base colour was above 1), and logs every untextured near-white or broken-shader renderer in that area after a rebuild ("[CatMe][Places] Suspicious: ..."). 27b: only one UI input module stays on the EventSystem (a scene-saved StandaloneInputModule beside the Input System module read the same touches; legacy and new input are both enabled) and extra EventSystems from place scenes are switched off; the camera skips empty touch slots. New sessions start at 0.12 (morning); a night played through still runs into dawn. 29: green cottage first (old house as fallback) with flower boxes and door planters, procedural mossy stone texture on the garden walls, a built hanging lantern (light at night only), fewer and more varied flowers away from the path and the camera's side, path slabs and edge stones, water tinted by time of day (`DayDirector.WaterTint` to the `_CatMeWaterTint` global in `River.shader`). 16: a timber jetty through a gap in the riverside fence, with rails and invisible stops, and a curiosity at its end that draws the pet. Audio list for the owner in `docs/ASSETS.md` ("World sounds to add"). Tests: `WorldDayTests` (2).
+Owner: run CatMe > Rebuild With Last Seed, read the Console's ground check, and walk to the jetty.
 - Find and fix the white wedges on the ground in front of the house (27a).
 - Find the source of "Touch was already deallocated" (27b); `CompanionCamera.cs:272-275`, `World/CatPetInput.cs:36` are the touch readers.
 - A new day starts at morning (~0.12), not dawn.

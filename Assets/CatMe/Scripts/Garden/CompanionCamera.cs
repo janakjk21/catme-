@@ -330,8 +330,10 @@ namespace CatMe.Garden
             {
                 foreach (var touch in touchscreen.touches)
                 {
-                    int id = touch.touchId.ReadValue();
+                    // Skip empty touch slots: only read a touch while it is live (or ending this frame).
                     var phase = touch.phase.ReadValue();
+                    if (phase == UnityEngine.InputSystem.TouchPhase.None) continue;
+                    int id = touch.touchId.ReadValue();
                     Vector2 position = touch.position.ReadValue();
                     if (phase == UnityEngine.InputSystem.TouchPhase.Began && lookTouchId < 0 && (fpAnchor != null || position.x > Screen.width * .5f) && !OverUi(id))
                     { lookTouchId = id; lookLast = position; lookActive = true; lastLookInputAt = Time.unscaledTime; }

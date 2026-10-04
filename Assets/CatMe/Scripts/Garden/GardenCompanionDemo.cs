@@ -831,6 +831,13 @@ namespace CatMe.Garden
             var eventSystem = FindAnyObjectByType<EventSystem>();
             if (eventSystem == null) { eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule)).GetComponent<EventSystem>(); }
             else if (eventSystem.GetComponent<InputSystemUIInputModule>() == null) eventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
+            // One input module only. A scene-saved StandaloneInputModule next to the Input System one makes both read the same
+            // touches (legacy and new input are both enabled), a likely source of "Touch was already deallocated" (audit 27b).
+            foreach (var module in eventSystem.GetComponents<BaseInputModule>())
+                if (!(module is InputSystemUIInputModule)) { module.enabled = false; Destroy(module); }
+            // Every other EventSystem (from additively loaded place scenes) is switched off; only this one drives the UI.
+            foreach (var other in FindObjectsByType<EventSystem>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                if (other != eventSystem) other.gameObject.SetActive(false);
             var canvasObject = new GameObject("Garden HUD", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             Canvas canvas = canvasObject.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvasRoot = canvas.transform;
