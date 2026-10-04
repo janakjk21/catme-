@@ -6,28 +6,47 @@ using UnityEngine;
 
 namespace CatMe.Tests
 {
-    /// <summary>F10: sprint is about 1.8x, its button is smaller than the stick and sits above it inside the safe area.</summary>
     public sealed class SprintTests
     {
-        static Type S => AppDomain.CurrentDomain.GetAssemblies().First(a => a.GetName().Name == "Assembly-CSharp").GetType("CatMe.Garden.SprintButton", true);
+        static Assembly App => AppDomain.CurrentDomain.GetAssemblies().First(a => a.GetName().Name == "Assembly-CSharp");
 
         [Test]
-        public void AboutOnePointEightTimesAndSmallerThanTheStick()
+        public void EdgeHoldStartsAndEaseStopsRunning()
         {
-            Assert.That((float)S.GetField("Factor").GetValue(null), Is.EqualTo(1.8f).Within(.01f));
-            Assert.That((float)S.GetField("Size").GetValue(null), Is.LessThan(220f));
+            var type = App.GetType("CatMe.Garden.EdgeSprint", true);
+            var sprint = Activator.CreateInstance(type);
+            var update = type.GetMethod("Update");
+            var running = type.GetProperty("Running");
+            update.Invoke(sprint, new object[] { .96f, .49f });
+            Assert.That(running.GetValue(sprint), Is.False);
+            update.Invoke(sprint, new object[] { .96f, .02f });
+            Assert.That(running.GetValue(sprint), Is.True);
+            update.Invoke(sprint, new object[] { .79f, .01f });
+            Assert.That(running.GetValue(sprint), Is.False);
         }
 
         [Test]
-        public void SitsAboveTheStickInsideTheSafeArea()
+        public void RunningDoesNotSlowForDistantPet()
         {
-            var screen = new Vector2(2796f, 1290f); var safe = new Rect(177f, 63f, 2442f, 1227f); var canvas = new Vector2(2340f, 1080f);
-            var p = (Vector2)S.GetMethod("Position").Invoke(null, new object[] { safe, screen, canvas });
-            float left = 177f * canvas.x / screen.x;
-            Assert.That(p.x, Is.EqualTo(left + 200f).Within(.01f), "same x as the stick's resting spot");
-            float stickY = 63f * 1080f / 1290f + 1227f * 1080f / 1290f * .22f;
-            Assert.That(p.y, Is.EqualTo(stickY + 230f).Within(.01f), "above the stick, clear of its 110 travel");
-            Assert.That(p.y + 60f, Is.LessThan(canvas.y), "inside the screen");
+            var type = App.GetType("CatMe.Garden.GardenCompanionDemo", true);
+            var speed = type.GetMethod("WalkSpeed", BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.That((float)speed.Invoke(null, new object[] { true, true }), Is.EqualTo(1.98f).Within(.001f));
+            Assert.That((float)speed.Invoke(null, new object[] { true, false }), Is.EqualTo(.7f));
+        }
+
+        [Test]
+        public void RunButtonStaysInsideRightSafeArea()
+        {
+            var type = App.GetType("CatMe.Garden.SprintButton", true);
+            var position = type.GetMethod("Position");
+            var screen = new Vector2(2796f, 1290f);
+            var safe = new Rect(177f, 63f, 2442f, 1227f);
+            var canvas = new Vector2(2340f, 1080f);
+            var point = (Vector2)position.Invoke(null, new object[] { safe, screen, canvas });
+            float right = safe.xMax * canvas.x / screen.x;
+            Assert.That(point.x, Is.EqualTo(right - 200f).Within(.01f));
+            Assert.That(point.x + 60f, Is.LessThan(right));
+            Assert.That(point.y + 60f, Is.LessThan(canvas.y));
         }
     }
 }

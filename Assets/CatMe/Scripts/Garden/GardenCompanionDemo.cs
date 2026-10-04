@@ -68,8 +68,17 @@ namespace CatMe.Garden
         private bool movementLatched;
         /// <summary>F10: held Sprint button (hold, not toggle: let go and you walk again).</summary>
         public bool Sprinting { get; private set; }
+        readonly EdgeSprint edgeSprint = new EdgeSprint();
+        bool buttonSprint;
         public float SprintFactor => Sprinting ? SprintButton.Factor : 1f;
-        internal void SetSprinting(bool on) { if (on && !Sprinting) CatMe.World.Haptics.Tap(); Sprinting = on; }
+        internal void SetSprinting(bool on) { buttonSprint = on; RefreshSprint(); }
+        void RefreshSprint()
+        {
+            bool indoors = FindAnyObjectByType<CatMe.Session.Interactions>()?.Indoors == true;
+            bool next = !indoors && !inputBlocked && (buttonSprint || edgeSprint.Running);
+            if (next && !Sprinting) CatMe.World.Haptics.Tap();
+            Sprinting = next;
+        }
         private float waitHintAt;
         private Vector3 scriptedWalk;
         private bool unboundedWorld;
@@ -183,6 +192,8 @@ namespace CatMe.Garden
         {
             appFlow?.Tick(Time.unscaledDeltaTime);
             ReadMovement();
+            edgeSprint.Update(touchMoveInput.magnitude, Time.unscaledDeltaTime);
+            RefreshSprint();
             if (inputBlocked && scriptedWalk.sqrMagnitude < 0.01f) { moveInput = Vector2.zero; touchMoveInput = Vector2.zero; return; }
             if (humanRoot != null)
             {
@@ -193,8 +204,8 @@ namespace CatMe.Garden
                 if (movement.sqrMagnitude > 1f) movement.Normalize();
                 // Walk slower while the pet is far behind, and say so once in a while, so it never feels like the stick broke.
                 bool petFarBehind = follow && catRoot != null && Vector3.Distance(catRoot.position, humanRoot.position) > 5f;
-                float ownerWalkSpeed = (petFarBehind ? .7f : 1.1f) * SprintFactor;
-                if (petFarBehind && combinedInput.sqrMagnitude > .04f && Time.unscaledTime > waitHintAt)
+                float ownerWalkSpeed = WalkSpeed(petFarBehind, Sprinting);
+                if (petFarBehind && !Sprinting && combinedInput.sqrMagnitude > .04f && Time.unscaledTime > waitHintAt)
                 { waitHintAt = Time.unscaledTime + 45f; SetStatus("Slowing down so " + CatMe.Pets.PetRoster.NameForText() + " can catch up."); }
                 Vector3 beforeMove = humanRoot.position;
                 MoveGrounded(humanRoot, movement * (ownerWalkSpeed * Time.deltaTime), 0.24f, CompanionScaleStandards.OwnerHeightMeters);
@@ -667,6 +678,8 @@ namespace CatMe.Garden
 
         public void SetMove(Vector2 direction) { if (!inputBlocked) touchMoveInput = direction; }
         public void ClearMovement() { moveInput = touchMoveInput = Vector2.zero; }
+        internal static float WalkSpeed(bool petFarBehind, bool sprinting) =>
+            (petFarBehind && !sprinting ? .7f : 1.1f) * (sprinting ? SprintButton.Factor : 1f);
         public void SetInputBlocked(bool blocked) { inputBlocked = blocked; if (blocked) ClearMovement(); }
         private void OnApplicationPause(bool paused)
         {
@@ -1427,8 +1440,21 @@ namespace CatMe.Garden
         }
     }
 
+    internal sealed class EdgeSprint
+    {
+        float held;
+        public bool Running { get; private set; }
+        public void Update(float magnitude, float deltaTime)
+        {
+            if (magnitude < .8f) { Running = false; held = 0f; return; }
+            if (magnitude < .95f) { held = 0f; return; }
+            held += deltaTime;
+            if (held >= .5f) Running = true;
+        }
+    }
+
     /// <summary>
-    /// F10: hold to sprint (about 1.8x). Sits above the joystick's resting spot inside the safe area, smaller than the stick, and
+    /// F10: hold to sprint (about 1.8x). Sits on the right side inside the safe area, smaller than the stick, and
     /// hides inside rooms and the tent. Hold rather than toggle, so letting go always returns to walking.
     /// </summary>
     internal sealed class SprintButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
@@ -1452,9 +1478,9 @@ namespace CatMe.Garden
         {
             if (screen.x <= 0f || screen.y <= 0f) return new Vector2(200f, 450f);
             float sx = canvas.x / screen.x, sy = canvas.y / screen.y;
-            float left = safe.xMin * sx, bottom = safe.yMin * sy, height = safe.height * sy;
+            float right = safe.xMax * sx, bottom = safe.yMin * sy, height = safe.height * sy;
             float stickY = bottom + Mathf.Max(height * MobileGardenJoystick.RestHeight, JoystickResponse.Travel);
-            return new Vector2(left + 200f, stickY + 230f);
+            return new Vector2(right - 200f, stickY + 230f);
         }
 
         void Update()
