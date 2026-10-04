@@ -65,6 +65,12 @@ namespace CatMe.Session
         {
             active.found = true;
             if (!string.IsNullOrEmpty(active.keepsakeId)) SessionDirector.Instance.AddKeepsake(active.keepsakeId);
+            if (active.keepsakeId == "lookout-keepsake")
+            {
+                garden.Voice?.Say(Pets.Moment.GoHome, 3.4f, true);
+                foreach (var point in SessionDirector.Instance.CurrentInteractions())
+                    if (point != null && point.kind == InteractionKind.EnterHouse) { garden.SetLead(point.transform.position, false); break; }
+            }
             if (!string.IsNullOrEmpty(active.foundLine) && PlayerPrefs.GetInt("CatMe.Journey.StoryEnabled", 0) == 1) garden.SetAppStatus(active.foundLine);
             active.gameObject.SetActive(false);
             Release();
