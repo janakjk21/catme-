@@ -237,6 +237,7 @@ namespace CatMe.Editor
             // Adding a second copy here produces duplicate native symbols at link time.
             project.AddFrameworkToProject(target, "AuthenticationServices.framework", false);
             project.AddFrameworkToProject(target, "GameKit.framework", false);
+            project.AddFrameworkToProject(target, "UserNotifications.framework", false);   // CatMeNotifications.mm
             project.WriteToFile(projectPath);
 
             string mainTarget = project.GetUnityMainTargetGuid();

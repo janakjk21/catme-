@@ -59,6 +59,8 @@ Not done in L2: real icon family (owner supplies sprites, see `MENUS_AND_ACCOUNT
 - Done when: tests cover each message and the migration.
 
 ### L5. Garden during Making, reveal in the garden (audit 13, 30)
+
+**Code done 2026-10-04 (cloud, not compiled):** Name is the last onboarding step (`OnboardingFlow.FlowFor`), with the first suggested name selected; after it the garden opens at once (`OnMakingInGarden`): morning, no rain (`DayDirector.EnsureDaylight`), stand-in pet, tutorial, and a Paper banner "Mochi is being made · about 3 min" that follows the server stage and hides under menus. When the pet is ready it is swapped in where the player is, with hearts, its hello and "Say hello to Mochi." (`OnRevealInGarden`); a failure shows the Try again toast. A resumed creation after relaunch also goes to the garden. Leaving the app while making schedules one local reminder in 4 min ("Mochi should be ready soon. Come and say hello."), cancelled on return (`World/LocalNotifications.cs`, `Plugins/iOS/CatMeNotifications.mm`; UserNotifications.framework is added by the development build post-process only, add it for release builds too). The Making screen remains only as a fallback. Not done: the stand-in hiding behind a bush or petal puff; the server keeps the placeholder name given at photo time (the phone's name wins locally). Tests: `MakingInGardenTests` (3).
 - After the selfie and naming, open the garden in daylight with the bundled stand-in and a "[Name] is being made" banner; the tutorial runs here; swap in the real models when ready with a short reveal; local notification if backgrounded.
 - Name the pet before the wait (move the Name screen ahead of Making).
 - Done when: a new player reaches the garden within a minute of the selfie.

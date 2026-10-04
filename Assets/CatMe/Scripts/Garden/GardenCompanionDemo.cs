@@ -599,6 +599,7 @@ namespace CatMe.Garden
         public void SetInputBlocked(bool blocked) { inputBlocked = blocked; if (blocked) ClearMovement(); }
         private void OnApplicationPause(bool paused)
         {
+            appFlow?.OnAppPaused(paused);
             if (!paused) return;
             ClearMovement();
             appFlow?.SaveProgress();

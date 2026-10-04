@@ -80,7 +80,9 @@ namespace CatMe.Garden
             store.OnClosed = () => { if (!welcome.activeSelf) CloseOverlayScreen(); };
             onboarding.OnCancelled = () => { if (onboardingFromWelcome) { welcome.SetActive(true); welcome.transform.SetAsLastSibling(); } else CloseOverlayScreen(); };
             onboarding.OnFinished = pet => { Time.timeScale = 1f; garden.SetActivePet(pet); EnterGarden(); };
-            onboarding.OnCreateFailed = message => PetToast?.Show(message, "Try again", () => StartOnboarding(false), 30f);
+            onboarding.OnCreateFailed = message => { HideMakingBanner(); PetToast?.Show(message, "Try again", () => StartOnboarding(false), 30f); };
+            onboarding.OnMakingInGarden = OpenGardenWhileMaking;
+            onboarding.OnRevealInGarden = RevealInGarden;
             var identity = new MobileIdentityService(device.AccountService); identityForAccount = identity;
             var apiConfig = Resources.Load<MobileApiConfig>("MobileApiConfig");
             IMobileApi api = apiConfig != null ? new MobileApi(apiConfig, identity) : null;
@@ -152,7 +154,7 @@ namespace CatMe.Garden
                 catch (Exception e) { Debug.LogWarning("[WornTag][Creation] could not place the new model: " + e.Message); }
                 garden.SetActivePet(pet);
                 if (result.ownerModelSaved && !result.isFixture) garden.StartCoroutine(garden.ReloadCharactersFromPhoneStorage());   // a real owner model replaced the bundled one
-                if (!onboarding.IsOpen) PetToast?.Show(pet.name + " is ready. Come and say hello.", "Meet " + pet.name, () => OpenOverlayScreen(() => onboarding.ShowReady(pet)), 30f);
+                if (!onboarding.IsOpen && !onboarding.MakingInGarden) PetToast?.Show(pet.name + " is ready. Come and say hello.", "Meet " + pet.name, () => OpenOverlayScreen(() => onboarding.ShowReady(pet)), 30f);
             };
             // First page: the login. Someone already signed in goes straight on: to the garden if they have a pet, otherwise to choosing one.
             if (!onboarding.IsSignedIn())
@@ -299,6 +301,68 @@ namespace CatMe.Garden
 
         private void OpenOverlayScreen(Action open) { SetGameplayControlsVisible(false); Time.timeScale = 0f; open(); }
         private void CloseOverlayScreen() { Time.timeScale = 1f; SetGameplayControlsVisible(garden.IsReady && !welcome.activeSelf); BackToMenu(); }
+
+        // ---- Making in the garden (launch task L5) -----------------------------------------------------------------
+
+        private GameObject makingBanner; private Text makingBannerText;
+
+        /// <summary>The banner line while the pet is made: "Mochi is being made · about 3 min".</summary>
+        internal static string MakingBannerText(string name, string stage)
+        {
+            string who = string.IsNullOrWhiteSpace(name) ? "Your pet" : name.Trim();
+            switch (stage)
+            {
+                case "queued": return who + " is being made · waiting in line";
+                case "generating": return who + " is being made · about 2 min";
+                case "downloading": case "ready": return who + " is almost here";
+                default: return who + " is being made · about 3 min";
+            }
+        }
+
+        // The garden opens in daylight with the stand-in pet; the first walk (tutorial) happens while the real pet is made.
+        private void OpenGardenWhileMaking(string name)
+        {
+            Time.timeScale = 1f;
+            UnityEngine.Object.FindAnyObjectByType<CatMe.World.DayDirector>()?.EnsureDaylight();
+            if (makingBanner == null)
+            {
+                makingBanner = CatMeUIStyle.Card(canvasRoot, "Making banner", new Vector2(640f, 60f), CatMeUIStyle.Paper, CatMeUIStyle.Elevation.Resting);
+                var r = (RectTransform)makingBanner.transform; r.anchorMin = r.anchorMax = new Vector2(.5f, 1f); r.anchoredPosition = new Vector2(0f, -150f);
+                makingBanner.GetComponent<Image>().raycastTarget = false;
+                var dot = UiKit.Rect(makingBanner.transform, "Making dot", new Vector2(-290f, 0f), new Vector2(16f, 16f));
+                var di = dot.gameObject.AddComponent<Image>(); di.sprite = UiKit.Circle; di.color = CatMeUIStyle.Sage; di.raycastTarget = false;
+                makingBannerText = UiKit.Label(makingBanner.transform, "", 24, CatMeUIStyle.Ink, new Vector2(16f, 0f), new Vector2(560f, 50f), FontStyle.Normal, TextAnchor.MiddleLeft, "Making line");
+            }
+            makingBannerText.text = MakingBannerText(name, onboarding.MakingStage);
+            makingBanner.SetActive(true);
+            CatMe.World.LocalNotifications.RequestPermission();
+            EnterGarden();
+        }
+
+        private void HideMakingBanner()
+        {
+            if (makingBanner != null) makingBanner.SetActive(false);
+            CatMe.World.LocalNotifications.Cancel(CatMe.World.LocalNotifications.PetReadyId);
+        }
+
+        // The real pet arrives where the player is: hearts, its hello, and one line. OnCreated has already swapped the model in.
+        private void RevealInGarden(PetProfile pet)
+        {
+            HideMakingBanner();
+            UnityEngine.Object.FindAnyObjectByType<CatMe.World.CatPetInput>()?.PopHearts(6);
+            if (garden.CatTransform != null) CatMe.Pets.PetSounds.PlayAt(garden.CatTransform.position, pet.Kind, CatMe.Pets.PetCue.Hello, .8f);
+            CatMe.World.Haptics.Tap();
+            garden.SetAppStatus("Say hello to " + pet.name + ".");
+        }
+
+        /// <summary>Leaving the app while a pet is made: a reminder in a few minutes; coming back cancels it.</summary>
+        internal void OnAppPaused(bool paused)
+        {
+            const string id = CatMe.World.LocalNotifications.PetReadyId;
+            if (paused && onboarding != null && onboarding.MakingInGarden)
+                CatMe.World.LocalNotifications.Schedule(id, "WornTag", CatMe.World.LocalNotifications.ReminderBody(onboarding.MakingName), CatMe.World.LocalNotifications.ReminderSeconds);
+            else if (!paused) CatMe.World.LocalNotifications.Cancel(id);
+        }
 
         // Screens opened from the menu go back to the menu when closed (MENUS_AND_ACCOUNT section 1).
         private bool returnToMenu, returnToSettings;
@@ -489,6 +553,13 @@ namespace CatMe.Garden
             if (needsCharacterReload && garden.IsReady) { needsCharacterReload = false; garden.StartCoroutine(garden.ReloadCharactersFromPhoneStorage()); }
             if (enterWhenReady && garden.IsReady) { enterWhenReady = false; EnterGarden(); }
             onboarding?.Tick();
+            if (makingBanner != null)
+            {
+                // Shown only on the walking view: hidden under menus, sheets and while the garden loads.
+                bool show = onboarding.MakingInGarden && garden.IsReady && !welcome.activeSelf && !garden.IsInputBlocked;
+                if (show) makingBannerText.text = MakingBannerText(onboarding.MakingName, onboarding.MakingStage);
+                if (makingBanner.activeSelf != show) makingBanner.SetActive(show);
+            }
             bool visible = tutorial.Active && garden.IsReady && !garden.IsInputBlocked && !welcome.activeSelf && !settings.activeSelf;
             guide.SetActive(visible);
             var catAction = canvasRoot.Find("Cat action entry");

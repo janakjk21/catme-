@@ -71,6 +71,24 @@ namespace CatMe.World
         }
 
         /// <summary>Weighted toward fair weather; never chaotic.</summary>
+        /// <summary>
+        /// A new player's first walk happens in daylight with no rain (launch task L5): moves the clock to morning and clears
+        /// the sky when it is dusk, night or wet. Returns true if anything changed.
+        /// </summary>
+        public bool EnsureDaylight()
+        {
+            bool dark = TimeOfDay < .08f || TimeOfDay > .5f;
+            bool wet = Type == DayType.Showery || Type == DayType.Rainy;
+            if (!dark && !wet) return false;
+            if (wet) Type = DayType.Clear;
+            if (dark) TimeOfDay = .12f;
+            Cloudiness = cloudTarget = TargetCloud();
+            showerAt = showerUntil = 0f; ScheduleShower();
+            applyAt = 0f;
+            Save();
+            return true;
+        }
+
         public void NewDay()
         {
             bool hadDay = PlayerPrefs.HasKey(TypeKey);

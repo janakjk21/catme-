@@ -36,7 +36,19 @@ namespace CatMe.Garden
         /// <summary>True while any onboarding or account screen covers the game; in-world prompts stay hidden.</summary>
         public static bool AnyOpen => current != null && current.IsOpen;
 
-        List<string> Flow() => addMode ? new List<string> { "species", "photo" } : new List<string> { "species", "photo", "person" };
+        List<string> Flow() => FlowFor(addMode);
+        /// <summary>The steps before the garden. The pet is named before the wait, so the garden can say "Mochi is being made".</summary>
+        internal static List<string> FlowFor(bool addMode) => addMode ? new List<string> { "species", "photo", "name" } : new List<string> { "species", "photo", "person", "name" };
+
+        /// <summary>The player went into the garden while the pet is made (launch task L5). Argument: the pet's name.</summary>
+        public Action<string> OnMakingInGarden;
+        /// <summary>The pet finished while the player was in the garden: reveal it there, with no extra screens.</summary>
+        public Action<PetProfile> OnRevealInGarden;
+        /// <summary>True from entering the garden during Making until the pet is revealed or the creation fails.</summary>
+        public bool MakingInGarden { get; private set; }
+        /// <summary>The server's stage for the creation in progress (checking, queued, generating, downloading).</summary>
+        public string MakingStage => remoteStage;
+        public string MakingName => PetLabel;
 
         public void Begin(bool addMode)
         {
@@ -92,13 +104,14 @@ namespace CatMe.Garden
             bool watching = IsOpen && step == "making";   // the player waited on the making screen
             if (result.ok)
             {
-                created = PetRoster.Add(who, species, petPhoto);
+                created = PetRoster.Add(PetLabel, species, petPhoto);   // the name chosen while it was being made
                 created.serverId = result.petId; created.isFixture = result.isFixture; PetRoster.SaveChanges();
                 OnCreated?.Invoke(created, result);          // saves the models and loads them into the garden
-                if (watching) ShowReady(created);            // name, then reveal, then the garden
+                if (MakingInGarden) { MakingInGarden = false; OnRevealInGarden?.Invoke(created); }
+                else if (watching) ShowReady(created);       // name, then reveal, then the garden
             }
-            else if (watching) ShowCreateFailed(result, who);
-            else { finishedResult = result; OnCreateFailed?.Invoke(string.IsNullOrEmpty(result.error) ? "We couldn't make your pet this time." : result.error); }
+            else if (watching) ShowCreateFailed(result, PetLabel);
+            else { MakingInGarden = false; finishedResult = result; OnCreateFailed?.Invoke(string.IsNullOrEmpty(result.error) ? "We couldn't make your pet this time." : result.error); }
         }
 
         public void ResumeCreation(PetProfile pet, Func<Action<string, string>, System.Threading.Tasks.Task<CatMe.Onboarding.CreationResult>> resume)
@@ -106,6 +119,7 @@ namespace CatMe.Garden
             if (pet == null || resume == null || creationStarted) return;
             accountOnly = false; addMode = false; signedInFlow = true; loginFirst = false;
             created = pet; petName = pet.name; species = pet.Kind; creationStarted = true; finishedResult = null;
+            if (OnMakingInGarden != null) { MakingInGarden = true; Hide(); OnMakingInGarden(PetLabel); ObserveResume(resume); return; }
             if (root == null) { var s = UiKit.Screen(canvasRoot, "Onboarding", CatMeUIStyle.Mist); root = s.root; safe = s.safe; }
             root.SetActive(true); root.transform.SetAsLastSibling(); ShowMaking();
             ObserveResume(resume);
@@ -117,7 +131,12 @@ namespace CatMe.Garden
             try { result = await resume((stage, message) => { if (!string.IsNullOrEmpty(stage)) remoteStage = stage; }); }
             catch (Exception e) { Debug.LogWarning("[WornTag][Creation] " + e.Message); result = new CatMe.Onboarding.CreationResult { error = "Something went wrong. Check your connection and try again." }; }
             creationStarted = false;
-            if (result.ok) { OnCreated?.Invoke(created, result); ShowReady(created); }
+            if (result.ok)
+            {
+                OnCreated?.Invoke(created, result);
+                if (MakingInGarden) { MakingInGarden = false; OnRevealInGarden?.Invoke(created); } else ShowReady(created);
+            }
+            else if (MakingInGarden) { MakingInGarden = false; OnCreateFailed?.Invoke(string.IsNullOrEmpty(result.error) ? "We couldn't make your pet this time." : result.error); }
             else ShowCreateFailed(result, PetLabel);
         }
 
@@ -201,8 +220,12 @@ namespace CatMe.Garden
             failMessage = null;
             bool selfieDone = i >= 0 && i + 1 < flow.Count && flow[i + 1] == "person" && personPhoto != null;   // retry with a selfie already taken
             if (i >= 0 && i + 1 < flow.Count && !selfieDone) { Show(flow[i + 1]); return; }
-            // Last step done: wait on the making screen until the pet and the person are ready.
-            if (creationStarted) { ShowMaking(); return; }
+            // Last step done: the garden opens straight away while the pet is made (no waiting screen).
+            if (creationStarted)
+            {
+                if (OnMakingInGarden == null) { ShowMaking(); return; }
+                MakingInGarden = true; Hide(); OnMakingInGarden(PetLabel); return;
+            }
             Hide();
             OnFinished?.Invoke(PetRoster.Active);
         }
@@ -550,24 +573,25 @@ namespace CatMe.Garden
 
         void ShowName()
         {
-            
+            if (!namingReady) Chrome("name");
             Title(LeftX, 300f, "What is their name?");
             Sub(LeftX, 180f, "Pick a name. You can change it later.", 80f);
             var box = CatMeUIStyle.Card(safe, "Name field", new Vector2(700f, 120f), CatMeUIStyle.Paper, CatMeUIStyle.Elevation.Resting);
             ((RectTransform)box.transform).anchoredPosition = new Vector2(LeftX + 350f, 70f);
             var text = UiKit.Label(box.transform, "", 48, CatMeUIStyle.Pine, Vector2.zero, new Vector2(640f, 90f), FontStyle.Bold, TextAnchor.MiddleLeft);
             var hint = UiKit.Label(box.transform, "Name", 48, new Color(.55f, .63f, .59f), Vector2.zero, new Vector2(640f, 90f), FontStyle.Bold, TextAnchor.MiddleLeft);
-            nameField = box.AddComponent<InputField>(); nameField.textComponent = text; nameField.placeholder = hint; nameField.characterLimit = 16; nameField.text = petName;
-            nameField.onValueChanged.AddListener(v => petName = v);
             string[] ideas = species == Species.Dog ? new[] { "Biscuit", "Juniper", "Waffles" } : new[] { "Mochi", "Juniper", "Miso" };
+            if (string.IsNullOrWhiteSpace(petName)) petName = ideas[0];   // a suggested name is selected by default
+            nameField = box.AddComponent<InputField>(); nameField.textComponent = text; nameField.placeholder = hint; nameField.characterLimit = PetRoster.NameMaxLength; nameField.text = petName;
+            nameField.onValueChanged.AddListener(v => petName = v);
             for (int i = 0; i < ideas.Length; i++)
             {
                 string n = ideas[i];
                 var chip = UiKit.Button(safe, n, new Vector2(LeftX + 110f + i * 230f, -50f), new Vector2(210f, 66f), CatMeUIStyle.Tile, false, () => { petName = n; if (nameField != null) nameField.text = n; }, 28, "Idea " + n);
             }
-            Primary(LeftX, -190f, namingReady ? "That's their name" : "Create", () =>
+            Primary(LeftX, -190f, "That's their name", () =>
             {
-                if (string.IsNullOrWhiteSpace(petName)) petName = species == Species.Dog ? "Your dog" : "Your cat";
+                petName = PetRoster.CleanName(petName) ?? (species == Species.Dog ? "Your dog" : "Your cat");
                 if (!namingReady) { Next(); return; }
                 created.name = petName.Trim(); PetRoster.SaveChanges(); namingReady = false; ShowReveal();
             }, 520f);
