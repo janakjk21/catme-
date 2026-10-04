@@ -69,6 +69,7 @@ Keep the existing contextual buttons as they are. Changes:
 
 ## F9. "Go home" in the pet action menu
 Add a **Go home** action to the paw menu next to Ball, Roam and Call (same size and style, label inside or under it). Tapping it: the pet says its home line, both walk to the house door (the existing lead-home behaviour in `Session/CompanionLeader`), and the house opens; if the player is already near the house, enter directly. Inside the house, the same slot becomes **Go outside**. A fade covers any teleport (no camera cut).
+- **Done in code (2026-10-04, not compiled):** fourth fan slot "Go home" (door icon, same size and pill label), relabelled "Go outside" inside the house (`Interactions.HomeActionLabel`). `Interactions.GoHome`: the pet says its home line; near the house (within the door prompt's reach) the house opens at once; within 14 m both walk to the door (pet leads, the person walks by itself; pushing the stick cancels); further away, or if the walk stalls for 2.5 s or takes over 18 s, the session fade covers the move to the door, then the house opens under the same fade. Inside, it runs the normal leave-house fade.
 
 ## F10. Sprint button
 A **Sprint** button near the joystick (above it, smaller than the joystick, inside the safe area). Hold to walk about 1.8× faster (or tap to toggle; pick hold and document it). The pet speeds up to keep pace; footstep pace and walk-clip speed follow so feet don't slide. Hidden inside rooms and the tent. Haptic tap on start.

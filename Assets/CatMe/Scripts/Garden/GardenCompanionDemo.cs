@@ -38,7 +38,7 @@ namespace CatMe.Garden
         private Text status;
         private GameObject statusPanel, catTray, pauseSheet;
         private Text followActionLabel;
-        private Text replayActionLabel;
+        private Text replayActionLabel, homeActionLabel;
         private bool replayArmed;
         private CanvasGroup statusGroup;
         private Coroutine statusFade;
@@ -848,6 +848,8 @@ namespace CatMe.Garden
         public Vector3 SampledGroundPosition(Vector3 value) => Grounded(value);
         public Vector3 OwnerPosition => humanRoot == null ? Vector3.zero : humanRoot.position;
         public Vector3 CompanionPosition => catRoot == null ? Vector3.zero : catRoot.position;
+        /// <summary>How hard the player is pushing the stick or keys right now (scripted walks excluded).</summary>
+        public float MoveInputMagnitude => Vector2.ClampMagnitude(moveInput + touchMoveInput, 1f).magnitude;
         public float CurrentMoveMagnitude => Mathf.Clamp01(Vector2.ClampMagnitude(moveInput + touchMoveInput, 1f).magnitude);
         public void ResumeConnectedOuting()
         {
@@ -957,15 +959,18 @@ namespace CatMe.Garden
                 var img = b.GetComponent<Image>(); img.sprite = UiKit.Circle; img.type = Image.Type.Simple;
                 UiKit.Icon(b.transform, icon, Vector2.zero, 64f, CatMeUIStyle.SageDeep);
                 // Readable over any scene: the label sits on a Paper pill, never loose white text (audit 27f).
-                var pill = CatMeUIStyle.Card(b.transform, "Caption pill", new Vector2(120f, 44f), CatMeUIStyle.Paper, CatMeUIStyle.Elevation.Resting);
+                var pill = CatMeUIStyle.Card(b.transform, "Caption pill", new Vector2(164f, 44f), CatMeUIStyle.Paper, CatMeUIStyle.Elevation.Resting);
                 ((RectTransform)pill.transform).anchoredPosition = new Vector2(0f, -86f); pill.GetComponent<Image>().raycastTarget = false;
-                var cap = UiKit.Label(pill.transform, label, 26, CatMeUIStyle.Ink, Vector2.zero, new Vector2(116f, 40f), FontStyle.Bold, TextAnchor.MiddleCenter, "Caption");
+                var cap = UiKit.Label(pill.transform, label, 26, CatMeUIStyle.Ink, Vector2.zero, new Vector2(160f, 40f), FontStyle.Bold, TextAnchor.MiddleCenter, "Caption");
                 return b;
             }
             Fan("Ball action", "ball", "Ball", PawLayout.FanSlot(0), () => { CloseCatTray(); ThrowBall(); });
             var followButton = Fan("Follow action", "walk", "Roam", PawLayout.FanSlot(1), () => { CloseCatTray(); ToggleFollow(); });
             followActionLabel = followButton.transform.Find("Caption pill/Caption")?.GetComponent<Text>();
             Fan("Call action", "call", "Call", PawLayout.FanSlot(2), () => { CloseCatTray(); CallCat(); });
+            // F9: the fourth action goes home (outside) or back outside (inside the house).
+            var homeButton = Fan("Home action", "door", "Go home", PawLayout.FanSlot(3), () => { CloseCatTray(); FindAnyObjectByType<CatMe.Session.Interactions>()?.GoHome(); });
+            homeActionLabel = homeButton.transform.Find("Caption pill/Caption")?.GetComponent<Text>();
             catTray.SetActive(false);
         }
 
@@ -973,6 +978,7 @@ namespace CatMe.Garden
         {
             if (catTray == null || pauseSheet.activeSelf) return;
             catTray.SetActive(!catTray.activeSelf);
+            if (catTray.activeSelf && homeActionLabel != null) homeActionLabel.text = FindAnyObjectByType<CatMe.Session.Interactions>()?.HomeActionLabel ?? "Go home";
             SetInputBlocked(catTray.activeSelf);
             if (catTray.activeSelf) catTray.transform.SetAsLastSibling();
         }

@@ -320,6 +320,65 @@ namespace CatMe.Session
             state = State.Free;
         }
 
+        // ---- F9: "Go home" / "Go outside" from the paw menu ------------------------------------------------------
+
+        public bool InHouse => state == State.InHouse;
+        /// <summary>The paw menu's label for the home action.</summary>
+        public string HomeActionLabel => state == State.InHouse ? "Go outside" : "Go home";
+        public const float WalkHomeMax = 14f, WalkHomeSeconds = 18f;
+
+        /// <summary>
+        /// Inside: step outside. Outside: the pet says its home line and both walk to the door, then the house opens. Near the house
+        /// it opens at once; far away, or if the walk stalls, a fade covers the move to the door (never a camera cut).
+        /// </summary>
+        public void GoHome()
+        {
+            if (state == State.InHouse) { StartCoroutine(LeaveHouse()); return; }
+            if (state != State.Free) return;
+            InteractionPoint door = null; float best = float.MaxValue;
+            foreach (var point in director.CurrentInteractions())
+            {
+                if (point == null || point.kind != InteractionKind.EnterHouse) continue;
+                float d = Flat(garden.OwnerTransform.position, point.transform.position);
+                if (d < best) { best = d; door = point; }
+            }
+            if (door == null) { garden.SetAppStatus("There's no house in this part of the walk."); return; }
+            garden.Voice?.Say(Moment.GoHome, 3f, true);
+            StartCoroutine(WalkHome(door, best));
+        }
+
+        IEnumerator WalkHome(InteractionPoint door, float distance)
+        {
+            float reach = Mathf.Max(door.radius, 4.5f) - .5f;
+            if (distance > reach && distance <= WalkHomeMax)
+            {
+                garden.SetLead(door.transform.position, false);
+                float started = Time.time, lastProgressAt = Time.time, closest = distance;
+                while (state == State.Free && Time.time - started < WalkHomeSeconds)
+                {
+                    Vector3 to = door.transform.position - garden.OwnerTransform.position; to.y = 0f;
+                    float d = to.magnitude;
+                    if (d <= reach) break;
+                    if (garden.MoveInputMagnitude > .2f) { garden.SetScriptedWalk(Vector3.zero); garden.ClearLead(); yield break; }   // the player took over
+                    if (d < closest - .2f) { closest = d; lastProgressAt = Time.time; }
+                    if (Time.time - lastProgressAt > 2.5f) break;   // stuck on something: the fade below covers the rest
+                    garden.SetScriptedWalk(to / d);
+                    yield return null;
+                }
+                garden.SetScriptedWalk(Vector3.zero);
+            }
+            if (state != State.Free) yield break;
+            garden.ClearLead();
+            active = door;
+            if (Flat(garden.OwnerTransform.position, door.transform.position) > reach + .5f)
+            {
+                // A fade covers the move to the door; EnterHouse keeps the screen covered on its own fade.
+                yield return director.FadeTo(1f, .4f);
+                garden.PlacePair(door.transform.position + door.transform.forward * 1.2f, door.transform.eulerAngles.y + 180f);
+            }
+            StartCoroutine(EnterHouse());
+        }
+
         // ---- house room: throw the ball, feed the cat, let it sleep -------------------------------------------------
 
         IEnumerator EnterHouse()
