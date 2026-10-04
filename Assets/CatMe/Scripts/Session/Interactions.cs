@@ -159,7 +159,7 @@ namespace CatMe.Session
         {
             if (buttonRect == null) return;
             buttonRect.anchorMin = buttonRect.anchorMax = new Vector2(1f, 0f); buttonRect.pivot = new Vector2(1f, 0f);
-            buttonRect.anchoredPosition = new Vector2(-40f, state == State.InHouse ? 200f : 210f); buttonRect.localScale = Vector3.one;
+            buttonRect.anchoredPosition = new Vector2(-40f, 480f);   // F6: above the bigger paw button and its fan, one fixed spot buttonRect.localScale = Vector3.one;
         }
 
         Text debugText;

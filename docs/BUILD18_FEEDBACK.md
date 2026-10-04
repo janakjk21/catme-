@@ -44,6 +44,7 @@ The camera "moves so much" and feels random. Replace the automatic behaviour wit
 
 ## F6. Pet button bigger and placed like the joystick
 The paw (pet actions) button is too small. Make it **much bigger** (about the joystick's size) and place it as the mirror of the joystick: bottom right, the same distance from the edges inside the safe area. Its Call / Roam / Ball buttons fan out above it, each with a readable label (`MENUS_AND_ACCOUNT.md` section 9).
+- **Done in code (2026-10-04, not compiled):** paw 200 (stick base 220) with a 104 icon, kept by `SafeMirror` at the stick's resting spot mirrored (200 in from the safe edge, 22% up the safe height); the fan (120 buttons on Paper with Paper label pills) opens on an arc above-left of it with a fourth slot ready for Go home; the contextual card moved up to 480 so it clears the paw. Tests: `PawLayoutTests` (3).
 
 ## F7. Fence off the river end
 Build a continuous fence (the same fence style already used along the bank) along the whole river side and across the end of the trail, with colliders, so the player can't walk toward the river at all for now. No gaps where the path meets the end clearing. In `PlaceSceneBuilder`; owner runs Rebuild With Last Seed.

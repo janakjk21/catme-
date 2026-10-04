@@ -894,11 +894,12 @@ namespace CatMe.Garden
             CreateMoveJoystick(canvas.transform);
             // Cat button (opens the fan), Pause and Camera: round glass controls in the thumbs' reach.
             var catBtn = UiKit.IconButton(canvas.transform, "", Vector2.zero, ToggleCatTray, "Cat action entry");
-            var catRect = (RectTransform)catBtn.transform; catRect.anchorMin = catRect.anchorMax = new Vector2(1f, 0f); catRect.sizeDelta = new Vector2(132f, 132f); catRect.anchoredPosition = new Vector2(-110f, 110f);
+            var catRect = (RectTransform)catBtn.transform; catRect.anchorMin = catRect.anchorMax = new Vector2(1f, 0f); catRect.sizeDelta = new Vector2(PawLayout.Size, PawLayout.Size);
+            catBtn.gameObject.AddComponent<SafeMirror>();   // F6: as big as the stick and its mirror image, bottom right of the safe area
             var catInk = new Color(.153f, .137f, .129f, .96f);
             catBtn.GetComponent<Image>().color = catInk;
             catBtn.GetComponent<CatMeButtonMotion>()?.Tint(catBtn.GetComponent<Image>(), catInk);   // the press animation restores this colour, not the default paper
-            UiKit.Icon(catBtn.transform, "paw", Vector2.zero, 74f, Color.white);
+            UiKit.Icon(catBtn.transform, "paw", Vector2.zero, 104f, Color.white);
             var pauseBtn = UiKit.IconButton(canvas.transform, "pause", Vector2.zero, OpenPause, "Pause action");
             var pauseRect = (RectTransform)pauseBtn.transform; pauseRect.anchorMin = pauseRect.anchorMax = new Vector2(1f, 1f); pauseRect.anchoredPosition = new Vector2(-70f, -70f);
             var camera = UiKit.IconButton(canvas.transform, "camera", Vector2.zero, () => journey?.TakePhoto(), "Camera action");
@@ -920,22 +921,22 @@ namespace CatMe.Garden
             catTray.transform.SetParent(parent, false);
             RectTransform rect = catTray.GetComponent<RectTransform>();
             rect.anchorMin = rect.anchorMax = new Vector2(1f, 0f); rect.pivot = new Vector2(.5f, .5f); rect.sizeDelta = new Vector2(10f, 10f);
-            rect.anchoredPosition = new Vector2(-110f, 110f);
+            catTray.AddComponent<SafeMirror>();   // the fan opens around the paw, wherever the safe area puts it
             Button Fan(string name, string icon, string label, Vector2 pos, Action action)
             {
-                var b = UiKit.Button(catTray.transform, "", pos, new Vector2(112f, 112f), CatMeUIStyle.PaperGlass, false, action, 30, name);
+                var b = UiKit.Button(catTray.transform, "", pos, new Vector2(PawLayout.FanSize, PawLayout.FanSize), CatMeUIStyle.Paper, false, action, 30, name);
                 var img = b.GetComponent<Image>(); img.sprite = UiKit.Circle; img.type = Image.Type.Simple;
-                UiKit.Icon(b.transform, icon, Vector2.zero, 60f, CatMeUIStyle.Pine);
+                UiKit.Icon(b.transform, icon, Vector2.zero, 64f, CatMeUIStyle.SageDeep);
                 // Readable over any scene: the label sits on a Paper pill, never loose white text (audit 27f).
                 var pill = CatMeUIStyle.Card(b.transform, "Caption pill", new Vector2(120f, 44f), CatMeUIStyle.Paper, CatMeUIStyle.Elevation.Resting);
                 ((RectTransform)pill.transform).anchoredPosition = new Vector2(0f, -86f); pill.GetComponent<Image>().raycastTarget = false;
                 var cap = UiKit.Label(pill.transform, label, 26, CatMeUIStyle.Ink, Vector2.zero, new Vector2(116f, 40f), FontStyle.Bold, TextAnchor.MiddleCenter, "Caption");
                 return b;
             }
-            Fan("Ball action", "ball", "Ball", new Vector2(-185f, 20f), () => { CloseCatTray(); ThrowBall(); });
-            var followButton = Fan("Follow action", "walk", "Roam", new Vector2(-150f, 190f), () => { CloseCatTray(); ToggleFollow(); });
+            Fan("Ball action", "ball", "Ball", PawLayout.FanSlot(0), () => { CloseCatTray(); ThrowBall(); });
+            var followButton = Fan("Follow action", "walk", "Roam", PawLayout.FanSlot(1), () => { CloseCatTray(); ToggleFollow(); });
             followActionLabel = followButton.transform.Find("Caption pill/Caption")?.GetComponent<Text>();
-            Fan("Call action", "call", "Call", new Vector2(-10f, 230f), () => { CloseCatTray(); CallCat(); });
+            Fan("Call action", "call", "Call", PawLayout.FanSlot(2), () => { CloseCatTray(); CallCat(); });
             catTray.SetActive(false);
         }
 
@@ -1341,6 +1342,48 @@ namespace CatMe.Garden
         {
             if (Queued) { Queued = false; return true; }
             Running = false; return false;
+        }
+    }
+
+    /// <summary>F6: the paw button's size and its fan. Pure numbers, tested.</summary>
+    internal static class PawLayout
+    {
+        public const float Size = 200f, FanSize = 120f, FanRadius = 250f;
+        /// <summary>Fan slot i (0 = lowest) on an arc above and to the left of the paw, so it never leaves the screen's right edge.</summary>
+        public static Vector2 FanSlot(int i, int count = 4)
+        {
+            float from = 175f, to = 85f;   // degrees: 180 is straight left, 90 straight up
+            float a = Mathf.Deg2Rad * Mathf.Lerp(from, to, count <= 1 ? 0f : i / (float)(count - 1));
+            return new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * FanRadius;
+        }
+
+        /// <summary>
+        /// Centre of the paw, in canvas units from the canvas's bottom-right corner: the joystick's resting spot (200 in from the
+        /// safe area's side, 22% up its height, at least the stick's travel) mirrored to the right.
+        /// </summary>
+        public static Vector2 Centre(Rect safe, Vector2 screen, Vector2 canvas)
+        {
+            if (screen.x <= 0f || screen.y <= 0f) return new Vector2(-200f, 220f);
+            float sx = canvas.x / screen.x, sy = canvas.y / screen.y;
+            float rightInset = (screen.x - safe.xMax) * sx, bottomInset = safe.yMin * sy, safeHeight = safe.height * sy;
+            return new Vector2(-(rightInset + 200f), bottomInset + Mathf.Max(safeHeight * MobileGardenJoystick.RestHeight, JoystickResponse.Travel));
+        }
+    }
+
+    /// <summary>Keeps a bottom-right anchored element at <see cref="PawLayout.Centre"/> as the safe area changes.</summary>
+    internal sealed class SafeMirror : MonoBehaviour
+    {
+        Rect lastSafe; Vector2 lastScreen;
+        void OnEnable() => Fit();
+        void Update() { if (Screen.safeArea != lastSafe || new Vector2(Screen.width, Screen.height) != lastScreen) Fit(); }
+        void Fit()
+        {
+            lastSafe = Screen.safeArea; lastScreen = new Vector2(Screen.width, Screen.height);
+            var rect = (RectTransform)transform;
+            var canvas = rect.parent as RectTransform;
+            if (canvas == null) return;
+            rect.anchorMin = rect.anchorMax = new Vector2(1f, 0f);
+            rect.anchoredPosition = PawLayout.Centre(lastSafe, lastScreen, canvas.rect.size);
         }
     }
 }
