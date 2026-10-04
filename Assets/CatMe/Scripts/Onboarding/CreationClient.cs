@@ -32,13 +32,48 @@ namespace CatMe.Onboarding
         /// <summary>True once the player has tapped "I agree" on the consent screen for the current version.</summary>
         public static bool ConsentGiven => PlayerPrefs.GetString(ConsentKey, "") == ConsentVersion;
         public static void RecordConsent() { PlayerPrefs.SetString(ConsentKey, ConsentVersion); PlayerPrefs.Save(); }
-        const string PendingKey = "WornTag.Creation.Pending";
+        public const string PendingKey = "CatMe.Creation.Pending.v1";
         const int MaxSide = 1536;
 
         readonly IMobileApi api;
         public CreationClient(IMobileApi api) { this.api = api ?? throw new ArgumentNullException(nameof(api)); }
 
         [Serializable] sealed class Pending { public string photo, petKey, ownerKey, petId; }
+        public static string PendingPetId
+        {
+            get
+            {
+                try { return JsonUtility.FromJson<Pending>(PlayerPrefs.GetString(PendingKey, ""))?.petId; }
+                catch { return null; }
+            }
+        }
+
+        /// <summary>Continues an existing server job. This path never uploads a photo or starts another creation.</summary>
+        public async Task<CreationResult> ResumeAsync(string petId, string petModelDestination, string ownerModelDestination, Action<string, string> report)
+        {
+            var result = new CreationResult { petId = petId };
+            if (string.IsNullOrEmpty(petId)) { result.error = "We couldn't find the pet being made. Try again."; return result; }
+            try
+            {
+                CreationStatus pet = await PollPetAsync(petId, report);
+                if (!FinishPetStatus(pet, result)) return result;
+                await DownloadPetAsync(pet, petModelDestination, result, report);
+                CreationStatus owner = await SafeOwnerAsync();
+                if (owner != null && owner.status != "failed" && owner.status != "rejected")
+                {
+                    for (int i = 0; i < 900 && owner.status != "ready"; i++) { await Task.Delay(2000); owner = await SafeOwnerAsync(); }
+                    if (owner?.status == "ready" && !string.IsNullOrEmpty(owner.modelUrl) && !string.IsNullOrEmpty(ownerModelDestination))
+                    { await api.DownloadFileAsync(owner.modelUrl, ownerModelDestination, null); result.ownerModelSaved = true; }
+                }
+                result.ok = true; ClearPending(); return result;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("[WornTag][Creation] resume failed: " + e.GetType().Name + ": " + e.Message);
+                result.error = e is MobileApiException || e is InvalidOperationException ? e.Message : "Something went wrong. Check your connection and try again.";
+                return result;
+            }
+        }
 
         /// <param name="report">Called with the server stage name (checking, queued, generating, ready) and a short message.</param>
         public async Task<CreationResult> RunAsync(CreationRequest request, Action<string, string> report)
@@ -74,26 +109,9 @@ namespace CatMe.Onboarding
                     catch (MobileApiException e) when (e.StatusCode == 409) { /* an owner avatar already exists or is running: keep going */ }
                 }
 
-                var deadline = DateTime.UtcNow.AddMinutes(30);   // real 3D generation can take 10 to 20 minutes; the server gives up at 30
-                CreationStatus pet = null, owner = null;
-                while (DateTime.UtcNow < deadline)
-                {
-                    pet = await api.GetPetAsync(pending.petId);
-                    if (pet != null && !string.IsNullOrEmpty(pet.stage)) report?.Invoke(pet.stage, null);
-                    if (pet != null && (pet.status == "ready" || pet.status == "failed" || pet.status == "rejected")) break;
-                    await Task.Delay(2000);
-                }
-                if (pet == null || pet.status == "failed") { result.error = "We couldn't make your pet this time. Try again."; ClearPending(); return result; }
-                if (pet.status == "rejected") { result.rejectReason = pet.rejectReason; result.error = RejectMessage(pet.rejectReason); ClearPending(); return result; }
-                if (pet.status != "ready") { result.error = "This is taking longer than expected. Your pet will keep being made; open the app again soon."; return result; }
-
-                result.isFixture = pet.isFixture; result.fixtureKey = pet.fixtureKey;
-                if (!string.IsNullOrEmpty(pet.modelUrl) && !string.IsNullOrEmpty(request.petModelDestination))
-                {
-                    report?.Invoke("downloading", "Bringing them home");
-                    await api.DownloadFileAsync(pet.modelUrl, request.petModelDestination, null);
-                    result.petModelSaved = true;
-                }
+                CreationStatus pet = await PollPetAsync(pending.petId, report), owner = null;
+                if (!FinishPetStatus(pet, result)) return result;
+                await DownloadPetAsync(pet, request.petModelDestination, result, report);
                 if (ownerJpeg != null)
                 {
                     for (int i = 0; i < 900; i++)   // up to 30 minutes, every 2 seconds
@@ -124,6 +142,37 @@ namespace CatMe.Onboarding
         {
             try { return await api.GetOwnerAsync(); }
             catch (MobileApiException) { return null; }
+        }
+
+        async Task<CreationStatus> PollPetAsync(string petId, Action<string, string> report)
+        {
+            var deadline = DateTime.UtcNow.AddMinutes(30);
+            CreationStatus pet = null;
+            while (DateTime.UtcNow < deadline)
+            {
+                pet = await api.GetPetAsync(petId);
+                if (pet != null && !string.IsNullOrEmpty(pet.stage)) report?.Invoke(pet.stage, null);
+                if (pet != null && (pet.status == "ready" || pet.status == "failed" || pet.status == "rejected")) break;
+                await Task.Delay(2000);
+            }
+            return pet;
+        }
+
+        static bool FinishPetStatus(CreationStatus pet, CreationResult result)
+        {
+            if (pet == null || pet.status == "failed") { result.error = "We couldn't make your pet this time. Try again."; ClearPending(); return false; }
+            if (pet.status == "rejected") { result.rejectReason = pet.rejectReason; result.error = RejectMessage(pet.rejectReason); ClearPending(); return false; }
+            if (pet.status != "ready") { result.error = "This is taking longer than expected. Your pet will keep being made; open the app again soon."; return false; }
+            result.isFixture = pet.isFixture; result.fixtureKey = pet.fixtureKey;
+            return true;
+        }
+
+        async Task DownloadPetAsync(CreationStatus pet, string destination, CreationResult result, Action<string, string> report)
+        {
+            if (string.IsNullOrEmpty(pet.modelUrl) || string.IsNullOrEmpty(destination)) return;
+            report?.Invoke("downloading", "Bringing them home");
+            await api.DownloadFileAsync(pet.modelUrl, destination, null);
+            result.petModelSaved = true;
         }
 
         public static string RejectMessage(string reason)

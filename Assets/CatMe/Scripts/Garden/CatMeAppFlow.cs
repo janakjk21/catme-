@@ -215,14 +215,33 @@ namespace CatMe.Garden
         /// <summary>After login: a person with a pet walks straight into the garden; a new person starts choosing a pet.</summary>
         private async void RouteSignedIn()
         {
+            MobileSession session = null;
             if (mobileApi != null)
             {
                 try
                 {
                     await EnsureAccountReadyAsync();
-                    await RestoreAccountAsync(mobileApi, await mobileApi.OpenSessionAsync());
+                    session = await mobileApi.OpenSessionAsync();
+                    await RestoreAccountAsync(mobileApi, session);
                 }
                 catch (Exception e) { Debug.LogWarning("[WornTag][Restore] session restore failed: " + e.Message); }
+            }
+            string pendingId = CreationClient.PendingPetId;
+            CreationStatus pending = null;
+            if (session?.pets != null)
+            {
+                foreach (var pet in session.pets)
+                    if ((!string.IsNullOrEmpty(pendingId) && pet.id == pendingId) || (pending == null && pet.status != "ready" && pet.status != "failed" && pet.status != "rejected")) pending = pet;
+            }
+            if (pending == null && !string.IsNullOrEmpty(pendingId)) pending = new CreationStatus { id = pendingId, name = "Your pet", species = "cat", status = "checking" };
+            if (pending != null)
+            {
+                var local = PetRoster.AddServerPet(pending.id, pending.name, pending.species);
+                string cache = System.IO.Path.Combine(Application.persistentDataPath, "Profiles", string.IsNullOrEmpty(identityForAccount?.UserId) ? "local-guest" : identityForAccount.UserId, "downloads");
+                string petDestination = System.IO.Path.Combine(cache, "pet-" + System.Guid.NewGuid().ToString("N") + ".glb");
+                onboarding.ResumeCreation(local, report => new CreationClient(mobileApi).ResumeAsync(pending.id, petDestination, System.IO.Path.Combine(cache, "owner.glb"), report));
+                welcome.SetActive(false);
+                return;
             }
             bool hasPet = PetRoster.HasOwnPet;
             if (hasPet) { welcome.SetActive(true); welcome.transform.SetAsLastSibling(); enterWhenReady = true; }   // opened from Tick, once everything is built and the garden is ready
@@ -371,7 +390,7 @@ namespace CatMe.Garden
                         string path = System.IO.Path.Combine(root, "Profiles", accountFolder);
                         if (System.IO.Directory.Exists(path)) System.IO.Directory.Delete(path, true);
                     }
-                    PlayerPrefs.DeleteKey("CatMe.Creation.Pending.v1");
+                    PlayerPrefs.DeleteKey(CreationClient.PendingKey);
                     PlayerPrefs.DeleteKey(FirstSessionKey); PlayerPrefs.Save();
                     PetRoster.Reload();
                     identityForAccount.SignOut();
@@ -388,7 +407,7 @@ namespace CatMe.Garden
                     foreach (var frame in UnityEngine.Object.FindObjectsByType<CatMe.Session.HousePhotoFrame>(FindObjectsInactive.Include)) frame.ClearDisplayedPhoto();
                     string drafts = System.IO.Path.Combine(root, "Profiles", "local-guest", "drafts");
                     if (System.IO.Directory.Exists(drafts)) System.IO.Directory.Delete(drafts, true);
-                    PlayerPrefs.DeleteKey("CatMe.Creation.Pending.v1"); PlayerPrefs.Save();
+                    PlayerPrefs.DeleteKey(CreationClient.PendingKey); PlayerPrefs.Save();
                     PetToast?.Show("Your photos have been removed. Your pets stay.", null, null);
                 }
             }

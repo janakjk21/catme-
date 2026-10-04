@@ -101,6 +101,26 @@ namespace CatMe.Garden
             else { finishedResult = result; OnCreateFailed?.Invoke(string.IsNullOrEmpty(result.error) ? "We couldn't make your pet this time." : result.error); }
         }
 
+        public void ResumeCreation(PetProfile pet, Func<Action<string, string>, System.Threading.Tasks.Task<CatMe.Onboarding.CreationResult>> resume)
+        {
+            if (pet == null || resume == null || creationStarted) return;
+            accountOnly = false; addMode = false; signedInFlow = true; loginFirst = false;
+            created = pet; petName = pet.name; species = pet.Kind; creationStarted = true; finishedResult = null;
+            if (root == null) { var s = UiKit.Screen(canvasRoot, "Onboarding", CatMeUIStyle.Mist); root = s.root; safe = s.safe; }
+            root.SetActive(true); root.transform.SetAsLastSibling(); ShowMaking();
+            ObserveResume(resume);
+        }
+
+        async void ObserveResume(Func<Action<string, string>, System.Threading.Tasks.Task<CatMe.Onboarding.CreationResult>> resume)
+        {
+            CatMe.Onboarding.CreationResult result;
+            try { result = await resume((stage, message) => { if (!string.IsNullOrEmpty(stage)) remoteStage = stage; }); }
+            catch (Exception e) { Debug.LogWarning("[WornTag][Creation] " + e.Message); result = new CatMe.Onboarding.CreationResult { error = "Something went wrong. Check your connection and try again." }; }
+            creationStarted = false;
+            if (result.ok) { OnCreated?.Invoke(created, result); ShowReady(created); }
+            else ShowCreateFailed(result, PetLabel);
+        }
+
         // ---- the making screen: the player waits here until the pet and the person are ready -----------------------------------
 
         static readonly string[] Stages = { "Checking the photo", "Waiting in line", "Building a 3D copy", "Almost ready" };
