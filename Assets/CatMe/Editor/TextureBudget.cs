@@ -15,6 +15,8 @@ namespace CatMe.Editor
             var paths = new HashSet<string>();
             foreach (var guid in AssetDatabase.FindAssets("t:Texture2D", new[] { "Assets" }))
                 paths.Add(AssetDatabase.GUIDToAssetPath(guid));
+            foreach (var guid in AssetDatabase.FindAssets("t:Cubemap", new[] { "Assets" }))
+                paths.Add(AssetDatabase.GUIDToAssetPath(guid));
 
             int changed = 0;
             AssetDatabase.StartAssetEditing();
@@ -32,13 +34,15 @@ namespace CatMe.Editor
                     bool sky = name.Contains("skybox") || name.Contains("/sky/");
                     bool hero = name.Contains("country house") || name.Contains("torii") || name.Contains("path");
                     bool foliage = name.Contains("rock") || name.Contains("tree") || name.Contains("foliage") || name.Contains("grass");
-                    int size = ui ? 2048 : sky ? 2048 : normal || hero || foliage ? 1024 : 512;
+                    int size = ui ? importer.maxTextureSize : sky ? 2048 : normal || hero || foliage ? 1024 : 512;
                     var format = ui ? TextureImporterFormat.ASTC_4x4 :
                                  size == 512 ? TextureImporterFormat.ASTC_8x8 : TextureImporterFormat.ASTC_6x6;
                     var settings = importer.GetPlatformTextureSettings("iPhone");
+                    bool changeType = normal && !ui && importer.textureType != TextureImporterType.NormalMap;
                     if (settings.overridden && settings.maxTextureSize == size && settings.format == format &&
                         !importer.isReadable && importer.mipmapEnabled == !ui &&
-                        (ui || importer.streamingMipmaps)) continue;
+                        (ui || importer.streamingMipmaps) && !changeType) continue;
+                    if (changeType) importer.textureType = TextureImporterType.NormalMap;
                     settings.name = "iPhone";
                     settings.overridden = true;
                     settings.maxTextureSize = size;
