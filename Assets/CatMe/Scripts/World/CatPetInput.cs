@@ -65,8 +65,12 @@ namespace CatMe.World
 
         static bool OverUi(int id) { var es = EventSystem.current; return es != null && (id >= 0 ? es.IsPointerOverGameObject(id) : es.IsPointerOverGameObject()); }
 
+        /// <summary>Raised when the player taps the pet (a sleeping pet wakes up).</summary>
+        public static event System.Action PetTapped;
+
         void Tap()
         {
+            PetTapped?.Invoke();
             Haptics.Tap();
             garden.CallCat();                         // it comes to the owner and answers
             Pets.PetSounds.PlayAt(garden.CatPosition, Species, Pets.PetCue.Chirp, .6f);   // a tap gets a chirp, not a meow (PET_AUDIO section 5)

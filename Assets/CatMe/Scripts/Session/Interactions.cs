@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using CatMe.Garden;
 using CatMe.Pets;
 using CatMe.World;
@@ -35,14 +36,18 @@ namespace CatMe.Session
         HousePhotoFrame houseFrame;
         bool frameLeading, frameAtAisle;
         // Feeding: walk up to the bowl, fill it, and the pet comes over and eats it down.
-        enum HouseAction { None, Bowl, Frame }
+        enum HouseAction { None, Bowl, Frame, Bed }
         enum FeedStage { Empty, Filled, Eating }
         HouseAction houseAction;
         FeedStage feed = FeedStage.Empty;
         Transform bowl, food; Vector3 bowlCentre; float bowlRadius = .25f, fullUntil;
         bool feedLeading;
         Coroutine eating;
-        const float BowlReach = 1.8f;
+        const float BowlReach = 1.8f, BedReach = 1.9f, WakeDistance = 3.5f;
+        // F8: bed time. The pet sleeps in its bed with the lights a little lower and a quiet loop (purr or slow breathing).
+        Transform petBed; AudioSource sleepLoop; readonly List<(Light light, float intensity)> dimmed = new List<(Light, float)>();
+        bool NearBed => PetBed != null && Flat(garden.OwnerTransform.position, PetBed.position) < BedReach;
+        Transform PetBed => petBed != null ? petBed : (petBed = RoomFind("Cat_Bed"));
         // Species decides the sounds, words and timing (a dog barks, gulps its food and retrieves; a cat meows, nibbles and purrs).
         CompanionBehavior Pet => garden.Behavior ?? CompanionBehavior.For(PetRoster.Active.Kind);
         float Flat(Vector3 a, Vector3 b) => Vector2.Distance(new Vector2(a.x, a.z), new Vector2(b.x, b.z));
@@ -103,10 +108,13 @@ namespace CatMe.Session
                 // One contextual action at a time: the nearer of the bowl (when empty) and the frame.
                 bool bowlReady = NearBowl && feed == FeedStage.Empty && Time.time >= fullUntil;
                 bool frameReady = NearFrame && houseFrame.CanInteract;
+                bool bedReady = !catSleeping && NearBed;
+                if (catSleeping && PetBed != null && Flat(garden.OwnerTransform.position, PetBed.position) > WakeDistance) Wake();   // walking away wakes it
                 houseAction = bowlReady && (!frameReady || Flat(garden.OwnerTransform.position, bowlCentre) < Flat(garden.OwnerTransform.position, houseFrame.transform.position)) ? HouseAction.Bowl
-                    : frameReady ? HouseAction.Frame : HouseAction.None;
+                    : frameReady ? HouseAction.Frame : bedReady ? HouseAction.Bed : HouseAction.None;
+                if (!catSleeping && PetBed != null && TappedOn(PetBed.position, 140f)) Sleep();   // tapping the bed itself
                 active = houseFrame != null ? houseFrame.GetComponent<InteractionPoint>() : null;
-                SetButton(houseAction == HouseAction.Bowl ? "Fill the bowl" : houseAction == HouseAction.Frame ? houseFrame.ButtonLabel : null); return;
+                SetButton(houseAction == HouseAction.Bowl ? "Fill the bowl" : houseAction == HouseAction.Frame ? houseFrame.ButtonLabel : houseAction == HouseAction.Bed ? "Bed time" : null); return;
             }
             if (state == State.Busy) { SetButton(null); return; }
             if (state == State.Sitting) { SeatedCatWander(); SetButton("Stand up"); return; }
@@ -192,6 +200,7 @@ namespace CatMe.Session
                 case State.InHouse:
                     if (houseAction == HouseAction.Bowl) FillBowl();
                     else if (houseAction == HouseAction.Frame && NearFrame && houseFrame.CanInteract) houseFrame.Interact();
+                    else if (houseAction == HouseAction.Bed) Sleep();
                     break;
                 case State.Sitting: StartCoroutine(StandUp()); break;
                 case State.InRoom: if (Time.time - roomEnteredAt > 3f) StartCoroutine(LeaveTent()); break;
@@ -352,6 +361,7 @@ namespace CatMe.Session
 
         IEnumerator LeaveHouse()
         {
+            Wake();
             state = State.Busy;
             yield return director.FadeTo(1f, .5f);
             StopEating(); feedLeading = false;
@@ -432,6 +442,7 @@ namespace CatMe.Session
             if (bowl == null || feed != FeedStage.Empty) return;
             feed = FeedStage.Filled; feedLeading = false; garden.ClearLead();
             Haptics.Tap();
+            garden.PlayOwnerPour();   // F8: crouch and pour when the clip exists for this person
             StartCoroutine(PourFood());
             StartEating();
         }
@@ -529,8 +540,12 @@ namespace CatMe.Session
             if (state == State.InHouse && eating == null) garden.ReleaseCat();
         }
 
+        void OnEnable() { CatPetInput.PetTapped += Wake; }
+        void OnDisable() { CatPetInput.PetTapped -= Wake; }
+
         void Sleep()
         {
+            if (catSleeping) return;
             StopEating(); feedLeading = false;
             garden.ClearLead(); frameLeading = false;
             var bed = RoomFind("Cat_Bed"); if (bed == null) return;
@@ -543,9 +558,65 @@ namespace CatMe.Session
             garden.SetCuriosity(bed.position, 12f);
             for (float t = 0f; t < 12f && Vector3.Distance(garden.CatPosition, bed.position) > .35f; t += Time.deltaTime) yield return null;
             garden.SetCuriosity(Vector3.zero, 0f);
-            garden.HoldCat(bed.position + Vector3.up * .12f, bed.eulerAngles.y);   // neutral pose: no sleep animation exists yet
-            catSleeping = true; garden.SetAppStatus(Pet.Asleep(PetRoster.NameForText(true)));
-            PetSounds.PlayAt(garden.CatPosition, Pet.Species, PetCue.Settle, .5f);
+            if (state != State.InHouse) yield break;
+            garden.HoldCat(bed.position + Vector3.up * .12f, bed.eulerAngles.y);   // curled up (neutral pose until a sleep clip exists)
+            catSleeping = true;
+            garden.SetAppStatus(PetRoster.NameForText(true) + " is fast asleep.");
+            DimRoom(true);
+            StartSleepLoop();
+        }
+
+        // Tapping the pet or walking away wakes it: the lights and the loop come back to normal.
+        void Wake()
+        {
+            if (!catSleeping) return;
+            catSleeping = false;
+            DimRoom(false);
+            StopSleepLoop();
+            if (state == State.InHouse && eating == null) garden.ReleaseCat();
+        }
+
+        void DimRoom(bool dim)
+        {
+            if (dim)
+            {
+                dimmed.Clear();
+                if (houseRoom != null) foreach (var l in houseRoom.GetComponentsInChildren<Light>()) { dimmed.Add((l, l.intensity)); l.intensity *= .7f; }
+            }
+            else { foreach (var (l, intensity) in dimmed) if (l != null) l.intensity = intensity; dimmed.Clear(); }
+        }
+
+        void StartSleepLoop()
+        {
+            var clip = PetSounds.Clip(Pet.Species, PetCue.Settle);   // cat: purr; dog: slow-breath stand-in
+            if (clip == null || !PetSounds.Enabled) return;
+            if (sleepLoop == null) { sleepLoop = gameObject.AddComponent<AudioSource>(); sleepLoop.loop = true; sleepLoop.spatialBlend = .8f; sleepLoop.playOnAwake = false; }
+            sleepLoop.clip = clip; sleepLoop.volume = 0f; sleepLoop.pitch = Pet.Species == Species.Dog ? .8f : 1f; sleepLoop.Play();
+            StartCoroutine(FadeSleepLoop(.22f, 1.5f));
+        }
+
+        void StopSleepLoop() { if (sleepLoop != null && sleepLoop.isPlaying) StartCoroutine(FadeSleepLoop(0f, .6f)); }
+
+        IEnumerator FadeSleepLoop(float to, float seconds)
+        {
+            float from = sleepLoop.volume;
+            for (float t = 0f; t < seconds && sleepLoop != null; t += Time.unscaledDeltaTime) { sleepLoop.volume = Mathf.Lerp(from, to, t / seconds); if (garden.CatTransform != null) sleepLoop.transform.position = garden.CatPosition; yield return null; }
+            if (sleepLoop == null) yield break;
+            sleepLoop.volume = to; if (to <= 0f) sleepLoop.Stop();
+        }
+
+        // A tap (touch or click) near a world point on screen, not on a button.
+        bool TappedOn(Vector3 world, float pixels)
+        {
+            var cam = Camera.main; if (cam == null) return false;
+            Vector2 pos; bool down = false;
+            var touch = UnityEngine.InputSystem.Touchscreen.current; var mouse = UnityEngine.InputSystem.Mouse.current;
+            if (touch != null && touch.primaryTouch.press.wasPressedThisFrame) { down = true; pos = touch.primaryTouch.position.ReadValue(); }
+            else if (mouse != null && mouse.leftButton.wasPressedThisFrame) { down = true; pos = mouse.position.ReadValue(); }
+            else pos = default;
+            if (!down || CatMe.Garden.MobileGardenJoystick.OverUiExceptStick(pos)) return false;
+            Vector3 sp = cam.WorldToScreenPoint(world);
+            return sp.z > 0f && ((Vector2)sp - pos).magnitude < pixels * Mathf.Clamp(Screen.height / 1080f, .7f, 1.6f);
         }
 
         void SetRoomButtons(bool show)

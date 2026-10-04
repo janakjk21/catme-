@@ -597,6 +597,35 @@ namespace CatMe.Garden
             SetStatus("You call " + CatMe.Pets.PetRoster.NameForText() + ".");
         }
 
+        /// <summary>
+        /// F8: the bundled person crouches and pours at the bowl, then walks on. Uses Resources/CatMeAnimations/OwnerPour (a Legacy
+        /// clip made from the owner's download by Editor/OwnerAnimationImport). A generated person has only a walk clip, so for
+        /// them, or when the clip is missing or doesn't fit the rig, nothing changes. Returns true when the clip plays.
+        /// </summary>
+        public bool PlayOwnerPour()
+        {
+            if (humanWalkAnimation == null || File.Exists(DeviceBridge.HumanModelPath)) return false;
+            if (humanWalkAnimation["OwnerPour"] == null)
+            {
+                var clip = Resources.Load<AnimationClip>("CatMeAnimations/OwnerPour");
+                if (clip == null || !clip.legacy) return false;
+                humanWalkAnimation.AddClip(clip, "OwnerPour");
+            }
+            var state = humanWalkAnimation["OwnerPour"];
+            state.wrapMode = WrapMode.Once; state.layer = 1;
+            humanWalkAnimation.CrossFade("OwnerPour", .2f);
+            StartCoroutine(BackToWalk(state.length));
+            return true;
+        }
+
+        private IEnumerator BackToWalk(float seconds)
+        {
+            SetOwnerFrozen(true);
+            yield return new WaitForSeconds(Mathf.Max(.3f, seconds - .2f));
+            if (humanWalkAnimation != null && humanWalkState != null) humanWalkAnimation.CrossFade(humanWalkState.name, .25f);
+            SetOwnerFrozen(false);
+        }
+
         // Height of the visible pet (cat model or dog), measured once when it picks up the ball.
         private float PetHeight()
         {
