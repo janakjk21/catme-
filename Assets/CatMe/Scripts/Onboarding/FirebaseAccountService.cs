@@ -43,6 +43,7 @@ namespace CatMe.Onboarding
                 FirebaseApp app = FirebaseApp.DefaultInstance;
                 auth = FirebaseAuth.GetAuth(app);
                 IsReady = true;          // sign-in only needs Auth; Firestore and Storage are optional extras
+                Telemetry.FirebaseStarted();   // crash reports and funnel events, when those SDKs are in the build
                 LastError = null;
                 try { firestore = FirebaseFirestore.DefaultInstance; } catch (Exception e) { Debug.LogWarning("[WornTag][Firebase] Firestore unavailable: " + e.Message); }
                 try { storage = FirebaseStorage.GetInstance(app); } catch (Exception e) { Debug.LogWarning("[WornTag][Firebase] Storage unavailable: " + e.Message); }

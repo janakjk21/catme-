@@ -629,6 +629,7 @@ namespace CatMe.Garden
             Chevron("Replay the controls guide", "walk", () => { returnToMenu = false; CloseSettings(); tutorial.Replay(); });
             Section("Account and data");
             Chevron("Account", "account", () => { settings.SetActive(false); returnToSettings = true; OpenAccount(); });
+            Toggle("Share crash reports", "Anonymous reports help us fix problems", "heart", () => Telemetry.Enabled, () => { Telemetry.Enabled = !Telemetry.Enabled; RefreshSettingLabels(); });
 
             // Footer: privacy, terms, version.
             y -= 16f;
@@ -793,6 +794,7 @@ namespace CatMe.Garden
         internal void OnFirstFetchComplete() { }
         private void FinishFirstSession()
         {
+            Telemetry.Track("first_walk_done", "skipped", tutorial.Progress.skipped ? "yes" : "no");
             garden.EndFirstGardenSession();
             SetGameplayControlsVisible(true);
             garden.SetAppStatus(tutorial.Progress.skipped ? "" : "You did it. The garden is yours.");

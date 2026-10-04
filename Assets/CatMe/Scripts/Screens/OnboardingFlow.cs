@@ -37,6 +37,8 @@ namespace CatMe.Garden
         public static bool AnyOpen => current != null && current.IsOpen;
 
         List<string> Flow() => FlowFor(addMode);
+        /// <summary>The three tips on the pet photo screen, for cats and dogs alike.</summary>
+        internal static readonly string[] PetPhotoTips = { "Their whole body, nose to tail", "Lots of light", "Only your pet" };
         /// <summary>The steps before the garden. The pet is named before the wait, so the garden can say "Mochi is being made".</summary>
         internal static List<string> FlowFor(bool addMode) => addMode ? new List<string> { "species", "photo", "name" } : new List<string> { "species", "photo", "person", "name" };
 
@@ -88,7 +90,8 @@ namespace CatMe.Garden
         void BeginEarlyCreation()
         {
             if (creationStarted) return;
-            creationStarted = true; finishedResult = null;
+            creationStarted = true; finishedResult = null; creationStartedAt = Time.realtimeSinceStartup;
+            CatMe.Onboarding.Telemetry.Track("creation_started", "species", species == Species.Dog ? "dog" : "cat");
             ownerTcs = new System.Threading.Tasks.TaskCompletionSource<string>();
             if (addMode) ownerTcs.TrySetResult(null);
             else if (personPhoto != null) ownerTcs.TrySetResult(personPhoto);
@@ -101,6 +104,7 @@ namespace CatMe.Garden
             try { result = await OnCreate(who, species, petPhoto, ownerTcs.Task, (stage, message) => { if (!string.IsNullOrEmpty(stage)) remoteStage = stage; }); }
             catch (Exception e) { Debug.LogWarning("[WornTag][Creation] " + e.Message); result = new CatMe.Onboarding.CreationResult { error = "Something went wrong. Check your connection and try again." }; }
             creationStarted = false;
+            TrackResult(result);
             bool watching = IsOpen && step == "making";   // the player waited on the making screen
             if (result.ok)
             {
@@ -112,6 +116,16 @@ namespace CatMe.Garden
             }
             else if (watching) ShowCreateFailed(result, PetLabel);
             else { MakingInGarden = false; finishedResult = result; OnCreateFailed?.Invoke(string.IsNullOrEmpty(result.error) ? "We couldn't make your pet this time." : result.error); }
+        }
+
+        float creationStartedAt;
+
+        // Funnel: how creations end (a reason code, never the photo or the name) and how long a ready pet took.
+        void TrackResult(CatMe.Onboarding.CreationResult result)
+        {
+            string outcome = result.ok ? "ready" : !string.IsNullOrEmpty(result.rejectReason) ? result.rejectReason : "failed";
+            CatMe.Onboarding.Telemetry.Track("creation_result", "result", outcome);
+            if (result.ok && creationStartedAt > 0f) CatMe.Onboarding.Telemetry.Track("time_to_ready", "seconds", (long)(Time.realtimeSinceStartup - creationStartedAt));
         }
 
         public void ResumeCreation(PetProfile pet, Func<Action<string, string>, System.Threading.Tasks.Task<CatMe.Onboarding.CreationResult>> resume)
@@ -131,6 +145,7 @@ namespace CatMe.Garden
             try { result = await resume((stage, message) => { if (!string.IsNullOrEmpty(stage)) remoteStage = stage; }); }
             catch (Exception e) { Debug.LogWarning("[WornTag][Creation] " + e.Message); result = new CatMe.Onboarding.CreationResult { error = "Something went wrong. Check your connection and try again." }; }
             creationStarted = false;
+            TrackResult(result);
             if (result.ok)
             {
                 OnCreated?.Invoke(created, result);
@@ -266,6 +281,7 @@ namespace CatMe.Garden
         void Show(string s)
         {
             step = s; Clear();
+            CatMe.Onboarding.Telemetry.Track("onboarding_step", "step", s);
             switch (s)
             {
                 case "species": ShowSpecies(); break;
@@ -320,8 +336,8 @@ namespace CatMe.Garden
             else
             {
                 Sub(RightX, 140f, "Take or pick one photo. We use it to build a 3D copy.", 110f);
-                if (species == Species.Dog) Tips(30f, "We can see all of them, from nose to tail", "There is lots of light", "Only your dog is in the photo");
-                else Tips(30f, "We can see their whole face", "There is lots of light", "Only your pet is in the photo");
+                // The whole animal builds a better 3D pet than a face close-up (launch task L8).
+                Tips(30f, PetPhotoTips);
                 Primary(RightX, -250f, petPhoto != null ? "Choose another" : "Choose a photo", ChoosePetPhoto, 520f);
                 TextLink(RightX, -360f, "Take a photo instead", ChoosePetPhoto, 360f);
             }

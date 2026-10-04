@@ -14,6 +14,7 @@ WornTag ("we", "us") is a game where you walk in a garden with a 3D pet made fro
 - Your photos and characters are private to your account. Nobody else in the game can see them.
 - You can delete your photos, or your whole account, any time in **Settings**.
 - No ads. No tracking across other apps. We never sell your data.
+- Anonymous crash reports help us fix problems; you can turn them off in **Settings**.
 
 ## What we collect
 
@@ -26,7 +27,8 @@ WornTag ("we", "us") is a game where you walk in a garden with a 3D pet made fro
 | **House frame photo** (optional) | when you put a picture in the frame | to show it in your in-game house; it is never sent to an AI provider |
 | **Account ID** | when you start ("Try it free"), or sign in with Google or Apple | to keep your pets in your account. If you sign in with Google or Apple we receive your account ID from them; [list any other fields actually stored, e.g. email if requested] |
 | **Consent record** (time and version) | when you tap "I agree" | to prove you agreed before any photo was uploaded |
-| **Technical data** (requests to our server, error logs) | while you play | to run the service, stop abuse and fix problems. [Add crash reporting here if Firebase Crashlytics is added.] |
+| **Technical data** (requests to our server, error logs) | while you play | to run the service, stop abuse and fix problems |
+| **Crash reports and usage events** (what went wrong in a crash, device model and OS version, and a few anonymous events such as "reached the photo step", "pet ready" with how long it took, "first walk finished" and the reason code when a photo is refused) | while you play, unless you turn off **Share crash reports** in Settings | to find and fix crashes and see where new players get stuck. They carry no name, email, photo or account ID, and are not used for advertising. |
 
 Photos you take in the game with the in-game camera, and your game settings, stay on your phone unless you choose to save a photo to your Photos.
 
@@ -38,7 +40,7 @@ We only share your photos with companies that help make the characters, and only
 
 | Company | What they receive | Why |
 |---|---|---|
-| **Google Firebase** (Google LLC / Google Ireland) | account ID, photos, models, pet records | sign-in, private storage and database (Firestore region `eur3`, Europe) |
+| **Google Firebase** (Google LLC / Google Ireland) | account ID, photos, models, pet records; crash reports and anonymous usage events (Firebase Crashlytics, Google Analytics for Firebase) | sign-in, private storage and database (Firestore region `eur3`, Europe); finding crashes and where players get stuck |
 | **Railway** (Railway Corp.) | requests to our server while it works | hosts our server |
 | **OpenAI** (OpenAI, L.L.C.) | your pet photo or selfie | checks that a photo is safe and shows a cat, a dog or one person before anything is made. OpenAI does not use data sent through its API to train its models by default. |
 | **Tripo** ([legal entity of Tripo3D]) | your pet photo | makes the 3D pet and its walk |
@@ -56,6 +58,8 @@ We only share your photos with companies that help make the characters, and only
 | 3D models, pet names, house frame photo | until you delete your account |
 | Consent record | for as long as your account exists, then deleted with it |
 | Server logs | up to [30] days |
+| Crash reports | 90 days (Crashlytics default) |
+| Usage events | [2 months: set "Event data retention" in Google Analytics to 2 months] |
 
 Provider copies are kept under their own retention terms [fill in from their terms].
 
@@ -66,7 +70,7 @@ Provider copies are kept under their own retention terms [fill in from their ter
 - You also have the right to ask for a copy of your data, to correct it, to object, and to complain to the UK Information Commissioner's Office (ico.org.uk). Write to [privacy@worntag.com]; we reply within one month.
 - A guest account ("Try it free") lives on your phone. If you delete the app without signing in, we cannot return your pets.
 
-**Our legal basis:** your consent for photos and characters (you can withdraw it any time by deleting your photos or account); performance of our agreement with you to run your account; our legitimate interest in keeping the service safe.
+**Our legal basis:** your consent for photos and characters (you can withdraw it any time by deleting your photos or account); performance of our agreement with you to run your account; our legitimate interest in keeping the service safe and fixing crashes (you can object by turning off **Share crash reports** in Settings).
 
 ## Children
 
