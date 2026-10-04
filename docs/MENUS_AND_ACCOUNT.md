@@ -151,7 +151,7 @@ The most important screen to get right: it holds the only way to keep pets acros
 | Delete account | `DELETE /v1/account`; delete the local profile folder; sign out; reload to Login. Apple accounts: run Apple reauthorisation and token revocation first (audit item 12). |
 
 ### Data on the phone
-Local data must live under **`Profiles/{uid}/`**, never one shared `Profiles/local-guest/` for everyone (today: `PetRoster.cs:35`, `LocalPlayerProfile.cs:34`). On first sign-in, move `local-guest` into the new uid. Signing in as a different person must never show the previous person's pets, photos or frame.
+Local data lives under **`Profiles/{uid}/`** (`Onboarding/AccountStorage.cs`, built 2026-10-04): pets, profile, store bag, drafts, downloads, the person model (`models/`), the photo album (`album/`) and the walk save (`session/`). The house frame cache was already per uid. The last account is remembered so the garden loads the right pets before Firebase restores the sign-in. The old shared folders (`Profiles/local-guest`, `Companion`, `JourneyPhotos`, `CatMeSession`) move once per phone into the first account that signs in. Signing in as a different person never shows the previous person's pets, photos or frame. Tests: `Tests/AccountStorageTests.cs`.
 
 ### Where it lives
 `Screens/OnboardingFlow.cs` `ShowSignedIn` (rename to `ShowAccount`, both states), wired from `Garden/CatMeAppFlow.cs` `OpenAccount`; deletion in `CatMeAppFlow.ConfirmDeletion`.

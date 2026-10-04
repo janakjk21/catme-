@@ -16,11 +16,12 @@ namespace CatMe.Garden
     [DisallowMultipleComponent]
     public sealed class DeviceBridge : MonoBehaviour
     {
-        static string Drafts => Path.Combine(Application.persistentDataPath, "Profiles", "local-guest", "drafts");
-        static string Models => Path.Combine(Application.persistentDataPath, "Companion");
+        // All per account (AccountStorage: Profiles/{uid}/).
+        static string Drafts => AccountStorage.Drafts;
         /// <summary>The player's downloaded models, loaded by the garden in place of the bundled ones.</summary>
-        public static string CatModelPath => Path.Combine(Models, "cat-walking.glb");
-        public static string HumanModelPath => Path.Combine(Models, "person-walking.glb");
+        public static string CatModelPath => AccountStorage.CatModelPath;
+        /// <summary>The one place the person model lives (creation, restore and retry all write here).</summary>
+        public static string HumanModelPath => AccountStorage.PersonModelPath;
 
         public FirebaseAccountService AccountService { get; private set; }
 #if UNITY_EDITOR
@@ -188,6 +189,8 @@ namespace CatMe.Garden
         // ---- Google sign-in ---------------------------------------------------------------------------------------------------
 
         Action<string> googleDone;             // error message, or null on success
+        /// <summary>Reported instead of a message when a guest tries to save to a Google account that already has WornTag pets.</summary>
+        public const string GoogleAccountInUse = "GOOGLE_ACCOUNT_IN_USE";
 
         /// <summary>Shows Google's sign-in sheet and signs in to Firebase with the result; reports null on success or a short reason.</summary>
         public void SignInWithGoogle(Action<string> done)
@@ -213,7 +216,11 @@ namespace CatMe.Garden
                 if (payload == null || string.IsNullOrEmpty(payload.idToken)) throw new InvalidOperationException("Google sign-in was incomplete.");
                 await AccountService.SignInWithGoogleTokensAsync(payload.idToken, payload.accessToken);
             }
-            catch (Exception ex) { Debug.LogWarning("[WornTag][Google] " + ex); error = "Google sign-in failed: " + ex.Message; }
+            catch (Exception ex)
+            {
+                Debug.LogWarning("[WornTag][Google] " + ex);
+                error = FirebaseAccountService.IsCredentialInUse(ex) ? GoogleAccountInUse : "Google sign-in failed: " + ex.Message;
+            }
             var done = googleDone; googleDone = null; done?.Invoke(error);
         }
 

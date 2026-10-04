@@ -400,17 +400,60 @@ namespace CatMe.Garden
         }
 
         /// <summary>Account screen for a person who is already signed in: who they are, and a way to sign out.</summary>
-        public void ShowSignedIn(string who, Action signOut, Action deleteAccount)
+        /// <summary>What the Account screen shows (MENUS_AND_ACCOUNT.md section 4).</summary>
+        public sealed class AccountView
+        {
+            public bool guest;
+            public string identityLine;   // "Signed in with Google · ja…@gmail.com"
+            public string petsLine;       // "Mochi and Miso are saved to your account."
+            public Sprite picture;
+            public Action saveWithGoogle, signOut, deletePhotos, deleteAccount, privacy, terms;
+            public string version;
+        }
+
+        /// <summary>Account, in two states: a guest (save the pets with Google) or a signed-in player (who you are, sign out). Both end with "Your data".</summary>
+        public void ShowAccount(AccountView v)
         {
             accountOnly = true;
             if (root == null) { var s = UiKit.Screen(canvasRoot, "Onboarding", CatMeUIStyle.Mist); root = s.root; safe = s.safe; }
             root.SetActive(true); root.transform.SetAsLastSibling(); step = "account"; Clear();
-            UiKit.IconButton(safe, "close", new Vector2(860f, 470f), () => { Hide(); OnAccountDone?.Invoke(); }, "Close");
-            Tag(LeftX, 270f, "Account");
-            Title(LeftX, 150f, "You are signed in");
-            Sub(LeftX, -10f, who, 120f);
-            Ghost(LeftX, -160f, "Sign out", () => { Hide(); signOut?.Invoke(); OnAccountDone?.Invoke(); }, 420f);
-            if (deleteAccount != null) { var d = UiKit.Link(safe, "Delete account", new Vector2(LeftX + 130f, -270f), new Vector2(300f, 70f), () => { Hide(); deleteAccount(); }); d.GetComponentInChildren<Text>().color = CatMeUIStyle.Danger; }
+            UiKit.IconButton(safe, "close", new Vector2(860f, 440f), () => { Hide(); OnAccountDone?.Invoke(); }, "Back to the garden");
+            if (v.picture != null)
+            {
+                var core = UiKit.Bezel(safe, "Picture card", new Vector2(500f, -40f), new Vector2(700f, 700f));
+                UiKit.CoverFrame(core, v.picture, Vector2.zero, core.sizeDelta - new Vector2(30f, 30f), 1f, "Picture", .5f, .5f);
+            }
+            if (v.guest)
+            {
+                Title(LeftX, 330f, "You're playing as a guest");
+                Sub(LeftX, 225f, "Your pets live only on this phone. Save them to keep them if you get a new phone.", 110f);
+                Primary(LeftX, 70f, "Save my pets with Google", v.saveWithGoogle, 560f);
+                TextLink(LeftX, -35f, "Sign out of this guest account", v.signOut, 520f);
+            }
+            else
+            {
+                Title(LeftX, 330f, "Your account");
+                Sub(LeftX, 225f, v.identityLine, 60f);
+                if (!string.IsNullOrEmpty(v.petsLine)) Sub(LeftX, 160f, v.petsLine, 60f);
+                Ghost(LeftX, 50f, "Sign out", v.signOut, 420f);
+            }
+            // Your data: separated by a hairline, the two destructive actions and the policies.
+            var line = UiKit.Rect(safe, "Divider", new Vector2(LeftX + 430f, -110f), new Vector2(860f, 2f));
+            var li = line.gameObject.AddComponent<Image>(); li.color = CatMeUIStyle.Hairline; li.raycastTarget = false;
+            UiKit.Label(safe, "Your data", 34, CatMeUIStyle.Ink, new Vector2(LeftX + 430f, -160f), new Vector2(860f, 50f), FontStyle.Bold, TextAnchor.MiddleLeft, "Your data");
+            DangerButton(LeftX, -250f, "Delete my photos", v.deletePhotos, 410f);
+            DangerButton(LeftX + 450f, -250f, "Delete account", v.deleteAccount, 410f);
+            TextLink(LeftX, -360f, "Privacy policy", v.privacy, 260f);
+            TextLink(LeftX + 280f, -360f, "Terms and AI policy", v.terms, 330f);
+            UiKit.Label(safe, v.version ?? "", 24, CatMeUIStyle.MutedInk, new Vector2(LeftX + 760f, -360f), new Vector2(220f, 50f), FontStyle.Normal, TextAnchor.MiddleRight, "Version");
+        }
+
+        // A light button with Danger text: never the biggest button on the screen, and it always confirms first.
+        Button DangerButton(float x, float y, string label, Action a, float w)
+        {
+            var b = Ghost(x, y, label, a, w);
+            var t = b.GetComponentInChildren<Text>(); if (t != null) t.color = CatMeUIStyle.Danger;
+            return b;
         }
 
         public void AccountSucceeded()

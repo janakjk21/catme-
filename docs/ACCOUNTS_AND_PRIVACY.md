@@ -24,7 +24,7 @@ How a player's identity, photos and models are handled, and what we promise. "No
 | 3D models | Storage `users/{uid}/models/`, `users/{uid}/avatar/` | to load them on any phone |
 | Pet name, species, status | Firestore `users/{uid}/pets/{petId}` | the pet list |
 | Consent time and version | Firestore `users/{uid}` | proof the player agreed to the photo upload |
-| Copies on the phone | app data folder (photos, downloaded models) | play offline |
+| Copies on the phone | app data folder, one folder per account: `Profiles/{uid}/` (photos, downloaded models, album, walk save) | play offline; another account on the same phone never sees them |
 | House frame photo | private Storage `users/{uid}/photos/frames/`, metadata `users/{uid}.houseFrame`, local `HousePhotos/{uid}/frame.jpg` | restore the same picture next time or on another phone signed into the same account; never sent to a generation provider |
 
 Photos go only to our server and the 3D provider that makes the model (Tripo for pets, Meshy for people). Nothing is public; every file link expires after 15 minutes.

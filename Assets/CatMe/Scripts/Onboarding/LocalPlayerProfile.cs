@@ -21,18 +21,31 @@ namespace CatMe.Onboarding
         public string draftStep = "cat";
     }
 
-    // Local guest foundation only. Cloud identity must use a separate authenticated scope.
+    // Per account (AccountStorage: Profiles/{uid}/). SwitchTo reloads it when a different account signs in.
     public sealed class LocalPlayerProfile
     {
         public LocalPlayerProfileData Data { get; private set; }
         public bool ReadOnly { get; private set; }
         public string Notice { get; private set; }
-        public string Folder { get; }
-        readonly string path;
-        public LocalPlayerProfile(string persistentRoot, bool legacyComplete)
+        public string Folder { get; private set; }
+        string path;
+        readonly string persistentRoot;
+        readonly bool legacyComplete;
+        public LocalPlayerProfile(string persistentRoot, bool legacyComplete) : this(persistentRoot, AccountStorage.ProfileFolder, legacyComplete) { }
+        public LocalPlayerProfile(string persistentRoot, string folder, bool legacyComplete)
         {
-            Folder = Path.Combine(persistentRoot, "Profiles", "local-guest");
+            this.persistentRoot = persistentRoot; this.legacyComplete = legacyComplete;
+            Load(folder);
+        }
+
+        /// <summary>Reads the profile in another account's folder (after sign-in or account switch).</summary>
+        public void SwitchTo(string folder) { if (folder != Folder) Load(folder); }
+
+        void Load(string folder)
+        {
+            Folder = folder;
             path = Path.Combine(Folder, "profile-v1.json");
+            Data = null; ReadOnly = false; Notice = null;
             try
             {
                 Data = Read(path) ?? Read(path + ".bak");

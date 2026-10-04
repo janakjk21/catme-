@@ -19,6 +19,8 @@ Source of truth: `docs/LAUNCH_AUDIT.md` (item numbers below) and `docs/MENUS_AND
 **Already done and validated, do not redo:** spend limits and daily caps, selfie person prompt, pet markings, restore pets, resume creation, bad-model fallback, policy links, EditMode tests, and (code only) lookout, river mesh, mountains, full day cycle. See "Validation of ChatGPT's fixes" in the audit.
 
 ### L1. Account, sign-out and per-account storage (audit 31a, 31b; `MENUS_AND_ACCOUNT.md` section 4) - highest priority
+
+**Code done 2026-10-04 (cloud, not compiled):** `AccountStorage` (per-uid folders, one-time legacy move, remembered last account), roster/store/profile/drafts/downloads/person model/album/session per account, two-state Account screen (`OnboardingFlow.ShowAccount`), Save my pets with Google (link; "already has pets" switch), sign-out to Login via scene reload with C1/C2, C3, C4 hold-to-delete (`ConfirmDialog.ShowWithCancel`, `HoldToConfirm`), deletion scoped to this account. Tests: `AccountStorageTests` (4). Apple stays hidden until the paid team.
 - Store all local data under `Profiles/{uid}/` (`PetRoster.cs:35`, `LocalPlayerProfile.cs:34`, `DeviceBridge.HumanModelPath`, house frame cache, downloads). Migrate `Profiles/local-guest` into the first signed-in uid once.
 - `RestoreAccountAsync` must restore into that account's folder only, so account B never sees account A's pets.
 - Sign out: save, sign out of Firebase, clear in-memory roster, models, frame and pending job, reload to Login. Guests get confirm C1 first.

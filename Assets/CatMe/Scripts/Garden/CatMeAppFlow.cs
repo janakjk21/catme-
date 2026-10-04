@@ -35,6 +35,7 @@ namespace CatMe.Garden
             this.garden = garden;
             this.device = device;
             profile = new LocalPlayerProfile(Application.persistentDataPath, PlayerPrefs.GetInt(FirstSessionKey, 0) == 1);
+            AccountStorage.Changed += OnAccountChanged;
             tutorial = new TutorialController(profile);
             garden.OwnerMoved += tutorial.OwnerMoved;
             garden.CallAccepted += tutorial.CallRequested;
@@ -91,6 +92,7 @@ namespace CatMe.Garden
             async System.Threading.Tasks.Task OpenSessionAsync()
             {
                 if (api == null) throw new InvalidOperationException("The account server is not configured.");
+                AccountStorage.UseAccount(identity.UserId);   // this account's own folder before anything is restored into it
                 var session = await api.OpenSessionAsync();
                 await RestoreAccountAsync(api, session);
                 onboarding.AccountSucceeded();
@@ -123,7 +125,7 @@ namespace CatMe.Garden
             onboarding.OnCreate = (name, species, photo, ownerTask, report) =>
             {
                 if (api == null) return System.Threading.Tasks.Task.FromResult(new CreationResult { error = "The account server is not configured." });
-                string cache = System.IO.Path.Combine(Application.persistentDataPath, "Profiles", string.IsNullOrEmpty(identity.UserId) ? "local-guest" : identity.UserId, "downloads");
+                string cache = AccountStorage.Downloads;
                 return new CreationClient(api).RunAsync(new CreationRequest
                 {
                     petName = name, species = species == Species.Dog ? "dog" : "cat", petPhotoPath = photo, ownerPhotoTask = ownerTask,
@@ -135,7 +137,7 @@ namespace CatMe.Garden
             {
                 try
                 {
-                    string cache = System.IO.Path.Combine(Application.persistentDataPath, "Profiles", string.IsNullOrEmpty(identityForAccount?.UserId) ? "local-guest" : identityForAccount.UserId, "downloads");
+                    string cache = AccountStorage.Downloads;
                     var newest = System.IO.Directory.Exists(cache) ? new System.IO.DirectoryInfo(cache).GetFiles("pet-*.glb") : new System.IO.FileInfo[0];
                     System.Array.Sort(newest, (x, y) => y.LastWriteTimeUtc.CompareTo(x.LastWriteTimeUtc));
                     if (result.petModelSaved && newest.Length > 0 && pet.Kind == Species.Cat)
@@ -179,6 +181,7 @@ namespace CatMe.Garden
                     string destination = System.IO.Path.Combine(PetRoster.PetFolder(local.id), "model.glb");
                     await api.DownloadFileAsync(current.modelUrl, destination, null);
                     local.modelPath = destination; local.isFixture = current.isFixture; PetRoster.SaveChanges();
+                    needsCharacterReload = true;
                 }
                 catch (Exception e) { Debug.LogWarning("[WornTag][Restore] could not restore " + local.name + ": " + e.Message); }
             }
@@ -187,7 +190,7 @@ namespace CatMe.Garden
                 try
                 {
                     var owner = await api.GetOwnerAsync();
-                    if (owner?.status == "ready" && !string.IsNullOrEmpty(owner.modelUrl)) await api.DownloadFileAsync(owner.modelUrl, DeviceBridge.HumanModelPath, null);
+                    if (owner?.status == "ready" && !string.IsNullOrEmpty(owner.modelUrl)) { await api.DownloadFileAsync(owner.modelUrl, DeviceBridge.HumanModelPath, null); needsCharacterReload = true; }
                 }
                 catch (Exception e) { Debug.LogWarning("[WornTag][Restore] could not restore the owner: " + e.Message); }
             }
@@ -245,6 +248,7 @@ namespace CatMe.Garden
         private async void RouteSignedIn()
         {
             MobileSession session = null;
+            AccountStorage.UseAccount(identityForAccount?.UserId);
             if (mobileApi != null)
             {
                 try
@@ -266,7 +270,7 @@ namespace CatMe.Garden
             if (pending != null)
             {
                 var local = PetRoster.AddServerPet(pending.id, pending.name, pending.species);
-                string cache = System.IO.Path.Combine(Application.persistentDataPath, "Profiles", string.IsNullOrEmpty(identityForAccount?.UserId) ? "local-guest" : identityForAccount.UserId, "downloads");
+                string cache = AccountStorage.Downloads;
                 string petDestination = System.IO.Path.Combine(cache, "pet-" + System.Guid.NewGuid().ToString("N") + ".glb");
                 onboarding.ResumeCreation(local, report => new CreationClient(mobileApi).ResumeAsync(pending.id, petDestination, System.IO.Path.Combine(cache, "owner.glb"), report));
                 welcome.SetActive(false);
@@ -294,11 +298,108 @@ namespace CatMe.Garden
         {
             SetGameplayControlsVisible(false); Time.timeScale = 0f;
             onboarding.OnAccountDone = () => CloseOverlayScreen();
-            string who = identityForAccount != null && !string.IsNullOrEmpty(identityForAccount.UserId)
-                ? (identityForAccount.IsGuest ? "You are using a guest account. Sign in to keep your pets if you change phones." : "Your pets are saved to your account.")
-                : null;
-            if (who == null) onboarding.BeginAccountOnly();
-            else onboarding.ShowSignedIn(who, () => identityForAccount.SignOut(), () => ConfirmDeletion(true));
+            if (identityForAccount == null || string.IsNullOrEmpty(identityForAccount.UserId)) { onboarding.BeginAccountOnly(); return; }
+            onboarding.ShowAccount(BuildAccountView());
+        }
+
+        private OnboardingFlow.AccountView BuildAccountView()
+        {
+            bool guest = identityForAccount.IsGuest;
+            var account = device.AccountService;
+            string provider = account?.SignInProvider;
+            string who = provider == "google" ? "Google" : provider == "apple" ? "Apple" : "your account";
+            string email = MaskEmail(account?.Email);
+            var active = PetRoster.Active;
+            return new OnboardingFlow.AccountView
+            {
+                guest = guest,
+                identityLine = "Signed in with " + who + (string.IsNullOrEmpty(email) ? "" : " · " + email),
+                petsLine = SavedPetsLine(),
+                picture = Art.FromFile(active?.photoPath) ?? Art.Load(active != null && active.Kind == Species.Dog ? "GoodDogExample" : "GoodCatExample"),
+                saveWithGoogle = SaveWithGoogle,
+                signOut = guest ? (Action)ConfirmGuestSignOut : ConfirmSignOut,
+                deletePhotos = () => ConfirmDeletion(false),
+                deleteAccount = () => ConfirmDeletion(true),
+                privacy = () => Application.OpenURL(CreationClient.PrivacyUrl),
+                terms = () => Application.OpenURL(CreationClient.TermsUrl),
+                version = "WornTag " + Application.version,
+            };
+        }
+
+        /// <summary>"Mochi, Miso and 2 more are saved to your account." Only pets the server knows about count.</summary>
+        internal static string SavedPetsLine()
+        {
+            var names = new List<string>();
+            foreach (var p in PetRoster.Pets) if (!string.IsNullOrEmpty(p.serverId) && !string.IsNullOrWhiteSpace(p.name)) names.Add(p.name.Trim());
+            if (names.Count == 0) return null;
+            string list = names.Count == 1 ? names[0] : names.Count == 2 ? names[0] + " and " + names[1] : names.Count == 3 ? names[0] + ", " + names[1] + " and " + names[2] : names[0] + ", " + names[1] + " and " + (names.Count - 2) + " more";
+            return list + (names.Count == 1 ? " is" : " are") + " saved to your account.";
+        }
+
+        /// <summary>"janak@gmail.com" becomes "ja…@gmail.com".</summary>
+        internal static string MaskEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email)) return null;
+            int at = email.IndexOf('@');
+            if (at <= 0) return null;
+            string local = email.Substring(0, at);
+            return (local.Length <= 2 ? local.Substring(0, 1) : local.Substring(0, 2)) + "…" + email.Substring(at);
+        }
+
+        // Guest -> Google: the anonymous account is linked, so the uid, pets and garden stay.
+        private void SaveWithGoogle()
+        {
+            device.SignInWithGoogle(error =>
+            {
+                if (error == null)
+                {
+                    onboarding.Hide();
+                    PetToast?.Show("Saved. " + PetRoster.NameForText(true) + " is safe.", null, null);
+                    OpenAccount();
+                    return;
+                }
+                if (error == DeviceBridge.GoogleAccountInUse)
+                {
+                    Confirm.ShowWithCancel("This Google account already has pets", "Switch to it? The pets in this guest account can't be recovered after you switch.",
+                        "Stay as guest", "Switch", null, SignOutAndReload);
+                    return;
+                }
+                if (error != "Sign-in cancelled.") PetToast?.Show(error, null, null);
+            });
+        }
+
+        // C1: a guest's pets are lost on sign-out, so saving with Google is offered first.
+        private void ConfirmGuestSignOut()
+        {
+            Confirm.ShowWithCancel("Lose these pets?", "Guest pets can't be recovered after you sign out. Save them with Google first.",
+                "Save with Google", "Sign out anyway", SaveWithGoogle, SignOutAndReload);
+        }
+
+        // C2
+        private void ConfirmSignOut()
+        {
+            Confirm.Show("Sign out?", "Your pets stay saved to your account. Sign in again to see them.", "Cancel", "Sign out", null, SignOutAndReload, false);
+        }
+
+        /// <summary>Sign out: save, sign out of Firebase, forget this account's in-memory data and go back to Login (scene reload).</summary>
+        internal void SignOutAndReload()
+        {
+            try { tutorial.Suspend(); } catch (Exception e) { Debug.LogWarning("[WornTag][Account] save before sign-out: " + e.Message); }
+            try { identityForAccount?.SignOut(); } catch (Exception e) { Debug.LogWarning("[WornTag][Account] sign-out: " + e.Message); }
+            AccountStorage.UseAccount(null);          // the next person starts with nothing from this account
+            PlayerPrefs.DeleteKey(CreationClient.PendingKey); PlayerPrefs.Save();
+            PetRoster.Reload(); StoreCatalog.Reload();
+            onboarding.Hide(); settings.SetActive(false); guide.SetActive(false);
+            enterWhenReady = false; Time.timeScale = 1f; SetGameplayControlsVisible(false);
+            UnityEngine.SceneManagement.SceneManager.LoadScene("GardenCompanion");
+        }
+
+        // A different account's folder is now in use: read its profile, and reload the pet and person once the garden is ready.
+        private bool needsCharacterReload;
+        private void OnAccountChanged()
+        {
+            profile.SwitchTo(AccountStorage.ProfileFolder);
+            needsCharacterReload = true;
         }
         private IIdentityService identityForAccount;
         private IMobileApi mobileApi;
@@ -341,6 +442,7 @@ namespace CatMe.Garden
 
         internal void Tick(float delta)
         {
+            if (needsCharacterReload && garden.IsReady) { needsCharacterReload = false; garden.StartCoroutine(garden.ReloadCharactersFromPhoneStorage()); }
             if (enterWhenReady && garden.IsReady) { enterWhenReady = false; EnterGarden(); }
             onboarding?.Tick();
             bool visible = tutorial.Active && garden.IsReady && !garden.IsInputBlocked && !welcome.activeSelf && !settings.activeSelf;
@@ -359,6 +461,7 @@ namespace CatMe.Garden
             garden.OwnerMoved -= tutorial.OwnerMoved; garden.CallAccepted -= tutorial.CallRequested; garden.CatArrived -= tutorial.CatArrived;
             garden.CallUnavailable -= tutorial.CallUnavailable; garden.BallReleased -= tutorial.BallReleased; garden.BallFinished -= tutorial.BallFinished;
             tutorial.Changed -= RefreshGuide; tutorial.Finished -= FinishFirstSession;
+            AccountStorage.Changed -= OnAccountChanged;
         }
 
         private void BuildSettings()
@@ -394,10 +497,12 @@ namespace CatMe.Garden
             if (deleting) return;
             if (privacyApi == null || string.IsNullOrEmpty(identityForAccount?.UserId))
             { PetToast?.Show("Sign in before removing your photos or account.", null, null); return; }
-            Confirm.Show(account ? "Delete your account?" : "Delete your photos?",
-                account ? "Your pets and photos will be removed for good." : "Your photos will be removed from our server and this phone. Your pets stay.",
-                account ? "Keep my account" : "Keep my photos", account ? "Delete account" : "Delete my photos", null,
-                () => _ = DeleteDataAsync(account));
+            if (account)   // C4: hold the button for 3 seconds
+                Confirm.Show("Delete your account?", "This removes your pets, photos and saved garden from WornTag for good. It can't be undone.",
+                    "Cancel", "Hold to delete", null, () => _ = DeleteDataAsync(true), true, 3f);
+            else           // C3
+                Confirm.Show("Delete your photos?", "We'll remove the photos you used to make your pets. Your pets stay.",
+                    "Cancel", "Delete photos", null, () => _ = DeleteDataAsync(false));
         }
 
         private async System.Threading.Tasks.Task DeleteDataAsync(bool account)
@@ -411,16 +516,16 @@ namespace CatMe.Garden
                 if (account)
                 {
                     // Only app-owned account files; settings preferences remain readable.
-                    foreach (string folder in new[] { "Companion", "CatMeSession", "CatMeJourney", "JourneyPhotos", "PhotoAlbum", "HousePhotos" })
+                    foreach (string folder in new[] { "Companion", "CatMeSession", "CatMeJourney", "JourneyPhotos", "PhotoAlbum" })
                     {
                         string path = System.IO.Path.Combine(root, folder);
                         if (System.IO.Directory.Exists(path)) System.IO.Directory.Delete(path, true);
                     }
-                    foreach (string accountFolder in new[] { "local-guest", identityForAccount.UserId })
-                    {
-                        string path = System.IO.Path.Combine(root, "Profiles", accountFolder);
-                        if (System.IO.Directory.Exists(path)) System.IO.Directory.Delete(path, true);
-                    }
+                    string frames = System.IO.Path.Combine(root, "HousePhotos", identityForAccount.UserId);
+                    if (System.IO.Directory.Exists(frames)) System.IO.Directory.Delete(frames, true);
+                    AccountStorage.DeleteFolder(identityForAccount.UserId);   // only this account; other accounts on the phone keep theirs
+                    AccountStorage.DeleteFolder(AccountStorage.GuestFolder);
+                    AccountStorage.UseAccount(null);
                     PlayerPrefs.DeleteKey(CreationClient.PendingKey);
                     PlayerPrefs.DeleteKey(FirstSessionKey); PlayerPrefs.Save();
                     PetRoster.Reload();
@@ -433,10 +538,10 @@ namespace CatMe.Garden
                 else
                 {
                     PetRoster.RemovePhotoCopies();
-                    string housePhotos = System.IO.Path.Combine(root, "HousePhotos");
+                    string housePhotos = System.IO.Path.Combine(root, "HousePhotos", identityForAccount.UserId);   // this account's frame only
                     if (System.IO.Directory.Exists(housePhotos)) System.IO.Directory.Delete(housePhotos, true);
                     foreach (var frame in UnityEngine.Object.FindObjectsByType<CatMe.Session.HousePhotoFrame>(FindObjectsInactive.Include)) frame.ClearDisplayedPhoto();
-                    string drafts = System.IO.Path.Combine(root, "Profiles", "local-guest", "drafts");
+                    string drafts = AccountStorage.Drafts;
                     if (System.IO.Directory.Exists(drafts)) System.IO.Directory.Delete(drafts, true);
                     PlayerPrefs.DeleteKey(CreationClient.PendingKey); PlayerPrefs.Save();
                     PetToast?.Show("Your photos have been removed. Your pets stay.", null, null);

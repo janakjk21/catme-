@@ -37,7 +37,8 @@ namespace CatMe.Pets
         static Save save;
         public static event Action Changed;
 
-        static string FilePath => Path.Combine(Application.persistentDataPath, "Profiles", "local-guest", "inventory-v1.json");
+        static string FilePath => Path.Combine(CatMe.Onboarding.AccountStorage.ProfileFolder, "inventory-v1.json");
+        static StoreCatalog() { CatMe.Onboarding.AccountStorage.Changed += Reload; }
 
         static void Ensure()
         {

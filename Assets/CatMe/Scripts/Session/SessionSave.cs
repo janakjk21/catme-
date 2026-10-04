@@ -23,7 +23,7 @@ namespace CatMe.Session
     {
         [Serializable] sealed class V1Snapshot { public int schema, mapRevision; public string checkpointId; public bool active, completed, rainStarted, sheltered, retreatReached; }
 
-        static string Folder => Path.Combine(Application.persistentDataPath, "CatMeSession");
+        static string Folder => Path.Combine(CatMe.Onboarding.AccountStorage.ProfileFolder, "session");   // per account
         static string FilePath => Path.Combine(Folder, "session-v2.json");
         static string LegacyPath => Path.Combine(Application.persistentDataPath, "CatMeJourney", "checkpoint-v1.json");
 

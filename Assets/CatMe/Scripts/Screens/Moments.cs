@@ -7,7 +7,8 @@ namespace CatMe.Garden
     /// <summary>Confirmation dialog: dimmed scrim, one card, the safe choice on the left and the consequence on the right.</summary>
     internal sealed class ConfirmDialog
     {
-        readonly GameObject root; readonly RectTransform card; Text title, body; Button safe, act; Action onSafe, onAct;
+        readonly GameObject root; readonly RectTransform card; Text title, body; Button safe, act, cancel; Action onSafe, onAct;
+        HoldToConfirm hold;
 
         public ConfirmDialog(Transform canvasRoot)
         {
@@ -17,16 +18,33 @@ namespace CatMe.Garden
             body = UiKit.Label(card, "", 30, CatMeUIStyle.BodyInk, new Vector2(0f, 20f), new Vector2(680f, 120f), FontStyle.Normal, TextAnchor.UpperLeft, "Body");
             safe = UiKit.Button(card, "Keep it", new Vector2(-170f, -140f), new Vector2(320f, 90f), CatMeUIStyle.Tile, false, () => { Hide(); onSafe?.Invoke(); }, 30, "Safe choice");
             safe.GetComponentInChildren<Text>().color = CatMeUIStyle.Pine;
-            act = UiKit.Button(card, "Delete", new Vector2(170f, -140f), new Vector2(320f, 90f), CatMeUIStyle.Danger, true, () => { Hide(); onAct?.Invoke(); }, 30, "Consequence");
+            act = UiKit.Button(card, "Delete", new Vector2(170f, -140f), new Vector2(320f, 90f), CatMeUIStyle.Danger, true, () => { if (hold != null && hold.enabled) return; Hide(); onAct?.Invoke(); }, 30, "Consequence");
+            hold = act.gameObject.AddComponent<HoldToConfirm>(); hold.enabled = false;
+            hold.Completed = () => { Hide(); onAct?.Invoke(); };
+            cancel = UiKit.Link(card, "Cancel", new Vector2(0f, -218f), new Vector2(300f, 64f), Hide, 28, TextAnchor.MiddleCenter);
+            cancel.gameObject.SetActive(false);
             root.SetActive(false);
+        }
+
+        /// <summary>
+        /// Three choices (main, consequence, Cancel), for example "Save with Google" · "Sign out anyway" · "Cancel".
+        /// With <paramref name="holdSeconds"/> the consequence must be pressed and held (account deletion).
+        /// </summary>
+        public void ShowWithCancel(string heading, string message, string mainLabel, string actLabel, Action mainAction, Action action, bool destructive = true, float holdSeconds = 0f)
+        {
+            Show(heading, message, mainLabel, actLabel, mainAction, action, destructive, holdSeconds);
+            card.sizeDelta = new Vector2(760f, 500f);
+            cancel.gameObject.SetActive(true);
         }
 
         public bool IsOpen => root.activeSelf;
 
         /// <param name="destructive">Red consequence button for deleting things; pine for ordinary confirmations.</param>
-        public void Show(string heading, string message, string safeLabel, string actLabel, Action safeAction, Action action, bool destructive = true)
+        public void Show(string heading, string message, string safeLabel, string actLabel, Action safeAction, Action action, bool destructive = true, float holdSeconds = 0f)
         {
             title.text = heading; body.text = message; onSafe = safeAction; onAct = action;
+            card.sizeDelta = new Vector2(760f, 420f); cancel.gameObject.SetActive(false);
+            hold.Seconds = holdSeconds; hold.enabled = holdSeconds > 0f;
             safe.GetComponentInChildren<Text>().text = safeLabel; act.GetComponentInChildren<Text>().text = actLabel;
             CatMeUIStyle.StyleButton(act, destructive ? CatMeUIStyle.Danger : CatMeUIStyle.Pine, true);
             root.SetActive(true); root.transform.SetAsLastSibling();
@@ -120,5 +138,35 @@ namespace CatMe.Garden
         }
 
         public void Hide() => root.SetActive(false);
+    }
+
+    /// <summary>Press and hold a button to confirm (account deletion): a fill grows across it and the action runs when it is full.</summary>
+    internal sealed class HoldToConfirm : MonoBehaviour, UnityEngine.EventSystems.IPointerDownHandler, UnityEngine.EventSystems.IPointerUpHandler, UnityEngine.EventSystems.IPointerExitHandler
+    {
+        public float Seconds = 3f;
+        public Action Completed;
+        Image fill; float heldFor; bool holding;
+
+        void Awake()
+        {
+            var go = new GameObject("Hold fill", typeof(RectTransform), typeof(Image)); go.transform.SetParent(transform, false); go.transform.SetAsFirstSibling();
+            var r = (RectTransform)go.transform; r.anchorMin = Vector2.zero; r.anchorMax = Vector2.one; r.offsetMin = r.offsetMax = Vector2.zero;
+            fill = go.GetComponent<Image>(); fill.color = new Color(1f, 1f, 1f, .28f); fill.raycastTarget = false;
+            fill.type = Image.Type.Filled; fill.fillMethod = Image.FillMethod.Horizontal; fill.fillAmount = 0f;
+        }
+
+        public void OnPointerDown(UnityEngine.EventSystems.PointerEventData e) { if (enabled) { holding = true; heldFor = 0f; } }
+        public void OnPointerUp(UnityEngine.EventSystems.PointerEventData e) => Release();
+        public void OnPointerExit(UnityEngine.EventSystems.PointerEventData e) => Release();
+        void Release() { holding = false; heldFor = 0f; if (fill != null) fill.fillAmount = 0f; }
+        void OnDisable() => Release();
+
+        void Update()
+        {
+            if (!holding) return;
+            heldFor += Time.unscaledDeltaTime;   // dialogs are shown while the game is paused
+            fill.fillAmount = Mathf.Clamp01(heldFor / Mathf.Max(.1f, Seconds));
+            if (heldFor >= Seconds) { Release(); CatMe.World.Haptics.Tap(); Completed?.Invoke(); }
+        }
     }
 }

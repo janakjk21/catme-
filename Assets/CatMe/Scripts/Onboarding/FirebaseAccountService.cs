@@ -123,6 +123,35 @@ namespace CatMe.Onboarding
             await TryEnsureProfileAsync();
         }
 
+        /// <summary>"guest", "google", "apple" or "other" for the signed-in user; null when nobody is signed in.</summary>
+        public string SignInProvider
+        {
+            get
+            {
+                var user = CurrentUser;
+                if (user == null) return null;
+                if (user.IsAnonymous) return "guest";
+                foreach (var info in user.ProviderData)
+                {
+                    if (info.ProviderId == "google.com") return "google";
+                    if (info.ProviderId == "apple.com") return "apple";
+                }
+                return "other";
+            }
+        }
+        public string Email => CurrentUser?.Email;
+
+        /// <summary>True when linking failed because that Google or Apple account already belongs to another WornTag account.</summary>
+        public static bool IsCredentialInUse(Exception error)
+        {
+            for (var e = error; e != null; e = e.InnerException)
+            {
+                if (e is Firebase.FirebaseException firebase && firebase.ErrorCode == (int)AuthError.CredentialAlreadyInUse) return true;
+                if (e is AggregateException aggregate) foreach (var inner in aggregate.InnerExceptions) if (IsCredentialInUse(inner)) return true;
+            }
+            return false;
+        }
+
         public void SignOut()
         {
             RequireReady();

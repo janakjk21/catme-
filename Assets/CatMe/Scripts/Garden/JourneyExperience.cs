@@ -452,7 +452,7 @@ namespace CatMe.Garden
             photos=ListPhotos();photoIndex=Mathf.Clamp(photoIndex,0,Mathf.Max(0,photos.Length-1));ShowPhoto();
         }
         string[] ListPhotos(){string folder=PhotoFolder();return Directory.Exists(folder)?Directory.GetFiles(folder,"*.png").OrderBy(f=>f,StringComparer.Ordinal).ToArray():Array.Empty<string>();}
-        string PhotoFolder()=>Path.Combine(Application.persistentDataPath,"JourneyPhotos");
+        string PhotoFolder()=>Path.Combine(CatMe.Onboarding.AccountStorage.ProfileFolder,"album");   // per account
         void ShowNotice(string message){if(photoNotice==null)photoNotice=MakeLabel(canvas.transform,"Photo notice",message,new Vector2(.5f,.28f),new Vector2(640,56));photoNotice.text=message;photoNotice.gameObject.SetActive(true);photoNotice.transform.SetAsLastSibling();noticeUntil=Time.unscaledTime+2.7f;StartCoroutine(HideNotice());}
         IEnumerator HideNotice(){yield return new WaitForSecondsRealtime(2.7f);if(photoNotice!=null&&Time.unscaledTime>=noticeUntil)photoNotice.gameObject.SetActive(false);}
 

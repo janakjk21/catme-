@@ -35,6 +35,8 @@ Photo guardrails (cloud, not compiled): selfie is camera only (no library; "Open
 
 Consent and policies (cloud, not compiled): consent screen before the first photo (nothing uploads without "I agree"; the app used to record consent automatically); server photo check built on `catme-ai` branch `claude/focused-faraday-eemw65` (41 tests pass, not deployed); privacy policy and terms with AI and photo policy drafted in `docs/legal/`.
 
+L1 account and per-account storage (cloud, not compiled): see `CLAUDE_TASKS.md` L1.
+
 ## Current task
 
 Launch-audit items 3, 4, 5, 9, 11 and 22 are implemented on `claude/focused-faraday-eemw65`. The generated `Assembly-CSharp.csproj` builds with 0 errors; Unity EditMode tests and the Play Mode paths remain for the owner to run. No scene, prefab or asset file was edited for this work, and no provider call, deployment or push was made.
