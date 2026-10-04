@@ -101,6 +101,39 @@ namespace CatMe.Editor
             }
             Debug.Log($"[CatMe][Optimise] Updated {changed} model importers. Animation clips were retained for Play Mode review.");
         }
+
+        [MenuItem("CatMe/Optimise/Apply Audio Budget")]
+        public static void ApplyAudio()
+        {
+            int changed = 0;
+            foreach (var guid in AssetDatabase.FindAssets("t:AudioClip", new[] { "Assets" }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                var importer = AssetImporter.GetAtPath(path) as AudioImporter;
+                var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+                if (importer == null || clip == null) continue;
+                string lower = path.ToLowerInvariant();
+                bool ambience = clip.length > 5f || lower.Contains("ambient") || lower.Contains("amb_") ||
+                                lower.Contains("wind-") || lower.Contains("rain-") || lower.Contains("river-") ||
+                                lower.Contains("music");
+                bool stereo = lower.Contains("music") || lower.Contains("day-ambient") || lower.Contains("amb_morning");
+                var settings = importer.defaultSampleSettings;
+                settings.loadType = ambience ? AudioClipLoadType.Streaming : AudioClipLoadType.DecompressOnLoad;
+                settings.compressionFormat = ambience ? AudioCompressionFormat.Vorbis : AudioCompressionFormat.ADPCM;
+                settings.quality = ambience ? .5f : 1f;
+                settings.sampleRateSetting = AudioSampleRateSetting.OverrideSampleRate;
+                settings.sampleRateOverride = (uint)Math.Min(clip.frequency, 44100);
+                if (settings.loadType == importer.defaultSampleSettings.loadType &&
+                    settings.compressionFormat == importer.defaultSampleSettings.compressionFormat &&
+                    settings.sampleRateOverride == importer.defaultSampleSettings.sampleRateOverride &&
+                    importer.forceToMono == !stereo) continue;
+                importer.forceToMono = !stereo;
+                importer.defaultSampleSettings = settings;
+                importer.SaveAndReimport();
+                changed++;
+            }
+            Debug.Log($"[CatMe][Optimise] Updated {changed} audio importers.");
+        }
     }
 }
 #endif
