@@ -200,7 +200,7 @@ namespace CatMe.Editor
                 BankBlocker(p, -3.5f, G + 1f, G + L + 5f); // exactly on the fence line: nobody can step past the fence toward the water
                 Bench(new Vector3(p.pathX(G + 14f) + 3.2f, 0, G + 14f), 90f);
                 Bench(new Vector3(p.pathX(G + L * .22f) + 3.2f, 0, G + L * .22f), 90f);
-                Bench(new Vector3(p.pathX(G + L - 4f) + 3.2f, 0, G + L - 4f), 90f);
+                Lookout(p, G + L + 4f);
                 // Tent in the middle of the walk, on the forest side, with its prompt on the path edge. Rain begins on the way to it.
                 float tentZ = G + L * .5f;
                 TentWithRoom(new Vector3(p.pathX(tentZ) + 5.2f, 0, tentZ), p.pathX(tentZ) + 2.2f);
@@ -899,6 +899,26 @@ namespace CatMe.Editor
             AddBoxCollider(go);
             AddSitPoint(p);
             clearZones.Add(p);
+        }
+
+        static void Lookout(PlaceSpec p, float z)
+        {
+            float pathX = p.pathX(z);
+            Vector3 bench = new Vector3(pathX + 3.1f, 0f, z);
+            Bench(bench, 90f);
+            var lastBench = structures.GetComponentsInChildren<Transform>(true).LastOrDefault(t => t.name == "Bench");
+            if (lastBench != null) lastBench.name = "Lookout bench";
+
+            // A small stone fan gives the camera a deliberate foreground without blocking the walking line.
+            Vector3 photo = new Vector3(pathX - .25f, 0f, z + 1.8f);
+            for (int i = -2; i <= 2; i++)
+                Box("Lookout photo marker", structures, OnGround(photo + new Vector3(i * .32f, 0f, 0f)) + Vector3.up * .025f,
+                    new Vector3(.25f, .05f, .42f), Mat("Lookout marker", new Color(.52f, .50f, .43f)), false, i * 5f);
+            Zone("LookoutPhotoZone", "Overlook", new Vector3(pathX, 2f, z + 1f), new Vector3(10f, 7f, 9f));
+
+            Curiosity("Lookout keepsake", new Vector3(pathX + .8f, 0f, z + 1.1f), "lookout-keepsake",
+                "One last look. Then let's walk home.", PrimitiveType.Sphere, new Vector3(.18f, .09f, .18f), new Color(.68f, .76f, .72f));
+            clearZones.Add(new Vector3(pathX, 0f, z));
         }
 
         // ---- Phase 5: butterflies, background animals across the river and in the side woods, and the visiting dog -------------------------
