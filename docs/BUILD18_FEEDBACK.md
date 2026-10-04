@@ -53,6 +53,15 @@ Keep the existing contextual buttons as they are. Changes:
 6. **Filling the bowl animation.** When the player fills the bowl, the person should crouch and pour. The owner downloads a suitable animation (for example from Mixamo: "Kneeling" / "Picking Up" / "Pouring") into `Assets/CatMe/Art/Animations/`; retarget it to the bundled person as a Humanoid clip and play it at the bowl, then return to idle. Generated people only have a walk clip, so for them skip the animation and keep today's behaviour.
 - Done when: the owner rebuilds the room and checks each item in Play Mode and on the phone.
 
+## F9. "Go home" in the pet action menu
+Add a **Go home** action to the paw menu next to Ball, Roam and Call (same size and style, label inside or under it). Tapping it: the pet says its home line, both walk to the house door (the existing lead-home behaviour in `Session/CompanionLeader`), and the house opens; if the player is already near the house, enter directly. Inside the house, the same slot becomes **Go outside**. A fade covers any teleport (no camera cut).
+
+## F10. Sprint button
+A **Sprint** button near the joystick (above it, smaller than the joystick, inside the safe area). Hold to walk about 1.8× faster (or tap to toggle; pick hold and document it). The pet speeds up to keep pace; footstep pace and walk-clip speed follow so feet don't slide. Hidden inside rooms and the tent. Haptic tap on start.
+
+## F11. Pinch in to a close-up
+Extend F5's pinch zoom: pinching in past the normal minimum moves to a **close-up** (about 0.9 m) that frames the player's face and the pet together; at the closest step the camera eases its look target from the body to head height. Pinch out returns to the normal range. Turn depth of field on only in close-up (off with Reduce motion). Clamp so the camera never enters the player or the pet; collision still wins.
+
 ## Owner actions for this list
 - Check the iPhone's ring/silent switch while testing sound, and report whether ambience plays with it on ring.
 - Put the downloaded frames in `Assets/CatMe/Art/Rooms/Frames/` and the bowl-filling animation in `Assets/CatMe/Art/Animations/`.
