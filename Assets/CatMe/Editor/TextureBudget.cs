@@ -54,6 +54,53 @@ namespace CatMe.Editor
             QualitySettings.streamingMipmapsMemoryBudget = 256f;
             Debug.Log($"[CatMe][Optimise] Updated {changed} texture importers; iPhone streaming budget 256 MB.");
         }
+
+        [MenuItem("CatMe/Optimise/Apply Model Budget")]
+        public static void ApplyModels()
+        {
+            int changed = 0;
+            foreach (var guid in AssetDatabase.FindAssets("t:Model", new[] { "Assets" }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (!path.EndsWith(".fbx", StringComparison.OrdinalIgnoreCase) &&
+                    !path.EndsWith(".obj", StringComparison.OrdinalIgnoreCase)) continue;
+                var importer = AssetImporter.GetAtPath(path) as ModelImporter;
+                if (importer == null) continue;
+                bool staticArt = path.Contains("/JTS_Shrine_") || path.Contains("/ALP_Assets/") ||
+                                 path.Contains("/Waldemarst/") || path.Contains("/Anime Trees/") ||
+                                 path.Contains("/Free/Stones/") || path.Contains("/LowPolyLivingRoomPack/") ||
+                                 path.Contains("/3D set of stylized nature");
+                bool dirty = importer.isReadable || importer.meshCompression != ModelImporterMeshCompression.Medium ||
+                             !importer.optimizeMeshPolygons || !importer.optimizeMeshVertices ||
+                             importer.importCameras || importer.importLights ||
+                             (staticArt && importer.importBlendShapes) ||
+                             importer.animationCompression != ModelImporterAnimationCompression.Optimal;
+                if (dirty)
+                {
+                    importer.isReadable = false;
+                    importer.meshCompression = ModelImporterMeshCompression.Medium;
+                    importer.optimizeMeshPolygons = true;
+                    importer.optimizeMeshVertices = true;
+                    importer.importCameras = false;
+                    importer.importLights = false;
+                    if (staticArt) importer.importBlendShapes = false;
+                    importer.animationCompression = ModelImporterAnimationCompression.Optimal;
+                    importer.SaveAndReimport();
+                    changed++;
+                }
+                foreach (var asset in AssetDatabase.LoadAllAssetsAtPath(path))
+                {
+                    if (!(asset is Mesh mesh)) continue;
+                    ulong triangles = 0;
+                    for (int submesh = 0; submesh < mesh.subMeshCount; submesh++)
+                        if (mesh.GetTopology(submesh) == MeshTopology.Triangles)
+                            triangles += mesh.GetIndexCount(submesh) / 3;
+                    if (triangles > 50000)
+                        Debug.LogWarning($"[CatMe][Optimise] {path}: {mesh.name} has {triangles} triangles.");
+                }
+            }
+            Debug.Log($"[CatMe][Optimise] Updated {changed} model importers. Animation clips were retained for Play Mode review.");
+        }
     }
 }
 #endif

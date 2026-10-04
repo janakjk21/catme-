@@ -142,3 +142,4 @@ Short sound effects: Decompress On Load, ADPCM, mono. Ambience and music: Stream
 | 1 | 2705.9 | 952.2 | 2135.1 | 952.2 | Unused packs and loose GLBs archived with `.meta` files. |
 | 2 | 2135.1 | 1031.5 | 1375.7 | 985.2 | Path-loaded seeds added; 155 unreachable files archived, 12 used PSDs flattened to PNG with GUIDs retained. Reachable MB fell because the flattened PNGs are smaller. |
 | 3 | 1375.7 | 985.2 | 1375.7 | 985.2 | Texture budget editor menu added; import overrides and runtime size await running it in Unity. |
+| 4 | 1375.7 | 985.2 | 1375.7 | 985.2 | Model budget editor menu added; import overrides await Unity. Clip stripping deferred until animated models are inspected in Play Mode. |
