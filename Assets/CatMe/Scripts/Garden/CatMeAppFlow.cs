@@ -335,7 +335,6 @@ namespace CatMe.Garden
             }
             makingBannerText.text = MakingBannerText(name, onboarding.MakingStage);
             makingBanner.SetActive(true);
-            CatMe.World.LocalNotifications.RequestPermission();
             EnterGarden();
         }
 
@@ -349,6 +348,7 @@ namespace CatMe.Garden
         private void RevealInGarden(PetProfile pet)
         {
             HideMakingBanner();
+            CatMe.World.LocalNotifications.RequestPermission();
             UnityEngine.Object.FindAnyObjectByType<CatMe.World.CatPetInput>()?.PopHearts(6);
             if (garden.CatTransform != null) CatMe.Pets.PetSounds.PlayAt(garden.CatTransform.position, pet.Kind, pet.Kind == Species.Dog ? CatMe.Pets.PetCue.Excited : CatMe.Pets.PetCue.Hello, .8f, true);
             CatMe.World.Haptics.Tap();
