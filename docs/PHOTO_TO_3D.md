@@ -22,6 +22,8 @@ PHONE                                   API (Railway)                          P
 15 save in the pet's own folder, garden loads it
 ```
 
+If a downloaded pet or person GLB cannot be imported, the app deletes only that bad download, loads the corresponding bundled character, and offers a Try again action that requests a fresh signed link.
+
 The selfie runs the same way through `/owner` and lands at `users/{uid}/avatar/v1.glb`. In the app the pet job starts as soon as the pet photo is chosen, and the selfie joins the same run when it is taken (`CreationRequest.ownerPhotoTask`).
 
 ## Inside "generating" (server, `worntag-api/mobile/live.js`)

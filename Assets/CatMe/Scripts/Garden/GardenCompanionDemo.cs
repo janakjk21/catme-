@@ -255,21 +255,39 @@ namespace CatMe.Garden
             string folder = Path.Combine(Application.streamingAssetsPath, GardenAssets);
             string savedCat = DeviceBridge.CatModelPath;
             string savedHuman = DeviceBridge.HumanModelPath;
-            string catPath = File.Exists(savedCat) ? savedCat : Path.Combine(folder, "cat-walking.glb");
+            string bundledCat = Path.Combine(folder, "cat-walking.glb"), bundledHuman = Path.Combine(folder, "human-walking.glb");
+            string catPath = File.Exists(savedCat) ? savedCat : bundledCat;
             // Each cat keeps its own downloaded model; the active cat's model wins over the single legacy file.
             var activePet = CatMe.Pets.PetRoster.Active;
             if (activePet != null && activePet.Kind == CatMe.Pets.Species.Cat && !string.IsNullOrEmpty(activePet.modelPath) && File.Exists(activePet.modelPath)) catPath = activePet.modelPath;
-            loadedCatModel = catPath;
-            string humanPath = File.Exists(savedHuman) ? savedHuman : Path.Combine(folder, "human-walking.glb");
+            string humanPath = File.Exists(savedHuman) ? savedHuman : bundledHuman;
             // A generated person has only a walk clip, so the call gesture exists only for the bundled person.
             // Loading the same large person model a second time would only double its memory.
             string callPath = File.Exists(savedHuman) ? null : Path.Combine(folder, "human-call.glb");
             // Provider pixel framing and authored GLB units vary, so enforce one shared pair scale after import.
-            catAnimation = await LoadCharacter(catPath, catRoot, CompanionScaleStandards.CatHeightMeters, true);
+            try { catAnimation = await LoadCharacter(catPath, catRoot, CompanionScaleStandards.CatHeightMeters, true); }
+            catch (Exception error) when (catPath != bundledCat)
+            {
+                Debug.LogWarning("[WornTag][Garden] downloaded pet model failed: " + error.Message);
+                DestroyChildren(catRoot); TryDelete(catPath);
+                if (activePet != null && activePet.modelPath == catPath) { activePet.modelPath = null; CatMe.Pets.PetRoster.SaveChanges(); }
+                catPath = bundledCat;
+                catAnimation = await LoadCharacter(catPath, catRoot, CompanionScaleStandards.CatHeightMeters, true);
+                appFlow?.ShowModelLoadFailure(activePet?.name ?? "your pet", () => appFlow.RetryPetModel(activePet));
+            }
+            loadedCatModel = catPath;
             catWalkState = FirstState(catAnimation);
             walkingHuman = new GameObject("WalkingHuman");
             walkingHuman.transform.SetParent(humanRoot, false);
-            humanWalkAnimation = await LoadCharacter(humanPath, walkingHuman.transform, CompanionScaleStandards.OwnerHeightMeters, true);
+            try { humanWalkAnimation = await LoadCharacter(humanPath, walkingHuman.transform, CompanionScaleStandards.OwnerHeightMeters, true); }
+            catch (Exception error) when (humanPath != bundledHuman)
+            {
+                Debug.LogWarning("[WornTag][Garden] downloaded person model failed: " + error.Message);
+                DestroyChildren(walkingHuman.transform); TryDelete(humanPath);
+                humanPath = bundledHuman;
+                humanWalkAnimation = await LoadCharacter(humanPath, walkingHuman.transform, CompanionScaleStandards.OwnerHeightMeters, true);
+                appFlow?.ShowModelLoadFailure("you", appFlow.RetryOwnerModel);
+            }
             humanWalkState = FirstState(humanWalkAnimation);
             humanHand = FindHumanHand(walkingHuman.transform);
             callingHuman = new GameObject("CallingHuman");
@@ -308,6 +326,12 @@ namespace CatMe.Garden
         private static void DestroyChildren(Transform root)
         {
             for (int i = root.childCount - 1; i >= 0; i--) Destroy(root.GetChild(i).gameObject);
+        }
+
+        private static void TryDelete(string path)
+        {
+            try { if (!string.IsNullOrEmpty(path) && File.Exists(path)) File.Delete(path); }
+            catch (Exception error) { Debug.LogWarning("[WornTag][Garden] could not remove a bad model: " + error.Message); }
         }
 
         private async Task<Animation> LoadCharacter(string path, Transform parent, float targetHeight, bool play)

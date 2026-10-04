@@ -198,6 +198,35 @@ namespace CatMe.Garden
         internal Toast PetToast { get; private set; }
         internal ScreenState State { get; private set; }
         internal void NotifyPetReady(string petName) => PetToast?.Show(petName + " is ready", "Meet " + petName, OpenPets);
+        internal void ShowModelLoadFailure(string name, Action retry) => PetToast?.Show("We couldn't load " + name + ".", "Try again", retry, 30f);
+
+        internal async void RetryPetModel(PetProfile pet)
+        {
+            if (pet == null || string.IsNullOrEmpty(pet.serverId) || mobileApi == null) return;
+            try
+            {
+                var current = await mobileApi.GetPetAsync(pet.serverId);
+                if (current?.status != "ready" || string.IsNullOrEmpty(current.modelUrl)) throw new InvalidOperationException("The model is not ready to download.");
+                string destination = System.IO.Path.Combine(PetRoster.PetFolder(pet.id), "model.glb");
+                await mobileApi.DownloadFileAsync(current.modelUrl, destination, null);
+                pet.modelPath = destination; PetRoster.SaveChanges();
+                garden.StartCoroutine(garden.ReloadCharactersFromPhoneStorage());
+            }
+            catch (Exception e) { ShowModelLoadFailure(pet.name, () => RetryPetModel(pet)); Debug.LogWarning("[WornTag][Restore] pet retry failed: " + e.Message); }
+        }
+
+        internal async void RetryOwnerModel()
+        {
+            if (mobileApi == null) return;
+            try
+            {
+                var owner = await mobileApi.GetOwnerAsync();
+                if (owner?.status != "ready" || string.IsNullOrEmpty(owner.modelUrl)) throw new InvalidOperationException("The model is not ready to download.");
+                await mobileApi.DownloadFileAsync(owner.modelUrl, DeviceBridge.HumanModelPath, null);
+                garden.StartCoroutine(garden.ReloadCharactersFromPhoneStorage());
+            }
+            catch (Exception e) { ShowModelLoadFailure("you", RetryOwnerModel); Debug.LogWarning("[WornTag][Restore] owner retry failed: " + e.Message); }
+        }
 
         /// <summary>Waits for Firebase to start (retrying once if it failed) and explains the real reason if it cannot.</summary>
         private async System.Threading.Tasks.Task EnsureAccountReadyAsync()
