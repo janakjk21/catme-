@@ -1,10 +1,10 @@
 # WornTag Terms of Use and AI & Photo Policy
 
-> **DRAFT for review.** Fill in every `[bracketed]` item and have it reviewed by a lawyer before publishing at https://worntag.com/terms. The app's consent screen links here ("Terms and AI policy").
+> **DRAFT for review.** Check the provider terms, deployment settings and legal wording before publishing at https://worntag.com/terms. The app's consent screen links here ("Terms and AI policy").
 
 **Last updated:** [date of publishing]
 
-These terms are an agreement between you and [legal name of the owner or company] ("WornTag", "we") for the WornTag app. By using the app you agree to them. Apple's standard Licensed Application End User License Agreement also applies to apps from the App Store.
+These terms are an agreement between you and Janakjk Sapkota ("WornTag", "we") for the WornTag app. By using the app you agree to them. Apple's standard Licensed Application End User License Agreement also applies to apps from the App Store.
 
 ## 1. Who can use WornTag
 
@@ -19,7 +19,7 @@ You can start without signing in ("Try it free") or sign in with Google or Apple
 **What happens to your photos.** When you make a pet or a 3D you, your photo is sent to our server and then to companies that help us:
 
 1. **OpenAI** checks the photo is safe and shows the right thing (a cat, a dog, or one person).
-2. **Tripo** turns a pet photo into a 3D pet; **Meshy** turns your selfie into a 3D you.
+2. **Tripo** receives the pet photo, redraws it with its `chat_image_2` (ChatGPT image) step, and makes the 3D pet and its walk. **Meshy** receives the cropped selfie, makes an image reference with its `gpt-image-2` option, and makes the 3D you and its walk.
 
 Details, and how long things are kept, are in the [Privacy Policy](https://worntag.com/privacy).
 
@@ -34,7 +34,9 @@ Details, and how long things are kept, are in the [Privacy Policy](https://wornt
 
 **Who owns what.** You keep all rights in the photos you upload. You give us permission to store and process them, and to send them to the companies above, only to make, store and show your characters and to keep the service safe. Your characters are for your personal use in WornTag. The game itself (art, code, music, words, the WornTag name) belongs to us or our licensors.
 
-**No training on your photos by us.** We do not use your photos to train AI models. OpenAI does not train on data sent through its API by default; [confirm Tripo's and Meshy's API terms and state them here].
+**Training.** We do not train AI models on your photos. OpenAI does not train on data sent through its API by default. Tripo's terms exclude paid users' inputs and outputs from AI training, depending on the provider account plan. Meshy's terms allow training on non-enterprise inputs and outputs unless a separate agreement changes that; its current help page says it does not presently train on uploaded images, but does not make that a permanent promise. Provider copies and training rules are described in the Privacy Policy.
+
+<!-- Provider sources checked 2026-10-04: https://www.tripo3d.ai/terms ; https://www.meshy.ai/terms-of-use ; https://help.meshy.ai/en/articles/15724182-is-meshy-safe-and-private-data-and-training-faq -->
 
 ## 4. Fair use
 
@@ -42,7 +44,7 @@ Do not try to break, overload or reverse-engineer the app or our server, get aro
 
 ## 5. Purchases
 
-[Not offered yet. When in-app purchases launch, add: what they are, that Apple handles payment and refunds, and that a failed creation never uses a paid credit.]
+In-app purchases are not offered at present. We will update these terms before offering paid features.
 
 ## 6. The service may change
 
@@ -62,4 +64,4 @@ These terms are governed by the law of England and Wales. You may also have the 
 
 ## 10. Contact
 
-[support@worntag.com] · [postal address]
+support@worntag.com · Janakjk Sapkota, 2 Gorse Rise, NG3 1BS, United Kingdom
