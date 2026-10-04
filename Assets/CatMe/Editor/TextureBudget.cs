@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEngine;
 
 namespace CatMe.Editor
@@ -133,6 +134,15 @@ namespace CatMe.Editor
                 changed++;
             }
             Debug.Log($"[CatMe][Optimise] Updated {changed} audio importers.");
+        }
+
+        [MenuItem("CatMe/Optimise/Apply iPhone Build Budget")]
+        public static void ApplyBuild()
+        {
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.iOS, ScriptingImplementation.IL2CPP);
+            PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.iOS, ManagedStrippingLevel.High);
+            PlayerSettings.stripEngineCode = true;
+            Debug.Log("[CatMe][Optimise] iPhone: IL2CPP, High managed stripping, engine code stripping on. Build and test all flows before shipping.");
         }
     }
 }
