@@ -22,6 +22,9 @@ namespace CatMe.Editor
                 var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
                 var camGo = new GameObject("UiCam", typeof(Camera)); var cam = camGo.GetComponent<Camera>();
                 cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = new Color(.36f, .52f, .32f); cam.orthographic = true; cam.orthographicSize = 5f; cam.transform.position = new Vector3(0, 0, -10);
+                foreach (var format in new[] { (label: "phone", width: 1920, height: 1080),
+                                               (label: "ipad-13", width: 2732, height: 2048),
+                                               (label: "ipad-11", width: 2388, height: 1668) })
                 foreach (string name in UiPreview.Names)
                 {
                     var canvasGo = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
@@ -29,10 +32,10 @@ namespace CatMe.Editor
                     var scaler = canvasGo.GetComponent<CanvasScaler>(); scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; scaler.referenceResolution = new Vector2(1920, 1080); scaler.matchWidthOrHeight = 1f;
                     UiPreview.Show(canvasGo.transform, name);
                     Canvas.ForceUpdateCanvases();
-                    var rt = new RenderTexture(1920, 1080, 24); cam.targetTexture = rt; cam.Render();
-                    RenderTexture.active = rt; var tex = new Texture2D(1920, 1080, TextureFormat.RGB24, false); tex.ReadPixels(new Rect(0, 0, 1920, 1080), 0, 0); tex.Apply();
-                    File.WriteAllBytes(Path.Combine(outDir, "ui-" + name + ".png"), tex.EncodeToPNG());
-                    RenderTexture.active = null; cam.targetTexture = null; UnityEngine.Object.DestroyImmediate(rt); UnityEngine.Object.DestroyImmediate(canvasGo);
+                    var rt = new RenderTexture(format.width, format.height, 24); cam.targetTexture = rt; cam.Render();
+                    RenderTexture.active = rt; var tex = new Texture2D(format.width, format.height, TextureFormat.RGB24, false); tex.ReadPixels(new Rect(0, 0, format.width, format.height), 0, 0); tex.Apply();
+                    File.WriteAllBytes(Path.Combine(outDir, "ui-" + format.label + "-" + name + ".png"), tex.EncodeToPNG());
+                    RenderTexture.active = null; cam.targetTexture = null; UnityEngine.Object.DestroyImmediate(tex); UnityEngine.Object.DestroyImmediate(rt); UnityEngine.Object.DestroyImmediate(canvasGo);
                 }
                 EditorApplication.Exit(0);
             }
