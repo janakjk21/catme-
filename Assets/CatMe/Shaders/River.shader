@@ -7,7 +7,6 @@ Shader "CatMe/River"
         _Deep ("Deep colour", Color) = (0.08, 0.38, 0.60, 1)
         _Shallow ("Shallow colour", Color) = (0.34, 0.80, 0.90, 1)
         _Foam ("Foam colour", Color) = (1, 1, 1, 1)
-        _FlowDirection ("Flow direction (xz)", Vector) = (0, 1, 0, 0)
         _Speed ("Flow speed", Float) = 0.35
         _RippleScale ("Ripple scale", Float) = 1.4
         _Sparkle ("Sparkle strength", Range(0, 2)) = 1.0
@@ -27,7 +26,6 @@ Shader "CatMe/River"
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _Deep, _Shallow, _Foam;
-                float4 _FlowDirection;
                 float _Speed, _RippleScale, _Sparkle;
             CBUFFER_END
 
@@ -60,9 +58,9 @@ Shader "CatMe/River"
 
             half4 frag(Varyings input) : SV_Target
             {
-                float2 p = input.positionWS.xz * _RippleScale;
-                float2 flow = normalize(_FlowDirection.xz + 0.0001) * _Time.y * _Speed;
-                float2 q = p - flow;
+                // The spline builder stores distance along the river in UV.y, so every bend flows downstream without world-space seams.
+                float2 p = float2(input.uv.x * 3.0, input.uv.y * _RippleScale);
+                float2 q = p - float2(0.0, _Time.y * _Speed);
 
                 // Layered sine ripples give long soft bands that drift downstream.
                 float r1 = sin(q.x * 1.7 + q.y * 0.6 + _Time.y * 0.9);

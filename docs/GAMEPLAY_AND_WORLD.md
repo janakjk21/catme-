@@ -18,7 +18,7 @@ One place, `Scenes/Places/Place_HomeGarden_r2.unity`, loaded into `GardenCompani
 |---|---|
 | Walled garden | where the player starts: open lawn, flower beds along the walls, the house at the back |
 | Gate | opens onto the riverside walk; the river is only visible beyond it |
-| Riverside walk | the main route, with benches facing the river and the tent halfway; the far end opens into a lookout with a final bench, keepsake, framed photo spot and a short line that turns the walk home |
+| Riverside walk | the main route beside one continuous spline river, with benches facing the water and the tent halfway; the far end opens into a lookout with a final bench, keepsake, framed photo spot and a short line that turns the walk home |
 | Tent | a 3.4 m A-frame beside the path with a lantern at the entrance (lit at dusk). Inside: a 5 x 5 m canvas room with a small fire in a stone ring (flames, sparks, flickering light, crackle; `World/CampFire`), rug, sleeping bag, crate and hanging lantern. The pet settles on its cushion facing the fire. Rain sound and "The rain has stopped." only if it was raining; "Go out" is available after 3 s. |
 | House | "Go into the house": an inside room (`Resources/Rooms/HouseRoom_r3.prefab`) with the supplied cat house and a large food bowl, feed, bed, ball and go out. Walk up to the empty bowl and "Fill the bowl": brown kibble pours in, the pet walks over, eats it down piece by piece (about 7 s), hearts pop, then it is full for 45 s. "Feed" from the dock makes the pet lead you to the bowl. While the frame is empty the cat leads toward it; after a new photo the pet goes to look at it, meows and hearts pop. Its nearby Add a photo / Change photo action opens the existing picker. A private account photo and local cache restore it next time; failed uploads offer Save photo retry. |
 | Edges | invisible walls keep the pair on the route; trees, hedges and the far bank fill the view |
@@ -75,7 +75,7 @@ Three steps, each shown as one short hint (`Onboarding/TutorialController`, word
 | Butterflies (`World/Butterflies`) | eight species from the AI cartoon butterflies pack drift through flowers, flap while flying and fold their wings when they land, scatter when you walk close; gone at dusk and in rain |
 | Visiting dog (`World/DogVisitor`) | a neighbour's dog walks the riverside path, stops, wags, sits, walks on |
 | Wildlife (`World/Wildlife`) | deer, horse and chickens across the river, scenery only |
-| Sound | garden ambience, rain, purr, meow, UI taps; Sound setting turns it off |
+| Sound | garden ambience, spatial river loop along the bank, rain, purr, meow, UI taps; Sound setting turns it off |
 
 ## The camera
 

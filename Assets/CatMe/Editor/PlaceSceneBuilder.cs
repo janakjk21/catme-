@@ -575,16 +575,41 @@ namespace CatMe.Editor
 
         static void River(PlaceSpec s, float offsetX, float width, float surfaceY, float? fixedX = null, float fromZ = -10f, float toZ = 90f)
         {
-            // A chain of flat segments following the path, opaque and cheap; no realtime reflections.
-            for (float z = fromZ; z < toZ; z += 4f)
+            const float step = 1.5f;
+            int count = Mathf.CeilToInt((toZ - fromZ) / step) + 1;
+            var centres = new Vector3[count];
+            for (int i = 0; i < count; i++)
             {
-                float x0 = fixedX ?? s.pathX(z) + offsetX, x1 = fixedX ?? s.pathX(z + 4f) + offsetX;
-                // The terrain object is lowered by its lift, so world height equals the height function; surfaceY is world Y.
-                Vector3 mid = new Vector3((x0 + x1) * .5f, surfaceY, z + 2f);
-                float yaw = Mathf.Atan2(x1 - x0, 4f) * Mathf.Rad2Deg;
-                var seg = Box("River", structures, mid, new Vector3(width, .05f, 4.3f), Water, false, yaw);
-                seg.name = "River segment";
+                float z = Mathf.Min(toZ, fromZ + i * step);
+                centres[i] = new Vector3(fixedX ?? s.pathX(z) + offsetX, surfaceY, z);
             }
+            var vertices = new Vector3[count * 2]; var uvs = new Vector2[count * 2]; var triangles = new int[(count - 1) * 6];
+            float distance = 0f;
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 tangent = centres[Mathf.Min(i + 1, count - 1)] - centres[Mathf.Max(0, i - 1)]; tangent.y = 0f; tangent.Normalize();
+                Vector3 across = new Vector3(tangent.z, 0f, -tangent.x) * (width * .5f);
+                if (i > 0) distance += Vector3.Distance(centres[i - 1], centres[i]);
+                vertices[i * 2] = centres[i] - across; vertices[i * 2 + 1] = centres[i] + across;
+                uvs[i * 2] = new Vector2(0f, distance / 4f); uvs[i * 2 + 1] = new Vector2(1f, distance / 4f);
+                if (i == count - 1) continue;
+                int v = i * 2, t = i * 6;
+                triangles[t] = v; triangles[t + 1] = v + 2; triangles[t + 2] = v + 1;
+                triangles[t + 3] = v + 1; triangles[t + 4] = v + 2; triangles[t + 5] = v + 3;
+            }
+            var mesh = new Mesh { name = s.id + " river spline" };
+            mesh.vertices = vertices; mesh.uv = uvs; mesh.triangles = triangles; mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            string meshPath = ArtFolder + "/Terrain/" + s.id + "_River.asset";
+            AssetDatabase.DeleteAsset(meshPath); AssetDatabase.CreateAsset(mesh, meshPath);
+            var river = new GameObject("River spline", typeof(MeshFilter), typeof(MeshRenderer)); river.transform.SetParent(structures, false);
+            river.GetComponent<MeshFilter>().sharedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(meshPath);
+            river.GetComponent<MeshRenderer>().sharedMaterial = Water;
+
+            float middleZ = (fromZ + toZ) * .5f;
+            var sound = new GameObject("River bank sound"); sound.transform.SetParent(structures, false);
+            sound.transform.position = new Vector3(s.pathX(middleZ) - 4.2f, GroundAt(s.pathX(middleZ) - 4.2f, middleZ) + .8f, middleZ);
+            var audio = sound.AddComponent<AudioSource>(); audio.clip = Resources.Load<AudioClip>("CatMeAudio/river-loop"); audio.loop = true; audio.playOnAwake = true;
+            audio.spatialBlend = .7f; audio.volume = .22f; audio.rolloffMode = AudioRolloffMode.Linear; audio.minDistance = 5f; audio.maxDistance = 75f;
         }
 
         // Imported country house, scaled to a target width and grounded, with a solid footprint and warm night lights.
