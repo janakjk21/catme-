@@ -16,6 +16,7 @@ Investigate in this order and fix what is wrong:
 `World/Haptics.cs` calls `CatMeHapticImpact` in `Plugins/iOS/CatMeHaptics.mm` from 14 places, but the owner felt nothing.
 Check: the generator is created and `prepare`d on the main thread; the right feedback style is used (soft / light / medium); `CatMe.Haptics` defaults to 1 and the Settings toggle uses that key; calls aren't wrapped in a condition that is false on device. Add one test vibration on the Settings toggle being switched on.
 - Done when: tapping the pet, pressing buttons and the call give a light tap on the phone.
+- **Done in code (2026-10-04, not compiled):** the likely cause was in `CatMeHaptics.mm`: a new generator per call, released right after `impactOccurred`, and calls not forced onto the main thread. Now one generator per style is kept, used on the main thread and re-prepared; generators are warmed at startup. `CatMe.Haptics` defaults to 1 and is the Settings key; switching it on gives one test tap; links now tap too. Owner: iPhone Settings > Sounds & Haptics > System Haptics must be on, and Low Power Mode turns haptics off. Tests: `HapticsTests` (2).
 
 ## F3. Dog pipeline: make it work end to end, like the cat
 Dogs still don't come out right. Trace one dog creation through every hop and make each one match the cat path:

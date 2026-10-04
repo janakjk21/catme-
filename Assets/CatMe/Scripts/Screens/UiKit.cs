@@ -210,7 +210,7 @@ namespace CatMe.Garden
             var go = new GameObject("Link " + text, typeof(RectTransform), typeof(Image), typeof(Button)); go.transform.SetParent(parent, false);
             var r = (RectTransform)go.transform; r.anchorMin = r.anchorMax = new Vector2(.5f, .5f); r.pivot = new Vector2(.5f, .5f); r.anchoredPosition = pos; r.sizeDelta = dims;
             go.GetComponent<Image>().color = new Color(0, 0, 0, 0);
-            var b = go.GetComponent<Button>(); b.onClick.AddListener(() => { CatMe.World.UiSounds.Click(); action(); });
+            var b = go.GetComponent<Button>(); b.onClick.AddListener(() => { CatMe.World.UiSounds.Click(); CatMe.World.Haptics.Soft(); action(); });
             Label(go.transform, text, fontSize, CatMeUIStyle.SageDeep, Vector2.zero, dims, FontStyle.Bold, align);
             return b;
         }

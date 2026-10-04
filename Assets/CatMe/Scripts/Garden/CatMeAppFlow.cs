@@ -868,6 +868,7 @@ namespace CatMe.Garden
         private void ToggleHaptics()
         {
             CatMe.World.Haptics.Enabled = !CatMe.World.Haptics.Enabled;
+            if (CatMe.World.Haptics.Enabled) CatMe.World.Haptics.Bump();   // one test tap so the player feels it is on (F2)
             RefreshSettingLabels();
         }
 
