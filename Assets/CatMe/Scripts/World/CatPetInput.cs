@@ -18,7 +18,7 @@ namespace CatMe.World
         GardenCompanionDemo garden; Transform canvas; Camera view;
         bool pressed, petting; float pressedAt, nextHeartAt, nextPulseAt; Vector2 pressPos;
         AudioSource purr;   // the petting loop: a cat purrs, a dog pants happily (PetSounds)
-        CameraProfile petProfile = new CameraProfile { name = "Pet", distance = 1.5f, height = .85f, pitch = 14f, fov = 46f, blendIn = 1.0f };
+        CameraProfile petProfile = new CameraProfile { name = "Pet", distance = 1.5f, height = .85f, pitch = 14f, fov = 46f, blendIn = 1.0f, zoomMax = 2.4f };   // petting: only the zoom range tightens
         Sprite heart; readonly List<(RectTransform rt, Image img, float t)> hearts = new List<(RectTransform, Image, float)>();
 
         public void Initialize(GardenCompanionDemo demo, Transform canvasRoot)

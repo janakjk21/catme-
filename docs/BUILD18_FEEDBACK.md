@@ -40,6 +40,7 @@ The camera "moves so much" and feels random. Replace the automatic behaviour wit
 - Keep collision: the camera pulls in smoothly when a wall or tree is between it and the player.
 - Inside rooms and the tent, the same controls with a tighter zoom range.
 - Done when: walking a full loop, the camera only moves when the player drags or pinches (plus collision pull-in).
+- **Done in code (2026-10-04, not compiled):** `CompanionCamera` third-person mode is now an orbit the player owns: one finger on the right half (off buttons) turns it (yaw free, pitch 5 to 55 degrees), two fingers pinch zoom 1.8 to 6 m (remembered in `CatMe.Camera.Zoom`; mouse wheel in the Editor). Removed: idle side-orbit and dolly, yaw-follow while walking, look-ahead, pet-widening, per-zone distance, pitch and screen offset. Zones and rooms only clamp the zoom range (`CameraProfile.zoomMin/zoomMax`: tent 3.2 m max, woodland 4.5, rooms 1.3 to 2.6, petting 2.4). Collision pull-in kept. The joystick walks relative to the camera. Seated first person is unchanged. Tests: `PlayerCameraTests` (3).
 
 ## F6. Pet button bigger and placed like the joystick
 The paw (pet actions) button is too small. Make it **much bigger** (about the joystick's size) and place it as the mirror of the joystick: bottom right, the same distance from the edges inside the safe area. Its Call / Roam / Ball buttons fan out above it, each with a readable label (`MENUS_AND_ACCOUNT.md` section 9).

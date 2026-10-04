@@ -14,6 +14,8 @@ namespace CatMe.Garden
         public float screenOffsetX;          // -1..1, positive moves the pair to the right of the screen
         public float lookAheadScale = 1f;
         public float blendIn = 1.5f;
+        /// <summary>F5: the only thing a zone may change: the zoom range the player can choose within.</summary>
+        public float zoomMin = CameraMath.ZoomMin, zoomMax = CameraMath.ZoomMax;
 
         public static CameraProfile Default => new CameraProfile();
         public static CameraProfile Named(string profile)
@@ -23,8 +25,8 @@ namespace CatMe.Garden
                 case "GardenClose": return new CameraProfile { name = profile, distance = 2.6f, height = 1.55f, pitch = 9f, fov = 48f };
                 case "GateReveal": return new CameraProfile { name = profile, distance = 3.1f, height = 1.5f, pitch = 6f, fov = 51f };
                 case "Riverside": return new CameraProfile { name = profile, distance = 3.1f, height = 1.65f, pitch = 8f, fov = 51f, screenOffsetX = .12f };
-                case "Woodland": return new CameraProfile { name = profile, distance = 2.8f, height = 1.6f, pitch = 7f, fov = 50f };
-                case "ShelterInside": return new CameraProfile { name = profile, distance = 3.2f, height = 1.6f, pitch = 5f, fov = 51f, screenOffsetX = .12f };
+                case "Woodland": return new CameraProfile { name = profile, distance = 2.8f, height = 1.6f, pitch = 7f, fov = 50f, zoomMax = 4.5f };
+                case "ShelterInside": return new CameraProfile { name = profile, distance = 3.2f, height = 1.6f, pitch = 5f, fov = 51f, screenOffsetX = .12f, zoomMax = 3.2f };
                 case "Overlook": return new CameraProfile { name = profile, distance = 3.8f, height = 1.9f, pitch = 6f, fov = 53f, screenOffsetX = .15f };
                 case "Homecoming": return new CameraProfile { name = profile, distance = 3.0f, height = 1.6f, pitch = 7f, fov = 50f };
                 case "CatEye": return new CameraProfile { name = profile, distance = 1.6f, height = .45f, pitch = 2f, fov = 58f };
@@ -56,6 +58,12 @@ namespace CatMe.Garden
         public bool IsFirstPerson => fpAnchor != null;
         public float LookYaw => restYaw + yawOffset;
 
+        // F5: the player owns the third-person camera. restYaw is the orbit yaw (drag), orbitPitch the pitch (drag), zoom the
+        // chosen distance (pinch, remembered). Nothing else turns or moves it, except collision pull-in.
+        const string ZoomKey = "CatMe.Camera.Zoom";
+        float orbitPitch = 18f, zoom = 3.2f, pinchLast;
+        bool pinching;
+
         /// <summary>Eye-level view from a fixed anchor; drag to look around a little. The owner model is hidden by the caller.</summary>
         bool fpWalkable;
         // Glide into first person (R-CAM-02), situational idle framing (R-CAM-01), walk sway (R-CAM-03).
@@ -75,7 +83,7 @@ namespace CatMe.Garden
         {
             // No teleport here, so blend back to the trailing view instead of cutting (LateUpdate eases the position and rotation).
             fpAnchor = null; SetDof(0f); if (cam != null) cam.nearClipPlane = .1f;
-            if (owner != null) { restYaw = owner.eulerAngles.y; lastOwnerPosition = owner.position; }
+            if (owner != null) { restYaw = owner.eulerAngles.y; lastOwnerPosition = owner.position; }   // face the way the player sits
             yawOffset = 0f; pitchOffset = 0f; ownerVelocity = Vector3.zero; lookAheadOffset = Vector3.zero; positionVelocity = Vector3.zero;
         }
 
@@ -84,6 +92,7 @@ namespace CatMe.Garden
             owner = ownerTransform; cat = catTransform; cam = GetComponent<Camera>();
             restYaw = owner != null ? owner.eulerAngles.y : 0f;
             lastOwnerPosition = owner != null ? owner.position : Vector3.zero;
+            zoom = Mathf.Clamp(PlayerPrefs.GetFloat(ZoomKey, 3.2f), CameraMath.ZoomMin, CameraMath.ZoomMax);
             initialised = true;
             SnapNow();
         }
@@ -150,7 +159,7 @@ namespace CatMe.Garden
             if (!initialised || owner == null) return;
             restYaw = owner.eulerAngles.y; yawOffset = 0f; pitchOffset = 0f;
             CameraProfile p = Active;
-            distance = p.distance; height = p.height; pitch = p.pitch; fov = p.fov; offsetX = p.screenOffsetX; lookAhead = p.lookAheadScale;
+            distance = Mathf.Clamp(zoom, p.zoomMin, p.zoomMax); fov = 50f; offsetX = 0f; lookAhead = 0f;
             lastOwnerPosition = owner.position; ownerVelocity = Vector3.zero; lookAheadOffset = Vector3.zero;
             Pose pose = Desired(0f, out Vector3 focus);
             transform.SetPositionAndRotation(pose.position, pose.rotation);
@@ -200,84 +209,41 @@ namespace CatMe.Garden
             }
             bool reduced = PlayerPrefs.GetInt("CatMe.ReduceMotion", 0) == 1;
             float dt = Mathf.Max(Time.unscaledDeltaTime, 0.0001f);
-            if (Time.timeScale == 0f) dt = 0f;
-            if (dt <= 0f) return;
+            if (Time.timeScale == 0f) return;
 
             CameraProfile p = Active;
-            float blend = Mathf.Max(.05f, p.blendIn);
-            distance = Mathf.SmoothDamp(distance, p.distance, ref distanceVelocity, blend, 100f, dt);
-            height = Mathf.SmoothDamp(height, p.height, ref heightVelocity, blend, 100f, dt);
-            pitch = Mathf.SmoothDamp(pitch, p.pitch, ref pitchVelocity, blend, 100f, dt);
-            offsetX = Mathf.SmoothDamp(offsetX, p.screenOffsetX, ref offsetVelocity, blend, 100f, dt);
+            ReadLookDrag(dt);
+            // The chosen zoom, clamped to what this zone allows; easing only so a zone clamp or pinch isn't a jump.
+            float wantDistance = Mathf.Clamp(zoom, p.zoomMin, p.zoomMax);
+            distance = Mathf.SmoothDamp(distance, wantDistance, ref distanceVelocity, .18f, 100f, dt);
             extraHeight = Mathf.SmoothDamp(extraHeight, extraHeightTarget, ref extraHeightVelocity, .6f, 100f, dt);
-
-            // Owner velocity drives look-ahead and the slow yaw follow.
             Vector3 velocity = (owner.position - lastOwnerPosition) / dt;
             lastOwnerPosition = owner.position;
             ownerVelocity = Vector3.Lerp(ownerVelocity, velocity, 1f - Mathf.Exp(-6f * dt));
+            idleTime = new Vector3(ownerVelocity.x, 0f, ownerVelocity.z).magnitude < .12f ? idleTime + dt : 0f;
+            if (cam != null) cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, 50f, 1f - Mathf.Exp(-4f * dt));
 
-            float planar = new Vector3(ownerVelocity.x, 0f, ownerVelocity.z).magnitude;
-            idleTime = planar < .12f ? idleTime + dt : 0f;
-            bool catClose = cat != null && Vector3.Distance(cat.position, owner.position) < 1.8f;
-            idleBlend = Mathf.MoveTowards(idleBlend, !reduced && idleTime > IdleOrbitDelay && catClose ? 1f : 0f, dt / 3f);
-            ReadLookDrag(dt);
-            FollowYaw(dt, reduced);
-
-            // Keep the cat in frame by widening gently when it strays from the middle of the view.
-            float widen = 0f, fovWiden = 0f;
-            if (cat != null && cam != null)
-            {
-                Vector3 view = cam.WorldToViewportPoint(cat.position + Vector3.up * .2f);
-                float off = Mathf.Max(Mathf.Abs(view.x - .5f) - .35f, view.z < 0f ? .4f : 0f);
-                if (off > 0f) { widen = Mathf.Clamp(off * 6f, 0f, 1.2f); fovWiden = Mathf.Clamp(off * 24f, 0f, 6f); }
-            }
-            float targetFov = p.fov + fovWiden;
-            fov = Mathf.SmoothDamp(fov, targetFov, ref fovVelocity, .8f, 100f, dt);
-            if (cam != null) cam.fieldOfView = fov;
-
-            Vector3 aheadTarget = reduced ? Vector3.zero : Vector3.ClampMagnitude(new Vector3(ownerVelocity.x, 0f, ownerVelocity.z) * .6f * lookAhead * p.lookAheadScale, 1.5f);
-            lookAheadOffset = Vector3.SmoothDamp(lookAheadOffset, aheadTarget, ref lookAheadVelocity, .5f, 100f, dt);
-
-            Pose pose = Desired(widen, out Vector3 focus);
+            Pose pose = Desired(0f, out Vector3 focus);
             // Collision: move in quickly, back out slowly so walls never pop the camera.
             Vector3 toCamera = pose.position - focus;
             float wanted = toCamera.magnitude;
             Vector3 dir = toCamera / Mathf.Max(wanted, .001f);
             float allowed = wanted;
             if (Physics.SphereCast(focus, .25f, dir, out RaycastHit hit, wanted, ~0, QueryTriggerInteraction.Ignore))
-                allowed = Mathf.Max(1.2f, hit.distance - .2f);
+                allowed = Mathf.Max(CameraMath.CollisionMin, hit.distance - .2f);
             Vector3 target = focus + dir * allowed;
-            float smooth = reduced ? .6f : .35f;
-            if (Vector3.Distance(transform.position, focus) > allowed + .05f) smooth = .08f; // pull in fast
+            float smooth = reduced ? .25f : .12f;
+            if (Vector3.Distance(transform.position, focus) > allowed + .05f) smooth = .06f; // pull in fast
             transform.position = Vector3.SmoothDamp(transform.position, target, ref positionVelocity, smooth, 100f, dt);
-            Quaternion look = Quaternion.LookRotation(focus - transform.position + Vector3.up * .05f);
-            transform.rotation = Quaternion.Slerp(transform.rotation, look, 1f - Mathf.Exp(-(reduced ? 4f : 7f) * dt));
+            transform.rotation = Quaternion.LookRotation(focus - transform.position);
         }
 
+        // The camera orbits the player at the player's yaw, pitch and zoom.
         Pose Desired(float widen, out Vector3 focus)
         {
-            focus = owner.position;
-            if (cat != null)
-            {
-                Vector3 catOffset = cat.position - owner.position;
-                focus += Vector3.ClampMagnitude(catOffset * .3f, 1.2f);
-            }
-            focus += lookAheadOffset;
-            focus.y += 1.05f;
-            float yaw = restYaw + yawOffset;
-            Quaternion rotation = Quaternion.Euler(0f, yaw, 0f);
-            float totalPitch = Mathf.Clamp(pitch + pitchOffset, -5f, 40f);
-            // Camera sits behind the focus by `distance`, at `height` above the ground under the owner.
-            Vector3 behind = rotation * Vector3.back * (distance + widen - .45f * idleBlend);
-            Vector3 position = focus + behind;
-            position.y = owner.position.y + height - .22f * idleBlend + extraHeight + Mathf.Tan(Mathf.Deg2Rad * (totalPitch - pitch)) * (distance + widen);
-            // Slide the pair off-centre on screen by moving the focus sideways.
-            Vector3 right = rotation * Vector3.right;
-            position -= right * offsetX * (distance + widen) * .55f;
-            Vector3 aim = focus - right * offsetX * (distance + widen) * .55f;
-            focus = aim;
-            Quaternion look = Quaternion.LookRotation(aim - position);
-            return new Pose(position, look);
+            focus = owner.position + Vector3.up * (1.2f + extraHeight);
+            Vector3 position = CameraMath.Orbit(focus, restYaw, orbitPitch, distance + widen);
+            return new Pose(position, Quaternion.LookRotation(focus - position));
         }
 
         void SetDof(float target)
@@ -326,6 +292,7 @@ namespace CatMe.Garden
             // Touch: one finger on the right half of the screen outside UI. Mouse: right button, for the editor.
             const float degPerPixel = .15f;
             var touchscreen = Touchscreen.current;
+            if (touchscreen != null && fpAnchor == null && ReadPinch(touchscreen)) return;
             if (touchscreen != null)
             {
                 foreach (var touch in touchscreen.touches)
@@ -348,6 +315,11 @@ namespace CatMe.Garden
                 if (lookTouchId >= 0) return;
             }
             var mouse = Mouse.current;
+            if (mouse != null && fpAnchor == null)
+            {
+                float wheel = mouse.scroll.ReadValue().y;
+                if (Mathf.Abs(wheel) > .01f) { CameraProfile p = Active; zoom = Mathf.Clamp(zoom * (wheel > 0f ? .9f : 1.1f), p.zoomMin, p.zoomMax); PlayerPrefs.SetFloat(ZoomKey, zoom); }
+            }
             if (mouse != null)
             {
                 bool fp = fpAnchor != null;
@@ -360,9 +332,37 @@ namespace CatMe.Garden
             }
         }
 
+        // Two fingers off the buttons: pinch to zoom (F5). Returns true while pinching, so the look drag pauses.
+        bool ReadPinch(Touchscreen touchscreen)
+        {
+            Vector2 a = default, b = default; int live = 0;
+            foreach (var touch in touchscreen.touches)
+            {
+                var phase = touch.phase.ReadValue();
+                if (phase != UnityEngine.InputSystem.TouchPhase.Began && phase != UnityEngine.InputSystem.TouchPhase.Moved && phase != UnityEngine.InputSystem.TouchPhase.Stationary) continue;
+                if (pinching == false && OverUi(touch.touchId.ReadValue())) continue;
+                if (live == 0) a = touch.position.ReadValue(); else if (live == 1) b = touch.position.ReadValue();
+                live++;
+            }
+            if (live < 2) { if (pinching) { pinching = false; PlayerPrefs.SetFloat(ZoomKey, zoom); } return false; }
+            float span = Vector2.Distance(a, b);
+            if (!pinching) { pinching = true; pinchLast = span; lookTouchId = -1; lookActive = false; return true; }
+            CameraProfile p = Active;
+            zoom = CameraMath.Pinch(zoom, pinchLast, span, p.zoomMin, p.zoomMax);
+            pinchLast = span;
+            return true;
+        }
+
         void ApplyLook(Vector2 delta, float degPerPixel)
         {
             lastLookInputAt = Time.unscaledTime;
+            if (fpAnchor == null)
+            {
+                // Third person: orbit around the player; yaw free, pitch 5 to 55 degrees.
+                restYaw = Mathf.Repeat(restYaw + delta.x * degPerPixel, 360f);
+                orbitPitch = CameraMath.ClampPitch(orbitPitch - delta.y * degPerPixel);
+                return;
+            }
             // Seated / in the tent: a wide, free look. On the path: a gentle limited look that recentres.
             float yawLimit = fpAnchor != null ? 140f : 70f, pitchMin = fpAnchor != null ? -60f : -5f, pitchMax = fpAnchor != null ? 60f : 25f;
             yawOffset = Mathf.Clamp(yawOffset + delta.x * degPerPixel * (fpAnchor != null ? 1.4f : 1f), -yawLimit, yawLimit);
@@ -377,4 +377,22 @@ namespace CatMe.Garden
         }
     }
 
+
+    /// <summary>F5 camera numbers and maths, pure so they are tested.</summary>
+    public static class CameraMath
+    {
+        public const float ZoomMin = 1.8f, ZoomMax = 6f, PitchMin = 5f, PitchMax = 55f, CollisionMin = .6f;
+
+        public static float ClampPitch(float pitch) => Mathf.Clamp(pitch, PitchMin, PitchMax);
+
+        /// <summary>Spreading the fingers zooms in (shorter distance) in proportion to the change in finger distance.</summary>
+        public static float Pinch(float zoom, float previousSpan, float span, float min, float max)
+        {
+            if (previousSpan < 1f || span < 1f) return Mathf.Clamp(zoom, min, max);
+            return Mathf.Clamp(zoom * previousSpan / span, min, max);
+        }
+
+        /// <summary>Camera position orbiting a focus point: behind it at the yaw, raised by the pitch, at the distance.</summary>
+        public static Vector3 Orbit(Vector3 focus, float yaw, float pitch, float distance) => focus + Quaternion.Euler(pitch, yaw, 0f) * Vector3.back * distance;
+    }
 }

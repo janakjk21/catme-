@@ -566,7 +566,7 @@ namespace CatMe.Session
         void ExitEye() { garden.CameraRig?.ExitFirstPerson(); }
 
         // Inside the tent and house you stay visible, with a close shoulder-height follow camera instead of a view from inside the head.
-        readonly CameraProfile roomProfile = new CameraProfile { name = "Room", distance = 1.55f, height = 1.7f, pitch = 12f, fov = 62f, blendIn = .15f };
+        readonly CameraProfile roomProfile = new CameraProfile { name = "Room", distance = 1.55f, height = 1.7f, pitch = 12f, fov = 62f, blendIn = .15f, zoomMin = 1.3f, zoomMax = 2.6f };   // F5: inside, the same controls with a tighter zoom range
         void EnterRoomView() { PetSounds.Indoors = true; var rig = garden.CameraRig; if (rig == null) return; rig.PushProfile(roomProfile); rig.Snap(); }
         void ExitRoomView() { PetSounds.Indoors = false; var rig = garden.CameraRig; if (rig == null) return; rig.PopProfile(roomProfile); }
 
