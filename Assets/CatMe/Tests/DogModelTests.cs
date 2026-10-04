@@ -42,8 +42,9 @@ namespace CatMe.Tests
         public void DogsAreShownALittleTallerThanCats()
         {
             var scale = App.GetType("CatMe.Garden.CompanionScaleStandards", true);
-            float dog = (float)scale.GetMethod("PetHeightFor").Invoke(null, new[] { Dog });
-            float cat = (float)scale.GetMethod("PetHeightFor").Invoke(null, new[] { Cat });
+            var byKind = scale.GetMethod("PetHeightFor", new[] { Species });
+            float dog = (float)byKind.Invoke(null, new[] { Dog });
+            float cat = (float)byKind.Invoke(null, new[] { Cat });
             Assert.That(dog, Is.GreaterThan(cat));
         }
     }

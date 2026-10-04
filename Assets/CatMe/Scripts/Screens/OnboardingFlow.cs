@@ -54,7 +54,7 @@ namespace CatMe.Garden
 
         public void Begin(bool addMode)
         {
-            accountOnly = false; finishedResult = null; this.addMode = addMode; signedInFlow = addMode || (IsSignedIn != null && IsSignedIn()); loginFirst = false; species = Species.Cat; petPhoto = personPhoto = null; personFailMessage = null; failHard = false; petName = ""; created = null;
+            accountOnly = false; finishedResult = null; this.addMode = addMode; signedInFlow = addMode || (IsSignedIn != null && IsSignedIn()); loginFirst = false; species = Species.Cat; petPhoto = personPhoto = null; personFailMessage = null; failHard = false; petName = ""; created = null; dogSize = PetSize.Medium;
             if (root == null) { var s = UiKit.Screen(canvasRoot, "Onboarding", CatMeUIStyle.Mist); root = s.root; safe = s.safe; }
             root.SetActive(true); root.transform.SetAsLastSibling();
             Show("species");
@@ -85,6 +85,7 @@ namespace CatMe.Garden
         // ---- the pet starts being made as soon as its photo is chosen --------------------------------------------------
 
         System.Threading.Tasks.TaskCompletionSource<string> ownerTcs; bool creationStarted; CatMe.Onboarding.CreationResult finishedResult;
+        string dogSize = PetSize.Medium;
         string PetLabel => string.IsNullOrWhiteSpace(petName) ? (species == Species.Dog ? "Your dog" : "Your cat") : petName.Trim();
 
         void BeginEarlyCreation()
@@ -109,6 +110,7 @@ namespace CatMe.Garden
             if (result.ok)
             {
                 created = PetRoster.Add(PetLabel, species, petPhoto);   // the name chosen while it was being made
+                if (species == Species.Dog) created.size = PetSize.Normalize(dogSize);
                 created.serverId = result.petId; created.isFixture = result.isFixture; PetRoster.SaveChanges();
                 OnCreated?.Invoke(created, result);          // saves the models and loads them into the garden
                 if (MakingInGarden) { MakingInGarden = false; OnRevealInGarden?.Invoke(created); }
@@ -172,7 +174,7 @@ namespace CatMe.Garden
             // A ring of dots turns around the pet they already have (or the garden cat) while the new one is made.
             var prev = PetRoster.Active;
             var art = prev != null && !string.IsNullOrEmpty(prev.photoPath) ? Art.FromFile(prev.photoPath) : null;
-            if (art == null) art = Art.Load("PlaceholderCat");
+            if (art == null) art = Art.Load(species == Species.Dog ? "GoodDogExample" : "PlaceholderCat") ?? Art.Load("PlaceholderCat");
             companionHome = new Vector2(-400f, 0f);
             companion = UiKit.Rect(safe, "Companion", companionHome, new Vector2(340f, 340f));
             UiKit.RoundPhoto(companion, art, Vector2.zero, 300f, CatMeUIStyle.Pine, "Previous pet");
@@ -611,7 +613,19 @@ namespace CatMe.Garden
                 if (!namingReady) { Next(); return; }
                 created.name = petName.Trim(); PetRoster.SaveChanges(); namingReady = false; ShowReveal();
             }, 520f);
-            UiKit.RoundPhoto(safe, petPhoto != null ? Art.FromFile(petPhoto) : Art.Load("PlaceholderCat"), new Vector2(480f, 30f), 400f, CatMeUIStyle.Pine, "Pet photo");
+            UiKit.RoundPhoto(safe, petPhoto != null ? Art.FromFile(petPhoto) : Art.Load(species == Species.Dog ? "GoodDogExample" : "PlaceholderCat"), new Vector2(480f, 30f), 400f, CatMeUIStyle.SageDeep, "Pet photo");
+            if (species == Species.Dog && !namingReady)
+            {
+                // Dog size sets how big their 3D dog is shown and how deep their bark is (F3).
+                UiKit.Label(safe, "How big are they?", 28, CatMeUIStyle.BodyInk, new Vector2(LeftX + 350f, -330f), new Vector2(700f, 44f), FontStyle.Bold, TextAnchor.MiddleLeft, "Size title");
+                string[] sizes = { PetSize.Small, PetSize.Medium, PetSize.Large }; string[] labels = { "Small", "Medium", "Large" };
+                for (int i = 0; i < 3; i++)
+                {
+                    string size = sizes[i]; bool on = PetSize.Normalize(dogSize) == size;
+                    var chip = UiKit.Button(safe, labels[i], new Vector2(LeftX + 110f + i * 230f, -400f), new Vector2(210f, 66f), on ? CatMeUIStyle.SageDeep : CatMeUIStyle.Mist, on, () => { dogSize = size; Show("name"); }, 28, "Size " + labels[i]);
+                    if (!on) chip.GetComponentInChildren<Text>().color = CatMeUIStyle.SageDeep;
+                }
+            }
         }
 
         /// <summary>Call every frame: a saved sign-in that is restored after launch skips the login page.</summary>

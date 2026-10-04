@@ -20,6 +20,13 @@ namespace CatMe.Pets
         static readonly PetVoicePicker catVoice = new PetVoicePicker(Species.Cat), dogVoice = new PetVoicePicker(Species.Dog);
         static AudioSource worldVoice;
 
+        /// <summary>Sets the voice pitch for the active pet: adult cat, or a small, medium or large dog.</summary>
+        public static void UseVoice(PetProfile pet)
+        {
+            if (pet == null) return;
+            (pet.Kind == Species.Dog ? dogVoice : catVoice).BasePitch = PetSize.BasePitch(pet.Kind, pet.size);
+        }
+
         public static bool Enabled => PlayerPrefs.GetInt("CatMe.SoundEnabled", 1) == 1;
         /// <summary>True when a vocalisation should be quieter (inside a room, or in rain); set by the rooms and the weather.</summary>
         public static bool Indoors { get; set; }

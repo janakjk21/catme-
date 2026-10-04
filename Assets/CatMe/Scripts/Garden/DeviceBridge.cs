@@ -267,6 +267,8 @@ namespace CatMe.Garden
         /// <summary>A dog's own model is shown a little taller than the cat, like real dogs; the corgi stand-in keeps its own size.</summary>
         public const float DogHeightMeters = 0.72f;
         public static float PetHeightFor(CatMe.Pets.Species kind) => kind == CatMe.Pets.Species.Dog ? DogHeightMeters : CatHeightMeters;
+        /// <summary>A dog's height follows its size (small, medium, large); a cat is always the cat height.</summary>
+        public static float PetHeightFor(CatMe.Pets.PetProfile pet) => pet != null && pet.Kind == CatMe.Pets.Species.Dog ? CatMe.Pets.PetSize.DogHeight(pet.size) : CatHeightMeters;
 
         public static float ScaleForMeasuredHeight(float measuredHeight, float targetHeight)
         {

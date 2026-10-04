@@ -83,6 +83,7 @@ namespace CatMe.Garden
         public void SetActivePet(CatMe.Pets.PetProfile pet)
         {
             if (pet == null) return;
+            CatMe.Pets.PetSounds.UseVoice(pet);   // the same pet always sounds like itself
             // A different cat with its own model: reload the characters so the right one walks beside the owner.
             // Cats and dogs alike (launch task L7): a pet with its own model reloads it; a pet without one returns to the stand-in.
             string own = PetModelChoice.OwnModel(pet.modelPath, !string.IsNullOrEmpty(pet.modelPath) && System.IO.File.Exists(pet.modelPath));
@@ -273,7 +274,7 @@ namespace CatMe.Garden
             var activePet = CatMe.Pets.PetRoster.Active;
             string ownModel = activePet == null ? null : PetModelChoice.OwnModel(activePet.modelPath, !string.IsNullOrEmpty(activePet.modelPath) && File.Exists(activePet.modelPath));
             if (ownModel != null) catPath = ownModel;
-            float petHeight = ownModel != null && activePet != null ? CompanionScaleStandards.PetHeightFor(activePet.Kind) : CompanionScaleStandards.CatHeightMeters;
+            float petHeight = ownModel != null && activePet != null ? CompanionScaleStandards.PetHeightFor(activePet) : CompanionScaleStandards.CatHeightMeters;
             string humanPath = File.Exists(savedHuman) ? savedHuman : bundledHuman;
             // A generated person has only a walk clip, so the call gesture exists only for the bundled person.
             // Loading the same large person model a second time would only double its memory.

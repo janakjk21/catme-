@@ -18,6 +18,7 @@ namespace CatMe.Pets
         public string serverId;      // id of the pet on the WornTag server, once created there
         public string modelPath;     // downloaded model on this phone (empty for fixture or built-in models)
         public bool isFixture;       // true while a stand-in model is used
+        public string size;          // dogs: small, medium or large (empty = medium); sets the shown height and the bark pitch
         public Species Kind => species == (int)Species.Dog ? Species.Dog : Species.Cat;
     }
 
@@ -25,6 +26,20 @@ namespace CatMe.Pets
     /// The player's pets, stored locally (layout-first phase: no account, no server). One pet is "active" and walks with the owner.
     /// The owner avatar is shared by every pet. Always contains at least one pet so the garden is never empty.
     /// </summary>
+    /// <summary>Dog sizes (F3): the height a dog's own model is shown at, and its voice pitch (PET_AUDIO.md section 4).</summary>
+    public static class PetSize
+    {
+        public const string Small = "small", Medium = "medium", Large = "large";
+        public static string Normalize(string size) => size == Small || size == Large ? size : Medium;
+        /// <summary>Shown height in metres; like the cat, about 1.4x real so the pet is easy to see from the follow camera.</summary>
+        public static float DogHeight(string size) { switch (Normalize(size)) { case Small: return .5f; case Large: return .9f; default: return .72f; } }
+        public static float BasePitch(Species species, string size)
+        {
+            if (species == Species.Cat) return .92f;
+            switch (Normalize(size)) { case Small: return 1.3f; case Large: return 1f; default: return 1.12f; }
+        }
+    }
+
     public static class PetRoster
     {
         [Serializable] sealed class Save { public int schema = 1; public string activeId; public List<PetProfile> pets = new List<PetProfile>(); public List<string> hiddenServerIds = new List<string>(); }
