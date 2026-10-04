@@ -113,15 +113,21 @@ namespace CatMe.Onboarding
         [Serializable] sealed class ApiErrorEnvelope { public ApiError error; }
         [Serializable] sealed class ApiError { public string code; public string message; }
         static string ErrorMessage(UnityWebRequest request)
+            => ErrorMessage(request.responseCode, request.downloadHandler?.text);
+
+        public static string ErrorMessage(long statusCode, string responseBody)
         {
             try
             {
-                var error = JsonUtility.FromJson<ApiErrorEnvelope>(request.downloadHandler.text)?.error;
+                var error = JsonUtility.FromJson<ApiErrorEnvelope>(responseBody)?.error;
                 if (error?.code == "DAILY_CAP_REACHED") return "We are making a lot of pets today. Try again tomorrow.";
-                if (error?.code == "DELETE_FAILED" || error?.code == "DELETE_UNAVAILABLE" || error?.code == "APPLE_REAUTH_REQUIRED" || error?.code == "JOB_IN_PROGRESS") return error.message;
+                if (!string.IsNullOrEmpty(error?.code) && !string.IsNullOrEmpty(error.message)) return error.message;
             }
             catch (ArgumentException) { }
-            switch (request.responseCode)
+            if (statusCode == 0) return "No internet. Your pet is saved on this phone. Try again when you're back online.";
+            if (statusCode == 429) return "Too many tries. Wait a minute.";
+            if (statusCode >= 500) return "The WornTag server is having trouble. Try again shortly.";
+            switch (statusCode)
             {
                 case 401: return "Please sign in again.";
                 case 403: return "Accept the photo consent first.";

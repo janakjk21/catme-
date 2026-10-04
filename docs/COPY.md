@@ -106,6 +106,8 @@ Your pets · Store · Photo album · Account · Settings · Keep exploring
 | When | Text |
 |---|---|
 | No internet | No internet. Your pet is saved on this phone. Try again when you're back online. |
+| Too many requests | Too many tries. Wait a minute. |
+| Server problem | The WornTag server is having trouble. Try again shortly. |
 | Still being made | [Name] is still being made. It takes a few minutes. |
 | Making failed | We couldn't make [Name] this time. Try again. |
 | Photo too dark | It's too dark to see them. Try again near a window. |
