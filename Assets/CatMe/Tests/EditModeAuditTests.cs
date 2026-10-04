@@ -35,7 +35,7 @@ namespace CatMe.Tests
             }
         }
 
-        [TestCase(0, null, "No internet. Your pet is saved on this phone. Try again when you're back online.")]
+        [TestCase(0, null, "No internet connection. Try again when you're back online.")]
         [TestCase(429, null, "Too many tries. Wait a minute.")]
         [TestCase(503, null, "The WornTag server is having trouble. Try again shortly.")]
         [TestCase(429, "{\"error\":{\"code\":\"DAILY_CAP_REACHED\",\"message\":\"server text\"}}", "We are making a lot of pets today. Try again tomorrow.")]

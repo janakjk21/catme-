@@ -44,15 +44,34 @@ namespace CatMe.Onboarding
             this.wait = wait ?? throw new ArgumentNullException(nameof(wait));
         }
 
-        [Serializable] sealed class Pending { public string photo, petKey, ownerKey, petId; }
-        public static string PendingPetId
+        /// <summary>Key used by builds before 2026-10; moved to <see cref="PendingKey"/> once.</summary>
+        public const string LegacyPendingKey = "WornTag.Creation.Pending";
+
+        // species and name are kept so a resumed creation shows the right animal and name before the server answers.
+        [Serializable] sealed class Pending { public string photo, petKey, ownerKey, petId, species, name; }
+
+        /// <summary>Moves a pending creation saved under the old key to the current key, once. Returns true if the old key existed.</summary>
+        public static bool MigrateLegacyPending()
         {
-            get
-            {
-                try { return JsonUtility.FromJson<Pending>(PlayerPrefs.GetString(PendingKey, ""))?.petId; }
-                catch { return null; }
-            }
+            if (!PlayerPrefs.HasKey(LegacyPendingKey)) return false;
+            string old = PlayerPrefs.GetString(LegacyPendingKey, "");
+            PlayerPrefs.DeleteKey(LegacyPendingKey);
+            if (!PlayerPrefs.HasKey(PendingKey) && !string.IsNullOrEmpty(old)) PlayerPrefs.SetString(PendingKey, old);
+            PlayerPrefs.Save();
+            return true;
         }
+
+        static Pending ReadPending()
+        {
+            MigrateLegacyPending();
+            try { return JsonUtility.FromJson<Pending>(PlayerPrefs.GetString(PendingKey, "")); }
+            catch { return null; }
+        }
+
+        public static string PendingPetId => ReadPending()?.petId;
+        /// <summary>"cat" or "dog" for the creation in progress, or null when unknown (very old pending records).</summary>
+        public static string PendingSpecies { get { string s = ReadPending()?.species; return s == "cat" || s == "dog" ? s : null; } }
+        public static string PendingName { get { string n = ReadPending()?.name; return string.IsNullOrWhiteSpace(n) ? null : n; } }
 
         /// <summary>Continues an existing server job. This path never uploads a photo or starts another creation.</summary>
         public async Task<CreationResult> ResumeAsync(string petId, string petModelDestination, string ownerModelDestination, Action<string, string> report)
@@ -94,6 +113,7 @@ namespace CatMe.Onboarding
 
                 // Reuse the same keys if this exact photo was already submitted (app killed or connection lost): the server then returns the existing job.
                 var pending = LoadPending(request.petPhotoPath) ?? new Pending { photo = request.petPhotoPath, petKey = Guid.NewGuid().ToString(), ownerKey = Guid.NewGuid().ToString() };
+                pending.species = request.species; pending.name = request.petName;
                 SavePending(pending);
 
                 await api.AcceptConsentAsync(CreationClient.ConsentVersion);
@@ -166,7 +186,7 @@ namespace CatMe.Onboarding
 
         static bool FinishPetStatus(CreationStatus pet, CreationResult result)
         {
-            if (pet == null || pet.status == "failed") { result.error = "We couldn't make your pet this time. Try again."; ClearPending(); return false; }
+            if (pet == null || pet.status == "failed") { result.error = FailedMessage(pet?.errorCode); ClearPending(); return false; }
             if (pet.status == "rejected") { result.rejectReason = pet.rejectReason; result.error = RejectMessage(pet.rejectReason); ClearPending(); return false; }
             if (pet.status != "ready") { result.error = "This is taking longer than expected. Your pet will keep being made; open the app again soon."; return false; }
             result.isFixture = pet.isFixture; result.fixtureKey = pet.fixtureKey;
@@ -180,6 +200,12 @@ namespace CatMe.Onboarding
             await api.DownloadFileAsync(pet.modelUrl, destination, null);
             result.petModelSaved = true;
         }
+
+        public const string CheckUnavailableMessage = "We couldn't check your photo just now. Try again in a minute.";
+
+        /// <summary>The line for a failed (not rejected) creation. The photo check being down is not the player's fault, and no credit was used.</summary>
+        public static string FailedMessage(string errorCode)
+            => errorCode == "CHECK_UNAVAILABLE" ? CheckUnavailableMessage : "We couldn't make your pet this time. Try again.";
 
         public static string RejectMessage(string reason)
         {
@@ -228,8 +254,8 @@ namespace CatMe.Onboarding
 
         static Pending LoadPending(string photo)
         {
-            try { var p = JsonUtility.FromJson<Pending>(PlayerPrefs.GetString(PendingKey, "")); return p != null && p.photo == photo && !string.IsNullOrEmpty(p.petKey) ? p : null; }
-            catch { return null; }
+            var p = ReadPending();
+            return p != null && p.photo == photo && !string.IsNullOrEmpty(p.petKey) ? p : null;
         }
         static void SavePending(Pending p) { PlayerPrefs.SetString(PendingKey, JsonUtility.ToJson(p)); PlayerPrefs.Save(); }
         static void ClearPending() { PlayerPrefs.DeleteKey(PendingKey); PlayerPrefs.Save(); }

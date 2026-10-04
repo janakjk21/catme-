@@ -125,7 +125,7 @@ namespace CatMe.Garden
 
         public void ShowOffline(Action retry, Action continueOffline)
         {
-            Begin("No internet", "Your pet is saved on this phone. Try again when you're back online.");
+            Begin("No internet", "Check your connection and try again.");
             UiKit.NestedButton(safe, "Try again", new Vector2(0f, -150f), 460f, CatMeUIStyle.SageDeep, () => { Hide(); retry?.Invoke(); }, 34, "Retry");
             UiKit.Link(safe, "Continue offline", new Vector2(0f, -270f), new Vector2(360f, 70f), () => { Hide(); continueOffline?.Invoke(); }, 28, TextAnchor.MiddleCenter);
         }

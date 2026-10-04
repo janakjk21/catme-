@@ -44,6 +44,31 @@ namespace CatMe.Onboarding
         public static string Models => Path.Combine(ProfileFolder, "models");
         public static string PersonModelPath => Path.Combine(Models, "person-walking.glb");
         public static string CatModelPath => Path.Combine(Models, "cat-walking.glb");
+        /// <summary>Where a downloaded person model waits before <see cref="InstallPersonModel"/> moves it to <see cref="PersonModelPath"/>.</summary>
+        public static string PersonDownloadPath => Path.Combine(Downloads, "owner.glb");
+
+        /// <summary>
+        /// The one place the person model goes: a real model moves from <see cref="PersonDownloadPath"/> to <see cref="PersonModelPath"/>.
+        /// A stand-in (fixture) is dropped, because the bundled person already carries the call and sit clips. Returns true when installed.
+        /// </summary>
+        public static bool InstallPersonModel(bool isFixture)
+        {
+            string from = PersonDownloadPath;
+            try
+            {
+                if (!File.Exists(from)) return false;
+                if (isFixture) { File.Delete(from); return false; }
+                Directory.CreateDirectory(Models);
+                if (File.Exists(PersonModelPath)) File.Delete(PersonModelPath);
+                File.Move(from, PersonModelPath);
+                return true;
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+                Debug.LogWarning("[WornTag][Account] Could not install the person model: " + e.Message);
+                return false;
+            }
+        }
 
         /// <summary>Uses this account's folder from now on (null or empty: no account, e.g. after sign-out). Returns true if it changed.</summary>
         public static bool UseAccount(string accountUid)

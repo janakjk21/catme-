@@ -130,7 +130,7 @@ namespace CatMe.Garden
                 {
                     petName = name, species = species == Species.Dog ? "dog" : "cat", petPhotoPath = photo, ownerPhotoTask = ownerTask,
                     petModelDestination = species == Species.Dog ? null : System.IO.Path.Combine(cache, "pet-" + System.Guid.NewGuid().ToString("N") + ".glb"),
-                    ownerModelDestination = System.IO.Path.Combine(cache, "owner.glb"),
+                    ownerModelDestination = AccountStorage.PersonDownloadPath,
                 }, report);
             };
             onboarding.OnCreated = (pet, result) =>
@@ -147,10 +147,7 @@ namespace CatMe.Garden
                         System.IO.File.Copy(newest[0].FullName, own, true);          // every cat keeps its own model
                         pet.modelPath = own; PetRoster.SaveChanges();
                     }
-                    string ownerCache = System.IO.Path.Combine(cache, "owner.glb");
-                    // A stand-in owner model matches the one already bundled, which also carries the call and sit clips, so only real models replace it.
-                    if (result.ownerModelSaved && !result.isFixture && System.IO.File.Exists(ownerCache))
-                        System.IO.File.Copy(ownerCache, DeviceBridge.HumanModelPath, true);
+                    if (result.ownerModelSaved) AccountStorage.InstallPersonModel(result.isFixture);
                 }
                 catch (Exception e) { Debug.LogWarning("[WornTag][Creation] could not place the new model: " + e.Message); }
                 garden.SetActivePet(pet);
@@ -190,7 +187,11 @@ namespace CatMe.Garden
                 try
                 {
                     var owner = await api.GetOwnerAsync();
-                    if (owner?.status == "ready" && !string.IsNullOrEmpty(owner.modelUrl)) { await api.DownloadFileAsync(owner.modelUrl, DeviceBridge.HumanModelPath, null); needsCharacterReload = true; }
+                    if (owner?.status == "ready" && !string.IsNullOrEmpty(owner.modelUrl))
+                    {
+                        await api.DownloadFileAsync(owner.modelUrl, AccountStorage.PersonDownloadPath, null);
+                        if (AccountStorage.InstallPersonModel(owner.isFixture)) needsCharacterReload = true;
+                    }
                 }
                 catch (Exception e) { Debug.LogWarning("[WornTag][Restore] could not restore the owner: " + e.Message); }
             }
@@ -225,8 +226,8 @@ namespace CatMe.Garden
             {
                 var owner = await mobileApi.GetOwnerAsync();
                 if (owner?.status != "ready" || string.IsNullOrEmpty(owner.modelUrl)) throw new InvalidOperationException("The model is not ready to download.");
-                await mobileApi.DownloadFileAsync(owner.modelUrl, DeviceBridge.HumanModelPath, null);
-                garden.StartCoroutine(garden.ReloadCharactersFromPhoneStorage());
+                await mobileApi.DownloadFileAsync(owner.modelUrl, AccountStorage.PersonDownloadPath, null);
+                if (AccountStorage.InstallPersonModel(owner.isFixture)) garden.StartCoroutine(garden.ReloadCharactersFromPhoneStorage());
             }
             catch (Exception e) { ShowModelLoadFailure("you", RetryOwnerModel); Debug.LogWarning("[WornTag][Restore] owner retry failed: " + e.Message); }
         }
@@ -266,13 +267,18 @@ namespace CatMe.Garden
                 foreach (var pet in session.pets)
                     if ((!string.IsNullOrEmpty(pendingId) && pet.id == pendingId) || (pending == null && pet.status != "ready" && pet.status != "failed" && pet.status != "rejected")) pending = pet;
             }
-            if (pending == null && !string.IsNullOrEmpty(pendingId)) pending = new CreationStatus { id = pendingId, name = "Your pet", species = "cat", status = "checking" };
+            if (pending == null && !string.IsNullOrEmpty(pendingId))
+            {
+                // The server didn't answer: use what the phone saved when the creation started.
+                string species = CreationClient.PendingSpecies ?? (PetRoster.Active.Kind == Species.Dog ? "dog" : "cat");
+                pending = new CreationStatus { id = pendingId, name = CreationClient.PendingName ?? (species == "dog" ? "Your dog" : "Your cat"), species = species, status = "checking" };
+            }
             if (pending != null)
             {
                 var local = PetRoster.AddServerPet(pending.id, pending.name, pending.species);
                 string cache = AccountStorage.Downloads;
                 string petDestination = System.IO.Path.Combine(cache, "pet-" + System.Guid.NewGuid().ToString("N") + ".glb");
-                onboarding.ResumeCreation(local, report => new CreationClient(mobileApi).ResumeAsync(pending.id, petDestination, System.IO.Path.Combine(cache, "owner.glb"), report));
+                onboarding.ResumeCreation(local, report => new CreationClient(mobileApi).ResumeAsync(pending.id, petDestination, AccountStorage.PersonDownloadPath, report));
                 welcome.SetActive(false);
                 return;
             }

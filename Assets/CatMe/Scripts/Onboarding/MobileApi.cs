@@ -115,6 +115,9 @@ namespace CatMe.Onboarding
         static string ErrorMessage(UnityWebRequest request)
             => ErrorMessage(request.responseCode, request.downloadHandler?.text);
 
+        /// <summary>Neutral: there may be no pet yet, so nothing claims one is saved.</summary>
+        public const string OfflineMessage = "No internet connection. Try again when you're back online.";
+
         public static string ErrorMessage(long statusCode, string responseBody)
         {
             try
@@ -124,14 +127,14 @@ namespace CatMe.Onboarding
                 if (!string.IsNullOrEmpty(error?.code) && !string.IsNullOrEmpty(error.message)) return error.message;
             }
             catch (ArgumentException) { }
-            if (statusCode == 0) return "No internet. Your pet is saved on this phone. Try again when you're back online.";
+            if (statusCode == 0) return OfflineMessage;
             if (statusCode == 429) return "Too many tries. Wait a minute.";
             if (statusCode >= 500) return "The WornTag server is having trouble. Try again shortly.";
             switch (statusCode)
             {
                 case 401: return "Please sign in again.";
                 case 403: return "Accept the photo consent first.";
-                case 409: return "A creation is already running, or your free pets are used.";
+                case 409: return "This can't be made right now. Try again later.";
                 case 400: return "That photo could not be used. Choose a JPEG under 8 MB.";
                 default: return "Account service is unavailable. Try again shortly.";
             }

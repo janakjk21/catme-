@@ -41,6 +41,8 @@ L2 menus and look (cloud, not compiled): see `CLAUDE_TASKS.md` L2.
 
 L3 joystick and camera (cloud, not compiled): see `CLAUDE_TASKS.md` L3.
 
+L4 errors and resume (app cloud, not compiled; server on `catme-ai` branch, not deployed): see `CLAUDE_TASKS.md` L4.
+
 ## Current task
 
 Launch-audit items 3, 4, 5, 9, 11 and 22 are implemented on `claude/focused-faraday-eemw65`. The generated `Assembly-CSharp.csproj` builds with 0 errors; Unity EditMode tests and the Play Mode paths remain for the owner to run. No scene, prefab or asset file was edited for this work, and no provider call, deployment or push was made.
