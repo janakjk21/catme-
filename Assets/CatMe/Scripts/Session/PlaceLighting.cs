@@ -44,7 +44,7 @@ namespace CatMe.Session
                 case "BlueHour":
                     return new PlaceLightingPreset { name = preset, sunPitch = -4, sunYaw = -80, sunIntensity = 0f, sunColor = Hex("#9DB4E0"), ambientSky = Hex("#4A5F86"), ambientEquator = Hex("#3F4A66"), ambientGround = Hex("#2C2A30"), fogColor = Hex("#3E4D6B"), fogDensity = .014f, skyExposure = .35f, skyTint = Hex("#6F86B8"), ambientIntensity = .9f, fillIntensity = .22f };
                 case "HouseInterior":
-                    return new PlaceLightingPreset { name = preset, skyResource = "Skyboxes/Sky_Sunset", sunPitch = 50, sunYaw = 0, sunIntensity = 0f, sunColor = Color.black, ambientSky = Hex("#6B5640"), ambientEquator = Hex("#7A6048"), ambientGround = Hex("#4A3A2A"), fogColor = Hex("#5A4632"), fogDensity = .004f, skyExposure = .1f, ambientIntensity = 1f, fillIntensity = 0f };
+                    return new PlaceLightingPreset { name = preset, skyResource = "Skyboxes/Sky_Day", skyTint = Hex("#9DB8E4"), sunPitch = 50, sunYaw = 0, sunIntensity = 0f, sunColor = Color.black, ambientSky = Hex("#6B5640"), ambientEquator = Hex("#7A6048"), ambientGround = Hex("#4A3A2A"), fogColor = Hex("#C9D6DE"), fogDensity = .0015f, skyExposure = 1.1f, ambientIntensity = 1f, fillIntensity = 0f };
                 case "TentInterior":
                     return new PlaceLightingPreset { name = preset, skyResource = "Skyboxes/Sky_Sunset", sunPitch = 50, sunYaw = 0, sunIntensity = 0f, sunColor = Color.black, ambientSky = Hex("#1C2128"), ambientEquator = Hex("#1A1E24"), ambientGround = Hex("#101216"), fogColor = Hex("#14171C"), fogDensity = .03f, skyExposure = .1f, ambientIntensity = .5f, fillIntensity = 0f };
                 case "Morning":
