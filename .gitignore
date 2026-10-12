@@ -42,3 +42,6 @@ LocalFixtures/
 # Local prototype provider credentials; intentionally embedded only in local builds
 /Assets/Resources/CompanionProviderKeys.json
 /Assets/Resources/CompanionProviderKeys.json.meta
+
+# Node tooling
+node_modules/
