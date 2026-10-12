@@ -1,5 +1,10 @@
-import 'dotenv/config';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { config as loadEnv } from 'dotenv';
 import { config, higgsfield } from '@higgsfield/client/v2';
+
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+loadEnv({ path: path.join(currentDir, '.env.local') });
 
 const credentials = process.env.HF_CREDENTIALS;
 
